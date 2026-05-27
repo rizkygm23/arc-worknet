@@ -1,0 +1,168 @@
+"use client";
+
+import { ArrowLeft, CheckCircle2, RotateCcw, XCircle } from "lucide-react";
+import Link from "next/link";
+import { notFound, useParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import { PageHeader } from "@/components/app-shell";
+import { ChainTxLink, DeliverableViewer, JobStatusBadge } from "@/components/job-components";
+import { useWorkNet } from "@/lib/store";
+import type { Job } from "@/lib/types";
+
+export default function ReviewJobPage() {
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const {
+    activeProfile,
+    completeJob,
+    getJob,
+    getJobEvaluation,
+    getJobSubmissions,
+    rejectSubmission,
+    requestRevision,
+    isSyncing,
+  } = useWorkNet();
+  const job = getJob(params.id);
+  const submission = getJobSubmissions(params.id)[0];
+  const evaluation = getJobEvaluation(submission?.id);
+  const [reviewText, setReviewText] = useState("Approved. Deliverable meets the acceptance criteria.");
+  const [rating, setRating] = useState(5);
+  const [busyAction, setBusyAction] = useState<string | undefined>();
+
+  if (!job) {
+    if (isSyncing) return <div className="panel"><p className="muted">Loading…</p></div>;
+    notFound();
+  }
+  const currentJob = job as Job;
+  const canReview = activeProfile?.id === currentJob.clientProfileId && currentJob.status === "submitted";
+
+  async function approve() {
+    if (!submission || !canReview) return;
+    setBusyAction("approve");
+    await completeJob(currentJob.id, submission.id, { rating, reviewText });
+    router.push(`/jobs/${currentJob.id}`);
+  }
+
+  async function revise() {
+    if (!submission || !canReview) return;
+    setBusyAction("revision");
+    await requestRevision(currentJob.id, submission.id, reviewText);
+    router.push(`/jobs/${currentJob.id}`);
+  }
+
+  async function reject() {
+    if (!submission || !canReview) return;
+    setBusyAction("reject");
+    await rejectSubmission(currentJob.id, submission.id, reviewText);
+    router.push(`/jobs/${currentJob.id}`);
+  }
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Review"
+        title={currentJob.title}
+        subtitle="Approve to release payment, request a revision, or reject and open a dispute."
+        actions={
+          <Link className="button ghost" href={`/jobs/${currentJob.id}`}>
+            <ArrowLeft size={16} />
+            Back
+          </Link>
+        }
+      />
+
+      <section className="layout-with-rail">
+        <div className="grid">
+          <div className="panel">
+            <div className="panel-header">
+              <div>
+                <h2 className="panel-title">Submission</h2>
+                <p className="small muted" style={{ margin: "4px 0 0" }}>
+                  Confirm the deliverable before releasing escrow.
+                </p>
+              </div>
+              <JobStatusBadge status={currentJob.status} />
+            </div>
+            <DeliverableViewer
+              url={submission?.deliverableUrl}
+              notes={submission?.notes}
+              hash={submission?.deliverableHashBytes32}
+            />
+          </div>
+
+          <div className="panel">
+            <div className="form-grid">
+              <label className="field">
+                <span>Rating</span>
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  max={5}
+                  value={rating}
+                  onChange={(event) => setRating(Number(event.target.value))}
+                />
+              </label>
+              <label className="field span-2">
+                <span>Review / reason</span>
+                <textarea
+                  className="textarea"
+                  value={reviewText}
+                  onChange={(event) => setReviewText(event.target.value)}
+                />
+              </label>
+            </div>
+
+            {canReview ? (
+              <div className="actions" style={{ marginTop: 16 }}>
+                <button className="button primary" type="button" disabled={!submission || Boolean(busyAction)} onClick={approve}>
+                  <CheckCircle2 size={16} />
+                  Approve and release
+                </button>
+                <button className="button" type="button" disabled={!submission || Boolean(busyAction)} onClick={revise}>
+                  <RotateCcw size={16} />
+                  Request revision
+                </button>
+                <button className="button" type="button" disabled={!submission || Boolean(busyAction)} onClick={reject}>
+                  <XCircle size={16} />
+                  Reject
+                </button>
+              </div>
+            ) : (
+              <p className="muted" style={{ marginTop: 16 }}>
+                Only the client wallet can review submitted work and release or dispute escrow.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <aside className="grid">
+          <div className="panel">
+            <h2 className="panel-title">AI evaluation draft</h2>
+            {evaluation ? (
+              <>
+                <div className="stat" style={{ marginTop: 14 }}>
+                  <span>Score</span>
+                  <strong>{evaluation.score}/100</strong>
+                </div>
+                <p className="muted">{evaluation.summary}</p>
+                <div className="tags">
+                  <span className="tag">{evaluation.verdict}</span>
+                  <span className="tag">{evaluation.model}</span>
+                </div>
+              </>
+            ) : (
+              <p className="muted">No AI evaluation is available yet.</p>
+            )}
+          </div>
+
+          <div className="panel">
+            <h2 className="panel-title">Settlement tx</h2>
+            <p className="small muted">Final payment release transaction.</p>
+            <ChainTxLink txHash={currentJob.completeTxHash} />
+          </div>
+        </aside>
+      </section>
+    </>
+  );
+}

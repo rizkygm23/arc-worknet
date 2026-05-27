@@ -1,0 +1,107 @@
+/* Hallmark · tokens · genre: engineered-cosmic · theme: xAI dark-canvas
+ * Source: x.ai/DESIGN.md — colors, typography, radii, spacing.
+ * Dark-canvas only (no light counterpart per design rule).
+ */
+:root {
+  /* ─── Brand & ink ─── */
+  --color-bg: #0a0a0a;
+  --color-surface: #191919;
+  --color-surface-2: #1a1c20;
+  --color-surface-3: #363a3f;
+  --color-text: #ffffff;
+  --color-text-mid: #dadbdf;
+  --color-text-mute: #7d8187;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+  --color-hairline: #212327;
+
+  /* ─── Accent (used sparingly, per brand) ─── */
+  --color-brand: #ffffff;
+  --color-brand-strong: #fafaf7;
+  --color-on-brand: #0a0a0a;
+  --color-accent-sunset: #ff7a17;
+  --color-accent-sunset-soft: #ffc285;
+  --color-accent-dusk: #7c3aed;
+  --color-accent-twilight: #c4b5fd;
+  --color-accent-breeze: #a0c3ec;
+  --color-accent-midnight: #0d1726;
+
+  /* ─── Semantic feedback ─── */
+  --color-success: #7ee787;
+  --color-error: #ff6b6b;
+  --color-warning: #ffc285;
+  --color-focus: #ffffff;
+
+  /* ─── Grayscale (kept for legacy use) ─── */
+  --color-gray-900: #0a0a0a;
+  --color-gray-800: #1a1c20;
+  --color-gray-700: #212327;
+  --color-gray-500: #7d8187;
+  --color-gray-400: #7d8187;
+  --color-gray-100: #dadbdf;
+
+  /* ─── Elevation (per brand: hairline carries elevation, shadows minimal) ─── */
+  --shadow-sm: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.7);
+
+  /* ─── Typography ─── */
+  --font-display: "Inter", "Universal Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Inter", "Universal Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-code: var(--font-mono);
+
+  /* xAI display scale (negative tracking is part of the brand) */
+  --text-display-xl: 96px;
+  --text-display-lg: 72px;
+  --text-display-md: 48px;
+  --text-display-sm: 32px;
+  --text-display-xs: 20px;
+  --tracking-display-xl: -2.4px;
+  --tracking-display-lg: -1.8px;
+  --tracking-display-md: -1.2px;
+  --tracking-display-sm: -0.6px;
+
+  /* Body */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-md: 18px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+  --text-display: clamp(2.25rem, 4vw + 1rem, 4.5rem);
+
+  /* Mono caption (uppercase tracked — brand signature) */
+  --text-caption-mono: 14px;
+  --text-caption-mono-sm: 12px;
+  --tracking-mono: 1.4px;
+  --tracking-mono-sm: 1.2px;
+
+  /* ─── Motion ─── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+
+  /* ─── Geometry ─── */
+  --rule-thin: 1px;
+  --radius-sm: 8px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  --radius-pill: 9999px;
+
+  /* ─── Spacing (xAI scale) ─── */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 48px;
+  --space-12: 64px;
+}

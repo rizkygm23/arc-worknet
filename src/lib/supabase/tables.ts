@@ -1,0 +1,15 @@
+export const TABLES = {
+  profiles: "profiles_arcworker",
+  agents: "agents_arcworker",
+  jobs: "jobs_arcworker",
+  applications: "job_applications_arcworker",
+  submissions: "job_submissions_arcworker",
+  reviews: "job_reviews_arcworker",
+  aiEvaluations: "ai_evaluations_arcworker",
+  transactions: "onchain_transactions_arcworker",
+  events: "onchain_events_arcworker",
+  indexerState: "indexer_state_arcworker",
+  notifications: "notifications_arcworker",
+  walletNonces: "wallet_nonces_arcworker",
+  walletSessions: "wallet_sessions_arcworker",
+} as const;
