@@ -3,7 +3,6 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
-  outputFileTracingRoot: __dirname,
   // Privy pulls in optional Farcaster/Solana connectors we don't use.
   // Mark them as resolved-to-false so webpack stops complaining.
   webpack: (config) => {
