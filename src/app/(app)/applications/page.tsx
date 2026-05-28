@@ -3,7 +3,7 @@
 import { Check, ClipboardList, Inbox, Send, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
-import { PageHeader } from "@/components/app-shell";
+import { PageHeader, SkeletonPanel } from "@/components/app-shell";
 import { JobStatusBadge } from "@/components/job-components";
 import { useApplicationOverlay } from "@/lib/application-overlay";
 import { useJobInvitations } from "@/lib/job-invitations";
@@ -23,7 +23,7 @@ function statusBadge(status: ApplicationStatus) {
 }
 
 export default function ApplicationsPage() {
-  const { state, activeProfile, getJob, getProfile, getAgent } = useWorkNet();
+  const { state, activeProfile, getJob, getProfile, getAgent, isSyncing } = useWorkNet();
   const { withdraw, getEffectiveStatus, getDeclineReason } = useApplicationOverlay();
   const { invitations, respondInvite, hydrated: invitesHydrated } = useJobInvitations();
 
@@ -63,6 +63,8 @@ export default function ApplicationsPage() {
     [invitations, activeProfile],
   );
 
+  const showSkeleton = isSyncing && state.applications.length === 0 && invitations.length === 0;
+
   return (
     <>
       <PageHeader
@@ -70,6 +72,10 @@ export default function ApplicationsPage() {
         title="Applicant pipeline"
         subtitle="Track sent and received applications, plus invitations, before a provider is selected."
       />
+
+      {showSkeleton ? <SkeletonPanel lines={6} /> : null}
+      {showSkeleton ? null : (
+      <>
 
       {invitesHydrated && receivedInvitations.length > 0 ? (
         <section className="panel" style={{ marginBottom: 16 }}>
@@ -274,6 +280,8 @@ export default function ApplicationsPage() {
           {state.applications.length === 0 ? <div className="empty">No applications yet.</div> : null}
         </div>
       </section>
+      </>
+      )}
     </>
   );
 }

@@ -2,14 +2,14 @@
 
 import { ArrowRight, CheckCircle2, ClipboardList, Plus, Sparkles, WalletCards } from "lucide-react";
 import Link from "next/link";
-import { PageHeader, StatCard, WalletPill } from "@/components/app-shell";
+import { PageHeader, SkeletonPanel, StatCard, WalletPill } from "@/components/app-shell";
 import { ChainTxLink, JobRow } from "@/components/job-components";
 import { formatUsdcUnits } from "@/lib/money";
 import { recommendJobs } from "@/lib/recommendations";
 import { useWorkNet } from "@/lib/store";
 
 export default function DashboardPage() {
-  const { state, activeProfile, getProfile, getAgent } = useWorkNet();
+  const { state, activeProfile, getProfile, getAgent, isSyncing } = useWorkNet();
   const myJobs = state.jobs.filter(
     (job) => job.clientProfileId === activeProfile?.id || job.providerProfileId === activeProfile?.id,
   );
@@ -22,6 +22,7 @@ export default function DashboardPage() {
     .reduce((sum, job) => sum + job.budgetUsdcUnits, 0);
   const profileLabel = activeProfile?.displayName ?? "Guest";
   const recommendations = activeProfile ? recommendJobs(state.jobs, activeProfile, 5) : [];
+  const showSkeleton = isSyncing && state.jobs.length === 0;
 
   return (
     <>
@@ -40,6 +41,9 @@ export default function DashboardPage() {
         }
       />
 
+      {showSkeleton ? <SkeletonPanel lines={6} /> : null}
+      {showSkeleton ? null : (
+      <>
       <section className="stat-grid" style={{ marginBottom: 16 }}>
         <StatCard label="My jobs" value={String(myJobs.length)} />
         <StatCard label="Pending review" value={String(pendingReviews.length)} />
@@ -189,6 +193,8 @@ export default function DashboardPage() {
           </div>
         </aside>
       </section>
+      </>
+      )}
     </>
   );
 }

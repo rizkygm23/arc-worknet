@@ -3,7 +3,7 @@
 import { Filter, Search, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { EmptyState, PageHeader, StatCard } from "@/components/app-shell";
+import { EmptyState, PageHeader, SkeletonPanel, StatCard } from "@/components/app-shell";
 import { ProfileReputationBadges } from "@/components/job-components";
 import { availabilityLabel } from "@/lib/availability";
 import { formatUsdcUnits } from "@/lib/money";
@@ -17,7 +17,7 @@ const roles: RoleFilter[] = ["all", "worker", "agent_owner"];
 const availabilityOptions: Array<"all" | Availability> = ["all", "open", "limited", "unavailable"];
 
 export default function WorkersDirectoryPage() {
-  const { state } = useWorkNet();
+  const { state, isSyncing } = useWorkNet();
   const [query, setQuery] = useState("");
   const [role, setRole] = useState<RoleFilter>("all");
   const [skill, setSkill] = useState("all");
@@ -72,6 +72,8 @@ export default function WorkersDirectoryPage() {
     setAvailability("all");
   }
 
+  const showSkeleton = isSyncing && candidates.length === 0;
+
   return (
     <>
       <PageHeader
@@ -80,6 +82,9 @@ export default function WorkersDirectoryPage() {
         subtitle="Browse workers and agent operators by skill, availability, and on-chain reputation."
       />
 
+      {showSkeleton ? <SkeletonPanel lines={6} /> : null}
+      {showSkeleton ? null : (
+      <>
       <section className="stat-grid" style={{ marginBottom: 16 }}>
         <StatCard label="Workers" value={String(candidates.length)} />
         <StatCard
@@ -257,6 +262,8 @@ export default function WorkersDirectoryPage() {
           </ul>
         )}
       </section>
+      </>
+      )}
     </>
   );
 }

@@ -3,7 +3,7 @@
 import { Bookmark, BookmarkCheck, Filter, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { EmptyState, PageHeader, StatCard, WalletPill } from "@/components/app-shell";
+import { EmptyState, PageHeader, SkeletonPanel, StatCard, WalletPill } from "@/components/app-shell";
 import { JobRow } from "@/components/job-components";
 import { useSavedJobs } from "@/lib/saved-jobs";
 import { formatUsdcUnits } from "@/lib/money";
@@ -32,7 +32,7 @@ const budgetBuckets = [
 type BudgetBucketId = (typeof budgetBuckets)[number]["id"];
 
 export default function JobsPage() {
-  const { state, getProfile, getAgent } = useWorkNet();
+  const { state, getProfile, getAgent, isSyncing } = useWorkNet();
   const { savedIds, isSaved, toggleSaved, hydrated } = useSavedJobs();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | JobStatus>("all");
@@ -86,6 +86,8 @@ export default function JobsPage() {
     setShowSavedOnly(false);
   }
 
+  const showSkeleton = isSyncing && state.jobs.length === 0;
+
   return (
     <>
       <PageHeader
@@ -103,6 +105,9 @@ export default function JobsPage() {
         }
       />
 
+      {showSkeleton ? <SkeletonPanel lines={6} /> : null}
+      {showSkeleton ? null : (
+      <>
       <section className="stat-grid" style={{ marginBottom: 16 }}>
         <StatCard label="Live jobs" value={String(state.jobs.length)} />
         <StatCard label="Open budget" value={formatUsdcUnits(openBudget, { compact: true })} />
@@ -243,6 +248,8 @@ export default function JobsPage() {
           </div>
         )}
       </section>
+      </>
+      )}
     </>
   );
 }

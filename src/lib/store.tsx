@@ -160,6 +160,17 @@ function mergeState(current: WorkNetState, incoming: WorkNetState, walletAddress
     activeProfileId: activeStillExists
       ? current.activeProfileId
       : walletProfile?.id ?? incoming.activeProfileId,
+    // Preserve private-slice fields from prior fetch — public bootstrap doesn't
+    // include them. They get refreshed by /api/bootstrap/private.
+    applications: current.applications,
+    submissions: current.submissions,
+    reviews: current.reviews,
+    aiEvaluations: current.aiEvaluations,
+    notifications: current.notifications,
+    jobMessages: current.jobMessages,
+    jobInvitations: current.jobInvitations,
+    savedJobs: current.savedJobs,
+    applicationOverlays: current.applicationOverlays,
   };
 
   // Short-circuit if nothing meaningful changed. Cheap structural check using
@@ -168,6 +179,56 @@ function mergeState(current: WorkNetState, incoming: WorkNetState, walletAddress
     return current;
   }
 
+  return next;
+}
+
+type PrivateBootstrapResponse =
+  | { session: null }
+  | {
+      activeProfileId: string;
+      ownedAgents: Agent[];
+      privateJobs: Job[];
+      applications: JobApplication[];
+      submissions: JobSubmission[];
+      reviews: WorkNetState["reviews"];
+      aiEvaluations: AiEvaluation[];
+      privateTransactions: WorkNetState["transactions"];
+      profileTransactions: WorkNetState["transactions"];
+      notifications: WorkNetState["notifications"];
+      jobMessages: WorkNetState["jobMessages"];
+      jobInvitations: WorkNetState["jobInvitations"];
+      savedJobs: WorkNetState["savedJobs"];
+      applicationOverlays: WorkNetState["applicationOverlays"];
+    };
+
+function mergePrivate(
+  current: WorkNetState,
+  priv: Extract<PrivateBootstrapResponse, { activeProfileId: string }>,
+): WorkNetState {
+  const dedupeById = <T extends { id: string }>(...sets: T[][]) => {
+    const map = new Map<string, T>();
+    for (const set of sets) for (const item of set) map.set(item.id, item);
+    return Array.from(map.values());
+  };
+
+  const next: WorkNetState = {
+    ...current,
+    activeProfileId: priv.activeProfileId,
+    agents: dedupeById(current.agents, priv.ownedAgents),
+    jobs: dedupeById(current.jobs, priv.privateJobs),
+    applications: priv.applications,
+    submissions: priv.submissions,
+    reviews: priv.reviews,
+    aiEvaluations: priv.aiEvaluations,
+    transactions: dedupeById(current.transactions, priv.privateTransactions, priv.profileTransactions),
+    notifications: priv.notifications,
+    jobMessages: priv.jobMessages,
+    jobInvitations: priv.jobInvitations,
+    savedJobs: priv.savedJobs,
+    applicationOverlays: priv.applicationOverlays,
+  };
+
+  if (stableJson(current) === stableJson(next)) return current;
   return next;
 }
 
@@ -221,13 +282,27 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
   const refreshState = useCallback(async () => {
     setIsSyncing(true);
     try {
-      const { state: incoming } = await apiJson<{ state: WorkNetState }>("/api/bootstrap");
+      // Public data first — fast, unblocks UI immediately.
+      const { state: publicState } = await apiJson<{ state: WorkNetState }>("/api/bootstrap");
       setBackendError(undefined);
-      setState((current) => mergeState(current, incoming, wallet.address));
+      setState((current) => mergeState(current, publicState, wallet.address));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to load production data.";
       setBackendError(message);
       setState((current) => (current === emptyState && isDemoDataEnabled() ? seedState : current));
+      setIsSyncing(false);
+      return;
+    }
+
+    // Private slice — fetched lazily so the UI can render with public data
+    // immediately. Failures here don't block the dashboard from rendering.
+    try {
+      const priv = await apiJson<PrivateBootstrapResponse>("/api/bootstrap/private");
+      if (priv && "activeProfileId" in priv && priv.activeProfileId) {
+        setState((current) => mergePrivate(current, priv));
+      }
+    } catch {
+      // Private fetch is best-effort; public state already painted.
     } finally {
       setIsSyncing(false);
     }
