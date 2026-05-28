@@ -3,6 +3,7 @@ export const TABLES = {
   agents: "agents_arcworker",
   jobs: "jobs_arcworker",
   applications: "job_applications_arcworker",
+  applicationOverlay: "application_status_overlay_arcworker",
   submissions: "job_submissions_arcworker",
   reviews: "job_reviews_arcworker",
   aiEvaluations: "ai_evaluations_arcworker",
@@ -12,4 +13,7 @@ export const TABLES = {
   notifications: "notifications_arcworker",
   walletNonces: "wallet_nonces_arcworker",
   walletSessions: "wallet_sessions_arcworker",
+  jobMessages: "job_messages_arcworker",
+  jobInvitations: "job_invitations_arcworker",
+  savedJobs: "saved_jobs_arcworker",
 } as const;

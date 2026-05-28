@@ -70,7 +70,7 @@
   --text-lg: 20px;
   --text-xl: 24px;
   --text-2xl: 32px;
-  --text-display: clamp(2.25rem, 4vw + 1rem, 4.5rem);
+  --text-display: clamp(1.75rem, 2vw + 1rem, 2.5rem);
 
   /* Mono caption (uppercase tracked — brand signature) */
   --text-caption-mono: 14px;

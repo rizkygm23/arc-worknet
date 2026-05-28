@@ -33,7 +33,7 @@ import { ARC_USDC_GAS_BUFFER_UNITS, formatUsdcUnits } from "./money";
 import { seedState } from "./seed";
 import { hasSupabaseBrowserConfig } from "./env";
 import { getBrowserSupabase } from "./supabase/browser";
-import { getJobCreatedArcId, readArcUsdcBalance, waitForArcReceipt } from "./wallet";
+import { getJobCreatedArcId, ensureArcNetwork, readArcUsdcBalance, waitForArcReceipt } from "./wallet";
 import type {
   Agent,
   AiEvaluation,
@@ -367,7 +367,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     if (!primaryWallet) return;
     try {
       setWalletError(undefined);
-      await primaryWallet.switchChain(ARC_TESTNET_CHAIN_ID);
+      await ensureArcNetwork(primaryWallet);
       const balance = primaryWallet.address ? await refreshWalletBalance(primaryWallet.address) : undefined;
       setWallet((current) => ({
         ...current,
@@ -471,7 +471,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
 
         let chainId = Number(primaryWallet.chainId?.split(":").pop() ?? "0");
         if (chainId !== ARC_TESTNET_CHAIN_ID) {
-          await primaryWallet.switchChain(ARC_TESTNET_CHAIN_ID);
+          await ensureArcNetwork(primaryWallet);
           chainId = ARC_TESTNET_CHAIN_ID;
         }
         const balance = await refreshWalletBalance(address);
@@ -538,7 +538,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       if (!primaryWallet) throw new Error("Connect a wallet first.");
       const chainId = Number(primaryWallet.chainId?.split(":").pop() ?? "0");
       if (chainId !== ARC_TESTNET_CHAIN_ID) {
-        await primaryWallet.switchChain(ARC_TESTNET_CHAIN_ID);
+        await ensureArcNetwork(primaryWallet);
       }
       const provider = await primaryWallet.getEthereumProvider();
       const txBase = {

@@ -512,3 +512,134 @@ create policy "Service role can manage notifications"
   to service_role
   using (true)
   with check (true);
+
+-- =========================================================================
+-- Tables migrated from browser localStorage (cross-device persistence)
+-- =========================================================================
+
+create table if not exists public.job_messages_arcworker (
+  id uuid primary key default gen_random_uuid(),
+  job_id uuid not null references public.jobs_arcworker(id) on delete cascade,
+  author_profile_id uuid not null references public.profiles_arcworker(id) on delete cascade,
+  body text not null check (char_length(body) between 1 and 4000),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists job_messages_arcworker_job_idx
+  on public.job_messages_arcworker(job_id, created_at);
+create index if not exists job_messages_arcworker_author_idx
+  on public.job_messages_arcworker(author_profile_id, created_at desc);
+
+alter table public.job_messages_arcworker enable row level security;
+
+drop policy if exists "Job messages readable to anyone on the job" on public.job_messages_arcworker;
+create policy "Job messages readable to anyone on the job"
+  on public.job_messages_arcworker for select using (true);
+
+drop policy if exists "Service role can manage job messages" on public.job_messages_arcworker;
+create policy "Service role can manage job messages"
+  on public.job_messages_arcworker for all
+  to service_role using (true) with check (true);
+
+revoke all on public.job_messages_arcworker from anon;
+grant select on public.job_messages_arcworker to authenticated;
+
+do $$ begin
+  create type public.invitation_status as enum ('pending', 'accepted', 'declined', 'cancelled');
+exception when duplicate_object then null;
+end $$;
+
+create table if not exists public.job_invitations_arcworker (
+  id uuid primary key default gen_random_uuid(),
+  job_id uuid not null references public.jobs_arcworker(id) on delete cascade,
+  from_client_profile_id uuid not null references public.profiles_arcworker(id) on delete cascade,
+  to_worker_profile_id uuid not null references public.profiles_arcworker(id) on delete cascade,
+  message text not null check (char_length(message) between 1 and 2000),
+  status public.invitation_status not null default 'pending',
+  created_at timestamptz not null default now(),
+  responded_at timestamptz,
+  check (from_client_profile_id <> to_worker_profile_id)
+);
+
+create unique index if not exists job_invitations_arcworker_pending_unique_idx
+  on public.job_invitations_arcworker(job_id, to_worker_profile_id)
+  where status = 'pending';
+create index if not exists job_invitations_arcworker_to_worker_idx
+  on public.job_invitations_arcworker(to_worker_profile_id, status, created_at desc);
+create index if not exists job_invitations_arcworker_from_client_idx
+  on public.job_invitations_arcworker(from_client_profile_id, created_at desc);
+
+alter table public.job_invitations_arcworker enable row level security;
+
+drop policy if exists "Invitations readable" on public.job_invitations_arcworker;
+create policy "Invitations readable"
+  on public.job_invitations_arcworker for select using (true);
+
+drop policy if exists "Service role can manage invitations" on public.job_invitations_arcworker;
+create policy "Service role can manage invitations"
+  on public.job_invitations_arcworker for all
+  to service_role using (true) with check (true);
+
+revoke all on public.job_invitations_arcworker from anon;
+grant select on public.job_invitations_arcworker to authenticated;
+
+create table if not exists public.saved_jobs_arcworker (
+  profile_id uuid not null references public.profiles_arcworker(id) on delete cascade,
+  job_id uuid not null references public.jobs_arcworker(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (profile_id, job_id)
+);
+
+create index if not exists saved_jobs_arcworker_profile_idx
+  on public.saved_jobs_arcworker(profile_id, created_at desc);
+
+alter table public.saved_jobs_arcworker enable row level security;
+
+drop policy if exists "Service role can manage saved jobs" on public.saved_jobs_arcworker;
+create policy "Service role can manage saved jobs"
+  on public.saved_jobs_arcworker for all
+  to service_role using (true) with check (true);
+
+revoke all on public.saved_jobs_arcworker from anon, authenticated;
+
+create table if not exists public.application_status_overlay_arcworker (
+  application_id uuid primary key references public.job_applications_arcworker(id) on delete cascade,
+  status public.application_status not null
+    check (status in ('withdrawn', 'rejected')),
+  reason text check (reason is null or char_length(reason) <= 2000),
+  actor_profile_id uuid references public.profiles_arcworker(id) on delete set null,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists application_status_overlay_arcworker_actor_idx
+  on public.application_status_overlay_arcworker(actor_profile_id, updated_at desc);
+
+alter table public.application_status_overlay_arcworker enable row level security;
+
+drop policy if exists "Overlay rows readable" on public.application_status_overlay_arcworker;
+create policy "Overlay rows readable"
+  on public.application_status_overlay_arcworker for select using (true);
+
+drop policy if exists "Service role can manage overlay" on public.application_status_overlay_arcworker;
+create policy "Service role can manage overlay"
+  on public.application_status_overlay_arcworker for all
+  to service_role using (true) with check (true);
+
+revoke all on public.application_status_overlay_arcworker from anon;
+grant select on public.application_status_overlay_arcworker to authenticated;
+
+create or replace function public.touch_updated_at_arcworker()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_application_overlay_touch
+  on public.application_status_overlay_arcworker;
+create trigger trg_application_overlay_touch
+  before update on public.application_status_overlay_arcworker
+  for each row execute function public.touch_updated_at_arcworker();

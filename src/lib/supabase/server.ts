@@ -338,6 +338,70 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["wallet_sessions_arcworker"]["Row"]>;
         Relationships: [];
       };
+      job_messages_arcworker: {
+        Row: {
+          id: string;
+          job_id: string;
+          author_profile_id: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["job_messages_arcworker"]["Row"]> & {
+          job_id: string;
+          author_profile_id: string;
+          body: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["job_messages_arcworker"]["Row"]>;
+        Relationships: [];
+      };
+      job_invitations_arcworker: {
+        Row: {
+          id: string;
+          job_id: string;
+          from_client_profile_id: string;
+          to_worker_profile_id: string;
+          message: string;
+          status: "pending" | "accepted" | "declined" | "cancelled";
+          created_at: string;
+          responded_at: string | null;
+        };
+        Insert: Partial<Database["public"]["Tables"]["job_invitations_arcworker"]["Row"]> & {
+          job_id: string;
+          from_client_profile_id: string;
+          to_worker_profile_id: string;
+          message: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["job_invitations_arcworker"]["Row"]>;
+        Relationships: [];
+      };
+      saved_jobs_arcworker: {
+        Row: {
+          profile_id: string;
+          job_id: string;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["saved_jobs_arcworker"]["Row"]> & {
+          profile_id: string;
+          job_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["saved_jobs_arcworker"]["Row"]>;
+        Relationships: [];
+      };
+      application_status_overlay_arcworker: {
+        Row: {
+          application_id: string;
+          status: "withdrawn" | "rejected";
+          reason: string | null;
+          actor_profile_id: string | null;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["application_status_overlay_arcworker"]["Row"]> & {
+          application_id: string;
+          status: "withdrawn" | "rejected";
+        };
+        Update: Partial<Database["public"]["Tables"]["application_status_overlay_arcworker"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
