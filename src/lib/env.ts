@@ -38,8 +38,6 @@ const envSchema = z.object({
   AI_PROVIDER_API_KEY: optionalSecret,
   ADMIN_API_SECRET: optionalSecret,
   DATA_ENCRYPTION_KEY: z.string().min(32).optional().or(z.literal("")),
-  REDIS_REST_URL: optionalUrl,
-  REDIS_REST_TOKEN: optionalSecret,
   PLATFORM_FEE_BPS: z.coerce.number().int().min(0).max(10000).default(100),
   PLATFORM_FEE_RECIPIENT_ADDRESS: optionalAddress,
   NEXT_PUBLIC_ENABLE_DEMO_DATA: z
