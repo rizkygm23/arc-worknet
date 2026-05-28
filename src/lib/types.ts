@@ -211,6 +211,41 @@ export type Notification = {
   createdAt: string;
 };
 
+export type JobMessage = {
+  id: string;
+  jobId: string;
+  authorProfileId: string;
+  body: string;
+  createdAt: string;
+};
+
+export type InvitationStatus = "pending" | "accepted" | "declined" | "cancelled";
+
+export type JobInvitation = {
+  id: string;
+  jobId: string;
+  fromClientProfileId: string;
+  toWorkerProfileId: string;
+  message: string;
+  status: InvitationStatus;
+  createdAt: string;
+  respondedAt?: string;
+};
+
+export type SavedJob = {
+  profileId: string;
+  jobId: string;
+  createdAt: string;
+};
+
+export type ApplicationOverlayEntry = {
+  applicationId: string;
+  status: Extract<ApplicationStatus, "withdrawn" | "rejected">;
+  reason?: string;
+  actorProfileId?: string;
+  updatedAt: string;
+};
+
 export type WorkNetState = {
   activeProfileId: string;
   profiles: Profile[];
@@ -223,6 +258,10 @@ export type WorkNetState = {
   transactions: OnchainTransaction[];
   events: OnchainEvent[];
   notifications: Notification[];
+  jobMessages: JobMessage[];
+  jobInvitations: JobInvitation[];
+  savedJobs: SavedJob[];
+  applicationOverlays: ApplicationOverlayEntry[];
 };
 
 export type WalletState = {

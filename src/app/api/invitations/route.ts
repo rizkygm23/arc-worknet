@@ -3,7 +3,7 @@ import { getServiceClientOrResponse } from "@/lib/api";
 import { requireWalletSession } from "@/lib/server/wallet-session";
 import { TABLES } from "@/lib/supabase/tables";
 
-export async function GET(_request: Request) {
+export async function GET() {
   const { supabase, response } = getServiceClientOrResponse();
   if (response) return response;
   const { session, response: authResponse } = await requireWalletSession(supabase);

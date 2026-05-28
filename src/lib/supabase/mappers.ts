@@ -1,8 +1,11 @@
 import type {
   Agent,
   AiEvaluation,
+  ApplicationOverlayEntry,
   Job,
   JobApplication,
+  JobInvitation,
+  JobMessage,
   JobReview,
   JobSubmission,
   Notification,
@@ -10,6 +13,7 @@ import type {
   OnchainTransaction,
   PortfolioItem,
   Profile,
+  SavedJob,
   WorkNetState,
 } from "@/lib/types";
 import { decryptJson, decryptText } from "@/lib/server/encryption";
@@ -28,6 +32,10 @@ export type BootstrapRows = {
   transactions: Tables["onchain_transactions_arcworker"]["Row"][];
   events: Tables["onchain_events_arcworker"]["Row"][];
   notifications: Tables["notifications_arcworker"]["Row"][];
+  jobMessages: Tables["job_messages_arcworker"]["Row"][];
+  jobInvitations: Tables["job_invitations_arcworker"]["Row"][];
+  savedJobs: Tables["saved_jobs_arcworker"]["Row"][];
+  applicationOverlays: Tables["application_status_overlay_arcworker"]["Row"][];
 };
 
 function nullable<T>(value: T | null | undefined): T | undefined {
@@ -258,6 +266,49 @@ export function mapNotification(row: Tables["notifications_arcworker"]["Row"]): 
   };
 }
 
+export function mapJobMessage(row: Tables["job_messages_arcworker"]["Row"]): JobMessage {
+  return {
+    id: row.id,
+    jobId: row.job_id,
+    authorProfileId: row.author_profile_id,
+    body: row.body,
+    createdAt: row.created_at,
+  };
+}
+
+export function mapJobInvitation(row: Tables["job_invitations_arcworker"]["Row"]): JobInvitation {
+  return {
+    id: row.id,
+    jobId: row.job_id,
+    fromClientProfileId: row.from_client_profile_id,
+    toWorkerProfileId: row.to_worker_profile_id,
+    message: row.message,
+    status: row.status,
+    createdAt: row.created_at,
+    respondedAt: nullable(row.responded_at),
+  };
+}
+
+export function mapSavedJob(row: Tables["saved_jobs_arcworker"]["Row"]): SavedJob {
+  return {
+    profileId: row.profile_id,
+    jobId: row.job_id,
+    createdAt: row.created_at,
+  };
+}
+
+export function mapApplicationOverlay(
+  row: Tables["application_status_overlay_arcworker"]["Row"],
+): ApplicationOverlayEntry {
+  return {
+    applicationId: row.application_id,
+    status: row.status,
+    reason: nullable(row.reason),
+    actorProfileId: nullable(row.actor_profile_id),
+    updatedAt: row.updated_at,
+  };
+}
+
 export function toWorkNetState(rows: BootstrapRows, activeProfileId = ""): WorkNetState {
   return {
     activeProfileId,
@@ -271,5 +322,9 @@ export function toWorkNetState(rows: BootstrapRows, activeProfileId = ""): WorkN
     transactions: rows.transactions.map(mapTransaction),
     events: rows.events.map(mapEvent),
     notifications: rows.notifications.map(mapNotification),
+    jobMessages: rows.jobMessages.map(mapJobMessage),
+    jobInvitations: rows.jobInvitations.map(mapJobInvitation),
+    savedJobs: rows.savedJobs.map(mapSavedJob),
+    applicationOverlays: rows.applicationOverlays.map(mapApplicationOverlay),
   };
 }

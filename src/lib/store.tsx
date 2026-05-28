@@ -126,7 +126,7 @@ type ApiErrorBody = {
   };
 };
 
-async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
+export async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     credentials: "include",
     ...init,
@@ -183,15 +183,10 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
   const [backendError, setBackendError] = useState<string | undefined>();
   const [isSyncing, setIsSyncing] = useState(true);
   const [isWalletPending, setIsWalletPending] = useState(false);
-  const [pendingVerify, setPendingVerify] = useState(false);
   const verifiedAddressRef = useRef<string | undefined>(undefined);
 
   const { ready, authenticated, user } = usePrivy();
-  const { login } = useLogin({
-    onComplete: () => {
-      setPendingVerify(true);
-    },
-  });
+  const { login } = useLogin();
   const { logout } = useLogout();
   const { wallets } = useWallets();
   const { createWallet } = useCreateWallet();
@@ -417,10 +412,10 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     stateProfilesRef.current = state.profiles;
   }, [state.profiles]);
-  const pendingVerifyRef = useRef(pendingVerify);
+  const stateActiveProfileIdRef = useRef(state.activeProfileId);
   useEffect(() => {
-    pendingVerifyRef.current = pendingVerify;
-  }, [pendingVerify]);
+    stateActiveProfileIdRef.current = state.activeProfileId;
+  }, [state.activeProfileId]);
   const signInFlightRef = useRef(false);
 
   // Bind Privy wallet → backend SIWE session.
@@ -444,13 +439,17 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
 
         const address = primaryWallet.address;
+        const lowerAddress = address.toLowerCase();
         const existingProfile = stateProfilesRef.current.find(
-          (p) => p.walletAddress.toLowerCase() === address.toLowerCase(),
+          (p) => p.walletAddress.toLowerCase() === lowerAddress,
         );
 
-        // If SIWE cookie is still alive (bootstrap returned matching profile)
-        // AND the user didn't just click Connect, restore state without prompting.
-        if (existingProfile && !pendingVerifyRef.current) {
+        // If SIWE cookie is still alive, bootstrap returns the matching profile
+        // AND sets activeProfileId to that profile via the server-side session.
+        // Trust that: skip re-signing on refresh.
+        const cookieAuthed =
+          existingProfile && stateActiveProfileIdRef.current === existingProfile.id;
+        if (cookieAuthed) {
           verifiedAddressRef.current = address;
           const chainId = Number(primaryWallet.chainId?.split(":").pop() ?? ARC_TESTNET_CHAIN_ID);
           const balance = await refreshWalletBalance(address);
@@ -462,7 +461,6 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
             usdcBalanceUnits: balance,
             balanceUpdatedAt: new Date().toISOString(),
           });
-          setState((current) => ({ ...current, activeProfileId: existingProfile.id }));
           return;
         }
 
@@ -498,7 +496,6 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       } finally {
         if (!cancelled) {
           setIsWalletPending(false);
-          setPendingVerify(false);
         }
         signInFlightRef.current = false;
       }
@@ -518,6 +515,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       if (authenticated) {
         verifiedAddressRef.current = undefined;
         setWallet({ isConnected: false });
+        await apiJson("/api/wallet/logout", { method: "POST" }).catch(() => undefined);
         await logout();
       }
       login();
@@ -530,6 +528,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     verifiedAddressRef.current = undefined;
     setWallet({ isConnected: false });
     setWalletError(undefined);
+    await apiJson("/api/wallet/logout", { method: "POST" }).catch(() => undefined);
     await logout();
   }, [logout]);
 

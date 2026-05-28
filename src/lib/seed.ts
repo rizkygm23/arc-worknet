@@ -327,4 +327,8 @@ export const seedState: WorkNetState = {
       createdAt: "2026-05-24T02:22:00.000Z",
     },
   ],
+  jobMessages: [],
+  jobInvitations: [],
+  savedJobs: [],
+  applicationOverlays: [],
 };

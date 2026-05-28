@@ -5,7 +5,7 @@ import type { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { TABLES } from "@/lib/supabase/tables";
 
 export const WALLET_SESSION_COOKIE = "arc_worknet_wallet_session";
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 

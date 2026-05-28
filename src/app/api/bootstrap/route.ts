@@ -106,6 +106,10 @@ export async function GET() {
         reviews: [],
         aiEvaluations: [],
         notifications: [],
+        jobMessages: [],
+        jobInvitations: [],
+        savedJobs: [],
+        applicationOverlays: [],
       };
       return NextResponse.json({ state: toWorkNetState(rows) });
     }
@@ -175,8 +179,24 @@ export async function GET() {
       ),
     ]);
 
-    const [submissions, reviews, aiEvaluations, privateTransactions, profileTransactions, notifications] =
-      await Promise.all([
+    const userApplicationIds = mergeUnique(
+      clientApplications,
+      profileApplications,
+      agentApplications,
+    ).map((app) => app.id);
+
+    const [
+      submissions,
+      reviews,
+      aiEvaluations,
+      privateTransactions,
+      profileTransactions,
+      notifications,
+      jobMessages,
+      jobInvitations,
+      savedJobs,
+      applicationOverlays,
+    ] = await Promise.all([
         selectWhereIn(
           supabase
             .from(TABLES.submissions)
@@ -225,6 +245,37 @@ export async function GET() {
             .eq("profile_id", session.profileId)
             .order("created_at", { ascending: false }),
         ),
+        selectWhereIn(
+          supabase
+            .from(TABLES.jobMessages)
+            .select("*")
+            .order("created_at", { ascending: true }),
+          "job_id",
+          privateJobIds,
+        ),
+        selectTable(
+          supabase
+            .from(TABLES.jobInvitations)
+            .select("*")
+            .or(
+              `to_worker_profile_id.eq.${session.profileId},from_client_profile_id.eq.${session.profileId}`,
+            )
+            .order("created_at", { ascending: false }),
+        ),
+        selectTable(
+          supabase
+            .from(TABLES.savedJobs)
+            .select("*")
+            .eq("profile_id", session.profileId)
+            .order("created_at", { ascending: false }),
+        ),
+        selectWhereIn(
+          supabase
+            .from(TABLES.applicationOverlay)
+            .select("*"),
+          "application_id",
+          userApplicationIds,
+        ),
       ]);
 
     const rows: BootstrapRows = {
@@ -238,6 +289,10 @@ export async function GET() {
       transactions: mergeUnique(publicRows.transactions, privateTransactions, profileTransactions),
       events: publicRows.events,
       notifications,
+      jobMessages,
+      jobInvitations,
+      savedJobs,
+      applicationOverlays,
     };
 
     return NextResponse.json({ state: toWorkNetState(rows, session?.profileId) });
