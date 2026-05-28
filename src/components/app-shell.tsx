@@ -11,6 +11,8 @@ import { ARC_TESTNET_CHAIN_ID } from "@/lib/arc";
 import { formatWalletAddress } from "@/lib/wallet";
 import { useReadNotifications } from "@/lib/notifications-read";
 import { needsOnboarding, readOnboardingDismissed } from "@/lib/onboarding";
+import { readTourDone } from "@/lib/tour";
+import { TourOverlay } from "@/components/tour";
 
 const ARC_EXPLORER_URL = process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app";
 
@@ -237,7 +239,7 @@ function NotificationsBell() {
   if (!activeProfile) return null;
 
   return (
-    <div className="notifications" ref={rootRef}>
+    <div className="notifications" ref={rootRef} data-tour="notifications">
       <button
         type="button"
         className="notifications-button"
@@ -331,7 +333,7 @@ function Sidebar() {
         <NotificationsBell />
       </div>
 
-      <nav className="nav" aria-label="Main navigation">
+      <nav className="nav" aria-label="Main navigation" data-tour="nav">
         {navItems.map((item) => {
           const active =
             pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
@@ -343,7 +345,7 @@ function Sidebar() {
         })}
       </nav>
 
-      <div className="sidebar-footer">
+      <div className="sidebar-footer" data-tour="wallet">
         <WalletPanel />
       </div>
     </aside>
@@ -470,6 +472,24 @@ function OnboardingGuard() {
   return null;
 }
 
+function TourGate() {
+  const { activeProfile } = useWorkNet();
+  const pathname = usePathname();
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    if (!activeProfile) return;
+    if (pathname === "/onboarding") return;
+    if (readTourDone()) return;
+    // Wait one frame so target elements have laid out.
+    const id = window.requestAnimationFrame(() => setShow(true));
+    return () => window.cancelAnimationFrame(id);
+  }, [activeProfile, pathname]);
+
+  if (!show) return null;
+  return <TourOverlay onClose={() => setShow(false)} />;
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-shell">
@@ -478,6 +498,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <MobileNav />
       <main className="content">{children}</main>
       <ErrorToast />
+      <TourGate />
     </div>
   );
 }
