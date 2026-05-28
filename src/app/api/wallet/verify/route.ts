@@ -66,26 +66,42 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Wallet signature verification failed." }, { status: 401 });
   }
 
-  const displayName = `Wallet ${input.address.slice(0, 6)}`;
-  const handle = `wallet-${input.address.slice(2, 8).toLowerCase()}`;
-  const { data: profile, error: profileError } = await supabase
+  const { data: existingProfile, error: existingError } = await supabase
     .from(TABLES.profiles)
-    .upsert(
-      {
+    .select("*")
+    .eq("wallet_address", address)
+    .maybeSingle();
+
+  if (existingError) return NextResponse.json({ error: existingError.message }, { status: 500 });
+
+  let profile = existingProfile;
+
+  if (!profile) {
+    const displayName = `Wallet ${input.address.slice(0, 6)}`;
+    const handle = `wallet-${input.address.slice(2, 8).toLowerCase()}`;
+    const { data: created, error: createError } = await supabase
+      .from(TABLES.profiles)
+      .insert({
         display_name: displayName,
         handle,
         wallet_address: address,
         timezone: input.timezone,
         bio: "Wallet-connected Arc WorkNet profile.",
         role: "client",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "wallet_address" },
-    )
-    .select("*")
-    .single();
-
-  if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
+      })
+      .select("*")
+      .single();
+    if (createError) return NextResponse.json({ error: createError.message }, { status: 500 });
+    profile = created;
+  } else if (input.timezone && existingProfile && existingProfile.timezone !== input.timezone) {
+    const { data: touched } = await supabase
+      .from(TABLES.profiles)
+      .update({ timezone: input.timezone, updated_at: new Date().toISOString() })
+      .eq("id", existingProfile.id)
+      .select("*")
+      .single();
+    if (touched) profile = touched;
+  }
 
   await supabase
     .from(TABLES.walletNonces)
