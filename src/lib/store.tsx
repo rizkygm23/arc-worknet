@@ -31,6 +31,8 @@ import { isDemoDataEnabled } from "./env";
 import { sha256Hex, stableJson } from "./hash";
 import { ARC_USDC_GAS_BUFFER_UNITS, formatUsdcUnits } from "./money";
 import { seedState } from "./seed";
+import { hasSupabaseBrowserConfig } from "./env";
+import { getBrowserSupabase } from "./supabase/browser";
 import { getJobCreatedArcId, readArcUsdcBalance, waitForArcReceipt } from "./wallet";
 import type {
   Agent,
@@ -56,21 +58,47 @@ type CreateJobInput = {
   actorType: "human" | "agent";
 };
 
-type StoreContextValue = {
+type DataContextValue = {
   state: WorkNetState;
   activeProfile?: Profile;
-  wallet: WalletState;
-  walletError?: string;
   backendError?: string;
   isSyncing: boolean;
-  isWalletPending: boolean;
   refreshState: () => Promise<void>;
-  connectWallet: () => Promise<void>;
-  disconnectWallet: () => Promise<void>;
-  switchWalletToArc: () => Promise<void>;
   setActiveProfile: (profileId: string) => void;
   resetDemo: () => void;
   loadDemoData: () => void;
+  getProfile: (profileId?: string) => Profile | undefined;
+  getAgent: (agentId?: string) => Agent | undefined;
+  getJob: (jobId: string) => Job | undefined;
+  getJobApplications: (jobId: string) => JobApplication[];
+  getJobSubmissions: (jobId: string) => JobSubmission[];
+  getJobEvaluation: (submissionId?: string) => AiEvaluation | undefined;
+};
+
+type WalletContextValue = {
+  wallet: WalletState;
+  walletError?: string;
+  isWalletPending: boolean;
+  connectWallet: () => Promise<void>;
+  disconnectWallet: () => Promise<void>;
+  switchWalletToArc: () => Promise<void>;
+};
+
+type UpdateProfileInput = Partial<{
+  displayName: string;
+  handle: string;
+  role: "client" | "worker" | "agent_owner";
+  bio: string;
+  avatarUrl: string;
+  countryCode: string;
+  timezone: string;
+  skills: string[];
+  hourlyRateUsdcUnits: number | null;
+  availability: "open" | "limited" | "unavailable" | null;
+  portfolio: Array<{ id: string; title: string; url?: string; description?: string }>;
+}>;
+
+type ActionsContextValue = {
   createJob: (input: CreateJobInput) => Promise<string>;
   applyToJob: (jobId: string, pitch: string, agentId?: string) => Promise<void>;
   acceptApplication: (applicationId: string) => Promise<void>;
@@ -82,15 +110,14 @@ type StoreContextValue = {
   rejectSubmission: (jobId: string, submissionId: string, reason: string) => Promise<void>;
   completeJob: (jobId: string, submissionId: string, input: { rating: number; reviewText: string }) => Promise<void>;
   registerAgent: (input: { name: string; description: string; capabilities: string[]; walletAddress: string }) => Promise<void>;
-  getProfile: (profileId?: string) => Profile | undefined;
-  getAgent: (agentId?: string) => Agent | undefined;
-  getJob: (jobId: string) => Job | undefined;
-  getJobApplications: (jobId: string) => JobApplication[];
-  getJobSubmissions: (jobId: string) => JobSubmission[];
-  getJobEvaluation: (submissionId?: string) => AiEvaluation | undefined;
+  updateProfile: (input: UpdateProfileInput) => Promise<void>;
 };
 
-const StoreContext = createContext<StoreContextValue | undefined>(undefined);
+type StoreContextValue = DataContextValue & WalletContextValue & ActionsContextValue;
+
+const DataContext = createContext<DataContextValue | undefined>(undefined);
+const WalletContext = createContext<WalletContextValue | undefined>(undefined);
+const ActionsContext = createContext<ActionsContextValue | undefined>(undefined);
 
 type ApiErrorBody = {
   error?: string;
@@ -128,12 +155,20 @@ function mergeState(current: WorkNetState, incoming: WorkNetState, walletAddress
     ? incoming.profiles.find((profile) => profile.walletAddress.toLowerCase() === walletAddress.toLowerCase())
     : undefined;
 
-  return {
+  const next: WorkNetState = {
     ...incoming,
     activeProfileId: activeStillExists
       ? current.activeProfileId
       : walletProfile?.id ?? incoming.activeProfileId,
   };
+
+  // Short-circuit if nothing meaningful changed. Cheap structural check using
+  // stableJson keeps React from re-rendering 21 consumers on every bootstrap.
+  if (stableJson(current) === stableJson(next)) {
+    return current;
+  }
+
+  return next;
 }
 
 async function refreshWalletBalance(address: string) {
@@ -216,13 +251,63 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     isSyncingRef.current = isSyncing;
   }, [isSyncing]);
 
+  // Live refs for state/wallet/activeProfile so action callbacks can have
+  // empty deps and stable identity. Without these, every refresh would
+  // invalidate every action and re-render every consumer.
+  const stateRef = useRef(state);
   useEffect(() => {
-    const id = setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+    stateRef.current = state;
+  }, [state]);
+  const walletRef = useRef(wallet);
+  useEffect(() => {
+    walletRef.current = wallet;
+  }, [wallet]);
+
+  // Subscribe to Supabase Realtime so the client refreshes the moment a server
+  // mutation calls invalidateBootstrapCache(). Beats blind 3s polling by a
+  // wide margin (no traffic when idle, sub-second latency when active).
+  // Safety fallback: 60s refresh when tab is visible, in case the realtime
+  // socket drops or Supabase isn't configured.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let unsub: (() => void) | undefined;
+
+    if (hasSupabaseBrowserConfig()) {
+      const supabase = getBrowserSupabase();
+      if (supabase) {
+        const channel = supabase
+          .channel("arcworknet:bootstrap")
+          .on("broadcast", { event: "bump" }, () => {
+            if (document.visibilityState === "hidden") return;
+            if (isSyncingRef.current) return;
+            void refreshStateRef.current();
+          })
+          .subscribe();
+        unsub = () => {
+          void supabase.removeChannel(channel);
+        };
+      }
+    }
+
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
       if (isSyncingRef.current) return;
       void refreshStateRef.current();
-    }, 3000);
-    return () => clearInterval(id);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    const fallback = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      if (isSyncingRef.current) return;
+      void refreshStateRef.current();
+    }, 60_000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(fallback);
+      unsub?.();
+    };
   }, []);
 
   const getProfile = useCallback(
@@ -258,14 +343,19 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     [getProfile, state.activeProfileId],
   );
 
+  const activeProfileRef = useRef(activeProfile);
+  useEffect(() => {
+    activeProfileRef.current = activeProfile;
+  }, [activeProfile]);
+
   const setActiveProfile = useCallback((profileId: string) => {
     setState((current) => ({ ...current, activeProfileId: profileId }));
   }, []);
 
   const resetDemo = useCallback(() => {
     setState(emptyState);
-    void refreshState();
-  }, [refreshState]);
+    void refreshStateRef.current();
+  }, []);
 
   const loadDemoData = useCallback(() => {
     if (!isDemoDataEnabled()) return;
@@ -321,8 +411,8 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
   );
 
   // Refs for values read inside SIWE effect — keeps the effect's dep array
-  // small so 3s polling (which changes state.profiles + isSyncing) doesn't
-  // re-fire the effect and trigger a duplicate sign prompt.
+  // small so background refreshes (which change state.profiles + isSyncing)
+  // don't re-fire the effect and trigger a duplicate sign prompt.
   const stateProfilesRef = useRef(state.profiles);
   useEffect(() => {
     stateProfilesRef.current = state.profiles;
@@ -480,199 +570,195 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     [primaryWallet],
   );
 
-  const createJob = useCallback(
-    async (input: CreateJobInput) => {
-      if (!activeProfile) throw new Error("Connect a wallet before creating a job.");
-      const normalizedInput = {
-        ...input,
-        title: input.title.trim(),
-        brief: input.brief.trim(),
-        acceptanceCriteria: input.acceptanceCriteria.trim(),
-        deliverableFormat: input.deliverableFormat.trim(),
-        category: input.category.trim(),
-      };
+  const createJob = useCallback(async (input: CreateJobInput) => {
+    const profile = activeProfileRef.current;
+    if (!profile) throw new Error("Connect a wallet before creating a job.");
+    const normalizedInput = {
+      ...input,
+      title: input.title.trim(),
+      brief: input.brief.trim(),
+      acceptanceCriteria: input.acceptanceCriteria.trim(),
+      deliverableFormat: input.deliverableFormat.trim(),
+      category: input.category.trim(),
+    };
 
-      const descriptionHash = await sha256Hex(
-        stableJson({
-          title: normalizedInput.title,
-          brief: normalizedInput.brief,
-          acceptanceCriteria: normalizedInput.acceptanceCriteria,
-          deliverableFormat: normalizedInput.deliverableFormat,
-        }),
-      );
-      const { job } = await apiJson<{ job: { id: string } }>("/api/jobs", {
-        method: "POST",
-        body: JSON.stringify({
-          ...normalizedInput,
-          clientProfileId: activeProfile.id,
-          descriptionHash,
-        }),
-      });
-      await refreshState();
-      return job.id;
-    },
-    [activeProfile, refreshState],
-  );
+    const descriptionHash = await sha256Hex(
+      stableJson({
+        title: normalizedInput.title,
+        brief: normalizedInput.brief,
+        acceptanceCriteria: normalizedInput.acceptanceCriteria,
+        deliverableFormat: normalizedInput.deliverableFormat,
+      }),
+    );
+    const { job } = await apiJson<{ job: { id: string } }>("/api/jobs", {
+      method: "POST",
+      body: JSON.stringify({
+        ...normalizedInput,
+        clientProfileId: profile.id,
+        descriptionHash,
+      }),
+    });
+    await refreshStateRef.current();
+    return job.id;
+  }, []);
 
   const applyToJob = useCallback(
     async (jobId: string, pitch: string, agentId?: string) => {
-      if (!activeProfile) throw new Error("Connect a wallet before applying to jobs.");
+      const profile = activeProfileRef.current;
+      if (!profile) throw new Error("Connect a wallet before applying to jobs.");
       const body = agentId
         ? { actorType: "agent" as const, applicantAgentId: agentId, pitch }
-        : { actorType: "human" as const, applicantProfileId: activeProfile.id, pitch };
+        : { actorType: "human" as const, applicantProfileId: profile.id, pitch };
       await apiJson(`/api/jobs/${jobId}/apply`, {
         method: "POST",
         body: JSON.stringify(body),
       });
-      await refreshState();
+      await refreshStateRef.current();
     },
-    [activeProfile, refreshState],
+    [],
   );
 
-  const acceptApplication = useCallback(
-    async (applicationId: string) => {
-      const application = state.applications.find((item) => item.id === applicationId);
-      if (!application) return;
-      await apiJson(`/api/jobs/${application.jobId}/accept-application`, {
-        method: "POST",
-        body: JSON.stringify({ applicationId }),
-      });
-      await refreshState();
-    },
-    [refreshState, state.applications],
-  );
+  const acceptApplication = useCallback(async (applicationId: string) => {
+    const application = stateRef.current.applications.find((item) => item.id === applicationId);
+    if (!application) return;
+    await apiJson(`/api/jobs/${application.jobId}/accept-application`, {
+      method: "POST",
+      body: JSON.stringify({ applicationId }),
+    });
+    await refreshStateRef.current();
+  }, []);
 
-  const createOnchainJob = useCallback(
-    async (jobId: string) => {
-      if (!wallet.address) throw new Error("Connect a wallet before starting the job.");
-      const job = state.jobs.find((item) => item.id === jobId);
-      if (!job) return;
-      if (!job.providerAddress) throw new Error("Accept a provider before starting the job.");
+  const sendArcTransactionRef = useRef(sendArcTransaction);
+  useEffect(() => {
+    sendArcTransactionRef.current = sendArcTransaction;
+  }, [sendArcTransaction]);
 
-      // ERC8183 rejects bytes32(0) for specHash. Compute on-the-fly if backend
-      // didn't store one (e.g. legacy job rows from before descriptionHash was wired).
-      let specHash = job.descriptionHash;
-      if (!specHash || !/^0x[0-9a-fA-F]{64}$/.test(specHash)) {
-        specHash = await sha256Hex(
-          stableJson({
-            title: job.title,
-            brief: job.brief,
-            acceptanceCriteria: job.acceptanceCriteria,
-            deliverableFormat: job.deliverableFormat,
-          }),
-        );
-      }
+  const createOnchainJob = useCallback(async (jobId: string) => {
+    const walletNow = walletRef.current;
+    if (!walletNow.address) throw new Error("Connect a wallet before starting the job.");
+    const job = stateRef.current.jobs.find((item) => item.id === jobId);
+    if (!job) return;
+    if (!job.providerAddress) throw new Error("Accept a provider before starting the job.");
 
-      // ERC-8183 reverts with InvalidDeadline() if expiredAt is in the past or
-      // too close to now. Enforce at least 1 hour buffer; default 30 days when missing.
-      const nowSeconds = Math.floor(Date.now() / 1000);
-      const minDeadline = nowSeconds + 60 * 60; // 1h buffer
-      const requestedDeadline = job.deadlineAt
-        ? Math.floor(new Date(job.deadlineAt).getTime() / 1000)
-        : nowSeconds + 30 * 24 * 60 * 60;
-      const deadlineSeconds = Math.max(requestedDeadline, minDeadline);
-
-      const data = encodeFunctionData({
-        abi: erc8183Abi,
-        functionName: "createJob",
-        args: [
-          job.providerAddress as Address,
-          (job.evaluatorAddress ?? wallet.address) as Address,
-          BigInt(deadlineSeconds),
-          specHash as Hex,
-          (job.hookAddress ?? ZERO_ADDRESS) as Address,
-        ],
-      });
-      const txHash = await sendArcTransaction({ to: ERC8183_CONTRACT_ADDRESS, data });
-      const receipt = await waitForArcReceipt(txHash);
-      await apiJson(`/api/jobs/${jobId}/create-onchain`, {
-        method: "POST",
-        body: JSON.stringify({
-          txHash,
-          arcJobId: getJobCreatedArcId(receipt),
-          blockNumber: Number(receipt.blockNumber),
+    // ERC8183 rejects bytes32(0) for specHash. Compute on-the-fly if backend
+    // didn't store one (e.g. legacy job rows from before descriptionHash was wired).
+    let specHash = job.descriptionHash;
+    if (!specHash || !/^0x[0-9a-fA-F]{64}$/.test(specHash)) {
+      specHash = await sha256Hex(
+        stableJson({
+          title: job.title,
+          brief: job.brief,
+          acceptanceCriteria: job.acceptanceCriteria,
+          deliverableFormat: job.deliverableFormat,
         }),
-      });
-      await refreshState();
-    },
-    [refreshState, sendArcTransaction, state.jobs, wallet.address],
-  );
+      );
+    }
 
-  const setBudget = useCallback(
-    async (jobId: string) => {
-      if (!wallet.address) throw new Error("Connect a wallet before setting budget.");
-      const job = state.jobs.find((item) => item.id === jobId);
-      if (!job?.arcJobId) throw new Error("Start the job before setting a budget.");
+    // ERC-8183 reverts with InvalidDeadline() if expiredAt is in the past or
+    // too close to now. Enforce at least 1 hour buffer; default 30 days when missing.
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const minDeadline = nowSeconds + 60 * 60;
+    const requestedDeadline = job.deadlineAt
+      ? Math.floor(new Date(job.deadlineAt).getTime() / 1000)
+      : nowSeconds + 30 * 24 * 60 * 60;
+    const deadlineSeconds = Math.max(requestedDeadline, minDeadline);
 
-      const data = encodeFunctionData({
-        abi: erc8183Abi,
-        functionName: "setBudget",
-        args: [BigInt(job.arcJobId), BigInt(job.budgetUsdcUnits), "0x"],
-      });
-      const txHash = await sendArcTransaction({ to: ERC8183_CONTRACT_ADDRESS, data });
-      const receipt = await waitForArcReceipt(txHash);
-      await apiJson(`/api/jobs/${jobId}/set-budget`, {
-        method: "POST",
-        body: JSON.stringify({ txHash, blockNumber: Number(receipt.blockNumber) }),
-      });
-      await refreshState();
-    },
-    [refreshState, sendArcTransaction, state.jobs, wallet.address],
-  );
+    const data = encodeFunctionData({
+      abi: erc8183Abi,
+      functionName: "createJob",
+      args: [
+        job.providerAddress as Address,
+        (job.evaluatorAddress ?? walletNow.address) as Address,
+        BigInt(deadlineSeconds),
+        specHash as Hex,
+        (job.hookAddress ?? ZERO_ADDRESS) as Address,
+      ],
+    });
+    const txHash = await sendArcTransactionRef.current({ to: ERC8183_CONTRACT_ADDRESS, data });
+    const receipt = await waitForArcReceipt(txHash);
+    await apiJson(`/api/jobs/${jobId}/create-onchain`, {
+      method: "POST",
+      body: JSON.stringify({
+        txHash,
+        arcJobId: getJobCreatedArcId(receipt),
+        blockNumber: Number(receipt.blockNumber),
+      }),
+    });
+    await refreshStateRef.current();
+  }, []);
 
-  const approveAndFund = useCallback(
-    async (jobId: string) => {
-      if (!wallet.address) throw new Error("Connect a wallet before funding escrow.");
-      const job = state.jobs.find((item) => item.id === jobId);
-      if (!job?.arcJobId) throw new Error("Start the job before funding escrow.");
-      if (
-        wallet.usdcBalanceUnits !== undefined &&
-        wallet.usdcBalanceUnits < job.budgetUsdcUnits + ARC_USDC_GAS_BUFFER_UNITS
-      ) {
-        throw new Error(
-          "Not enough USDC. Keep a small buffer above the job budget — the same balance pays gas and funds escrow.",
-        );
-      }
+  const setBudget = useCallback(async (jobId: string) => {
+    const walletNow = walletRef.current;
+    if (!walletNow.address) throw new Error("Connect a wallet before setting budget.");
+    const job = stateRef.current.jobs.find((item) => item.id === jobId);
+    if (!job?.arcJobId) throw new Error("Start the job before setting a budget.");
 
-      const approveData = encodeFunctionData({
-        abi: erc20UsdcAbi,
-        functionName: "approve",
-        args: [ERC8183_CONTRACT_ADDRESS, BigInt(job.budgetUsdcUnits)],
-      });
-      const approveTxHash = await sendArcTransaction({ to: ARC_USDC_ADDRESS, data: approveData });
-      await waitForArcReceipt(approveTxHash);
+    const data = encodeFunctionData({
+      abi: erc8183Abi,
+      functionName: "setBudget",
+      args: [BigInt(job.arcJobId), BigInt(job.budgetUsdcUnits), "0x"],
+    });
+    const txHash = await sendArcTransactionRef.current({ to: ERC8183_CONTRACT_ADDRESS, data });
+    const receipt = await waitForArcReceipt(txHash);
+    await apiJson(`/api/jobs/${jobId}/set-budget`, {
+      method: "POST",
+      body: JSON.stringify({ txHash, blockNumber: Number(receipt.blockNumber) }),
+    });
+    await refreshStateRef.current();
+  }, []);
 
-      const fundData = encodeFunctionData({
-        abi: erc8183Abi,
-        functionName: "fund",
-        args: [BigInt(job.arcJobId), "0x"],
-      });
-      const fundTxHash = await sendArcTransaction({ to: ERC8183_CONTRACT_ADDRESS, data: fundData });
-      const receipt = await waitForArcReceipt(fundTxHash);
+  const approveAndFund = useCallback(async (jobId: string) => {
+    const walletNow = walletRef.current;
+    if (!walletNow.address) throw new Error("Connect a wallet before funding escrow.");
+    const job = stateRef.current.jobs.find((item) => item.id === jobId);
+    if (!job?.arcJobId) throw new Error("Start the job before funding escrow.");
+    if (
+      walletNow.usdcBalanceUnits !== undefined &&
+      walletNow.usdcBalanceUnits < job.budgetUsdcUnits + ARC_USDC_GAS_BUFFER_UNITS
+    ) {
+      throw new Error(
+        "Not enough USDC. Keep a small buffer above the job budget — the same balance pays gas and funds escrow.",
+      );
+    }
 
-      await apiJson(`/api/jobs/${jobId}/fund`, {
-        method: "POST",
-        body: JSON.stringify({
-          approveTxHash,
-          txHash: fundTxHash,
-          blockNumber: Number(receipt.blockNumber),
-        }),
-      });
-      const balance = await refreshWalletBalance(wallet.address);
-      setWallet((current) => ({
-        ...current,
-        usdcBalanceUnits: balance,
-        balanceUpdatedAt: new Date().toISOString(),
-      }));
-      await refreshState();
-    },
-    [refreshState, sendArcTransaction, state.jobs, wallet.address, wallet.usdcBalanceUnits],
-  );
+    const approveData = encodeFunctionData({
+      abi: erc20UsdcAbi,
+      functionName: "approve",
+      args: [ERC8183_CONTRACT_ADDRESS, BigInt(job.budgetUsdcUnits)],
+    });
+    const approveTxHash = await sendArcTransactionRef.current({ to: ARC_USDC_ADDRESS, data: approveData });
+    await waitForArcReceipt(approveTxHash);
+
+    const fundData = encodeFunctionData({
+      abi: erc8183Abi,
+      functionName: "fund",
+      args: [BigInt(job.arcJobId), "0x"],
+    });
+    const fundTxHash = await sendArcTransactionRef.current({ to: ERC8183_CONTRACT_ADDRESS, data: fundData });
+    const receipt = await waitForArcReceipt(fundTxHash);
+
+    await apiJson(`/api/jobs/${jobId}/fund`, {
+      method: "POST",
+      body: JSON.stringify({
+        approveTxHash,
+        txHash: fundTxHash,
+        blockNumber: Number(receipt.blockNumber),
+      }),
+    });
+    const balance = await refreshWalletBalance(walletNow.address);
+    setWallet((current) => ({
+      ...current,
+      usdcBalanceUnits: balance,
+      balanceUpdatedAt: new Date().toISOString(),
+    }));
+    await refreshStateRef.current();
+  }, []);
 
   const submitDeliverable = useCallback(
     async (jobId: string, input: { url: string; notes: string }) => {
-      if (!wallet.address) throw new Error("Connect a wallet before submitting deliverables.");
-      const job = state.jobs.find((item) => item.id === jobId);
+      const walletNow = walletRef.current;
+      if (!walletNow.address) throw new Error("Connect a wallet before submitting deliverables.");
+      const job = stateRef.current.jobs.find((item) => item.id === jobId);
       if (!job) throw new Error("Job not found.");
       if (!job.arcJobId) throw new Error("Start and fund the job before submitting deliverables.");
       const submissionId = crypto.randomUUID();
@@ -688,14 +774,14 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
         functionName: "submit",
         args: [BigInt(job.arcJobId), deliverableHashBytes32 as Hex, "0x"],
       });
-      const submitTxHash = await sendArcTransaction({ to: ERC8183_CONTRACT_ADDRESS, data });
+      const submitTxHash = await sendArcTransactionRef.current({ to: ERC8183_CONTRACT_ADDRESS, data });
       const receipt = await waitForArcReceipt(submitTxHash);
       const blockNumber = Number(receipt.blockNumber);
 
       const { submission } = await apiJson<{ submission: { id: string } }>(`/api/jobs/${jobId}/submit`, {
         method: "POST",
         body: JSON.stringify({
-          submitterProfileId: activeProfile?.id,
+          submitterProfileId: activeProfileRef.current?.id,
           submitterAgentId: job.providerAgentId,
           notes: input.notes,
           deliverableUrl: input.url,
@@ -705,10 +791,10 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
           blockNumber,
         }),
       });
-      await refreshState();
+      await refreshStateRef.current();
       return submission.id;
     },
-    [activeProfile?.id, refreshState, sendArcTransaction, state.jobs, wallet.address],
+    [],
   );
 
   const reviewSubmission = useCallback(
@@ -717,9 +803,11 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       submissionId: string,
       input: { decision: "approve" | "request_revision" | "reject"; rating?: number; reviewText: string },
     ) => {
-      if (!activeProfile) throw new Error("Connect a wallet before reviewing work.");
-      if (!wallet.address) throw new Error("Connect a wallet before reviewing work.");
-      const job = state.jobs.find((item) => item.id === jobId);
+      const profile = activeProfileRef.current;
+      const walletNow = walletRef.current;
+      if (!profile) throw new Error("Connect a wallet before reviewing work.");
+      if (!walletNow.address) throw new Error("Connect a wallet before reviewing work.");
+      const job = stateRef.current.jobs.find((item) => item.id === jobId);
       if (!job) throw new Error("Job not found.");
       if (!job.arcJobId) throw new Error("Start and fund the job before reviewing work.");
       const reviewPayload = { jobId, submissionId, ...input };
@@ -738,14 +826,14 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
             ? [BigInt(job.arcJobId), reasonHashBytes32 as Hex]
             : [BigInt(job.arcJobId), reasonHashBytes32 as Hex, "0x"],
       });
-      const reviewTxHash = await sendArcTransaction({ to: ERC8183_CONTRACT_ADDRESS, data: reviewData });
+      const reviewTxHash = await sendArcTransactionRef.current({ to: ERC8183_CONTRACT_ADDRESS, data: reviewData });
       const receipt = await waitForArcReceipt(reviewTxHash);
       const completeTxHash = input.decision === "approve" ? reviewTxHash : undefined;
 
       await apiJson(`/api/jobs/${jobId}/complete`, {
         method: "POST",
         body: JSON.stringify({
-          reviewerProfileId: activeProfile.id,
+          reviewerProfileId: profile.id,
           submissionId,
           rating: input.rating,
           reviewText: input.reviewText,
@@ -757,9 +845,9 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
           decision: input.decision,
         }),
       });
-      await refreshState();
+      await refreshStateRef.current();
     },
-    [activeProfile, refreshState, sendArcTransaction, state.jobs, wallet.address],
+    [],
   );
 
   const requestRevision = useCallback(
@@ -795,14 +883,25 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     [reviewSubmission],
   );
 
+  const updateProfile = useCallback(async (input: UpdateProfileInput) => {
+    const profile = activeProfileRef.current;
+    if (!profile) throw new Error("Connect a wallet before editing your profile.");
+    await apiJson("/api/profile", {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+    await refreshStateRef.current();
+  }, []);
+
   const registerAgent = useCallback(
     async (input: { name: string; description: string; capabilities: string[]; walletAddress: string }) => {
-      if (!activeProfile) throw new Error("Connect a wallet before registering an agent.");
+      const profile = activeProfileRef.current;
+      if (!profile) throw new Error("Connect a wallet before registering an agent.");
       const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
       await apiJson("/api/agents/register", {
         method: "POST",
         body: JSON.stringify({
-          ownerProfileId: activeProfile.id,
+          ownerProfileId: profile.id,
           name: input.name,
           slug,
           description: input.description,
@@ -811,38 +910,21 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
           metadataUri: `ipfs://pending-${slug}`,
         }),
       });
-      await refreshState();
+      await refreshStateRef.current();
     },
-    [activeProfile, refreshState],
+    [],
   );
 
-  const value = useMemo<StoreContextValue>(
+  const dataValue = useMemo<DataContextValue>(
     () => ({
       state,
       activeProfile,
-      wallet,
-      walletError,
       backendError,
       isSyncing,
-      isWalletPending,
       refreshState,
-      connectWallet,
-      disconnectWallet,
-      switchWalletToArc,
       setActiveProfile,
       resetDemo,
       loadDemoData,
-      createJob,
-      applyToJob,
-      acceptApplication,
-      createOnchainJob,
-      setBudget,
-      approveAndFund,
-      submitDeliverable,
-      requestRevision,
-      rejectSubmission,
-      completeJob,
-      registerAgent,
       getProfile,
       getAgent,
       getJob,
@@ -853,18 +935,37 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     [
       state,
       activeProfile,
-      wallet,
-      walletError,
       backendError,
       isSyncing,
-      isWalletPending,
       refreshState,
-      connectWallet,
-      disconnectWallet,
-      switchWalletToArc,
       setActiveProfile,
       resetDemo,
       loadDemoData,
+      getProfile,
+      getAgent,
+      getJob,
+      getJobApplications,
+      getJobSubmissions,
+      getJobEvaluation,
+    ],
+  );
+
+  const walletValue = useMemo<WalletContextValue>(
+    () => ({
+      wallet,
+      walletError,
+      isWalletPending,
+      connectWallet,
+      disconnectWallet,
+      switchWalletToArc,
+    }),
+    [wallet, walletError, isWalletPending, connectWallet, disconnectWallet, switchWalletToArc],
+  );
+
+  // Actions never change identity — all callbacks above use refs internally.
+  // Memoize once so this context literally never invalidates.
+  const actionsValue = useMemo<ActionsContextValue>(
+    () => ({
       createJob,
       applyToJob,
       acceptApplication,
@@ -876,24 +977,46 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       rejectSubmission,
       completeJob,
       registerAgent,
-      getProfile,
-      getAgent,
-      getJob,
-      getJobApplications,
-      getJobSubmissions,
-      getJobEvaluation,
-    ],
+      updateProfile,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
   );
 
-  return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
+  return (
+    <DataContext.Provider value={dataValue}>
+      <WalletContext.Provider value={walletValue}>
+        <ActionsContext.Provider value={actionsValue}>{children}</ActionsContext.Provider>
+      </WalletContext.Provider>
+    </DataContext.Provider>
+  );
 }
 
-export function useWorkNet() {
-  const context = useContext(StoreContext);
-  if (!context) {
-    throw new Error("useWorkNet must be used inside WorkNetProvider");
-  }
-  return context;
+export function useWorkNetData() {
+  const ctx = useContext(DataContext);
+  if (!ctx) throw new Error("useWorkNetData must be used inside WorkNetProvider");
+  return ctx;
+}
+
+export function useWorkNetWallet() {
+  const ctx = useContext(WalletContext);
+  if (!ctx) throw new Error("useWorkNetWallet must be used inside WorkNetProvider");
+  return ctx;
+}
+
+export function useWorkNetActions() {
+  const ctx = useContext(ActionsContext);
+  if (!ctx) throw new Error("useWorkNetActions must be used inside WorkNetProvider");
+  return ctx;
+}
+
+// Backward-compatible aggregator. New code should prefer the granular hooks
+// above so components only subscribe to the slice they actually use.
+export function useWorkNet(): StoreContextValue {
+  const data = useWorkNetData();
+  const wallet = useWorkNetWallet();
+  const actions = useWorkNetActions();
+  return { ...data, ...wallet, ...actions };
 }
 
 export function nextOnchainAction(status: JobStatus) {

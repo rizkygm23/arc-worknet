@@ -7,13 +7,15 @@ import {
   ExternalLink,
   FileUp,
   Handshake,
+  MessageSquare,
   Plus,
   Send,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { useState } from "react";
-import { PageHeader, WalletPill } from "@/components/app-shell";
+import { PageHeader, SkeletonPanel, WalletPill } from "@/components/app-shell";
 import {
   BudgetAmount,
   ChainTxLink,
@@ -21,8 +23,246 @@ import {
   EscrowTimeline,
   JobStatusBadge,
 } from "@/components/job-components";
+import { useApplicationOverlay } from "@/lib/application-overlay";
+import { useJobMessages } from "@/lib/job-messages";
 import { nextOnchainAction, useWorkNet } from "@/lib/store";
-import type { Job } from "@/lib/types";
+import type { Job, Profile } from "@/lib/types";
+
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const diffSec = Math.round((then - Date.now()) / 1000);
+  const abs = Math.abs(diffSec);
+  if (abs < 60) return "just now";
+  if (abs < 3600) return `${Math.round(abs / 60)}m ago`;
+  if (abs < 86400) return `${Math.round(abs / 3600)}h ago`;
+  if (abs < 86400 * 7) return `${Math.round(abs / 86400)}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function MessagesPanel({ job }: { job: Job }) {
+  const { activeProfile, getProfile } = useWorkNet();
+  const { messages, postMessage, hydrated } = useJobMessages(job.id);
+  const [draft, setDraft] = useState("");
+
+  const isParticipant =
+    activeProfile?.id === job.clientProfileId || activeProfile?.id === job.providerProfileId;
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeProfile) return;
+    const trimmed = draft.trim();
+    if (!trimmed) return;
+    postMessage(activeProfile.id, trimmed);
+    setDraft("");
+  }
+
+  return (
+    <div className="panel">
+      <div className="panel-header">
+        <div className="profile-strip">
+          <span className="avatar">
+            <MessageSquare size={18} />
+          </span>
+          <div>
+            <h2 className="panel-title">Messages</h2>
+            <p className="small muted hide-mobile" style={{ margin: "4px 0 0" }}>
+              Direct thread between client and provider.
+            </p>
+          </div>
+        </div>
+        <span className="small muted">{messages.length} message{messages.length === 1 ? "" : "s"}</span>
+      </div>
+
+      {!hydrated ? (
+        <div className="empty">Loading thread…</div>
+      ) : messages.length === 0 ? (
+        <div className="empty">No messages yet. Start the conversation below.</div>
+      ) : (
+        <ul className="messages-list">
+          {messages.map((message) => {
+            const author = getProfile(message.authorProfileId);
+            const isMe = author?.id === activeProfile?.id;
+            return (
+              <li key={message.id} className={`message-item${isMe ? " message-mine" : ""}`}>
+                <span className="message-avatar" aria-hidden>
+                  {(author?.displayName ?? "?").slice(0, 1)}
+                </span>
+                <div className="message-body">
+                  <div className="message-meta">
+                    <strong>{author?.displayName ?? "Unknown"}</strong>
+                    <span className="small muted">{relativeTime(message.createdAt)}</span>
+                  </div>
+                  <p className="message-text">{message.body}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {activeProfile && isParticipant ? (
+        <form onSubmit={handleSubmit} className="message-compose">
+          <textarea
+            className="textarea"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Write a message…"
+            aria-label="Message body"
+            rows={2}
+          />
+          <button className="button primary" type="submit" disabled={!draft.trim()}>
+            <Send size={14} />
+            Send
+          </button>
+        </form>
+      ) : (
+        <p className="small muted" style={{ marginTop: 12 }}>
+          Only the client and assigned provider can post in this thread.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function DeclineApplicationButton({
+  applicationId,
+  applicantName,
+  onDecline,
+  disabled,
+}: {
+  applicationId: string;
+  applicantName: string;
+  onDecline: (id: string, reason: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+
+  if (!open) {
+    return (
+      <button
+        className="button ghost small"
+        type="button"
+        onClick={() => setOpen(true)}
+        disabled={disabled}
+      >
+        <X size={14} />
+        Decline
+      </button>
+    );
+  }
+
+  return (
+    <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+      <label className="field" style={{ margin: 0 }}>
+        <span className="small muted">Reason (optional, shared with {applicantName})</span>
+        <textarea
+          className="textarea"
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          rows={2}
+          placeholder="Scope changed, going with another fit, etc."
+          aria-label="Decline reason"
+        />
+      </label>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          className="button"
+          type="button"
+          onClick={() => {
+            onDecline(applicationId, reason);
+            setOpen(false);
+            setReason("");
+          }}
+          disabled={disabled}
+        >
+          Confirm decline
+        </button>
+        <button
+          className="button ghost"
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            setReason("");
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ApplicantCard({
+  application,
+  applicantProfile,
+  applicantAgent,
+  applicantOwnerProfile,
+  effectiveStatus,
+  declineReason,
+  onAccept,
+  onDecline,
+  busy,
+}: {
+  application: { id: string; pitch: string; actorType: string; status: string };
+  applicantProfile?: Profile;
+  applicantAgent?: { name: string; ownerProfileId: string } | undefined;
+  applicantOwnerProfile?: Profile;
+  effectiveStatus: string;
+  declineReason?: string;
+  onAccept: (id: string) => void;
+  onDecline: (id: string, reason: string) => void;
+  busy: boolean;
+}) {
+  const displayName =
+    application.actorType === "agent"
+      ? applicantAgent?.name ?? "Agent"
+      : applicantProfile?.displayName ?? "Worker";
+  const subline =
+    application.actorType === "agent"
+      ? `Agent · owner ${applicantOwnerProfile?.displayName ?? "?"} · ${effectiveStatus}`
+      : effectiveStatus;
+
+  return (
+    <div className="card panel">
+      <div className="panel-header">
+        <div className="profile-strip">
+          <span className="avatar">{displayName.slice(0, 1)}</span>
+          <div>
+            <strong>{displayName}</strong>
+            <div className="small muted">{subline}</div>
+          </div>
+        </div>
+        {effectiveStatus === "pending" ? (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              className="button primary"
+              type="button"
+              onClick={() => onAccept(application.id)}
+              disabled={busy}
+            >
+              <Check size={16} />
+              Accept
+            </button>
+            <DeclineApplicationButton
+              applicationId={application.id}
+              applicantName={displayName}
+              onDecline={onDecline}
+              disabled={busy}
+            />
+          </div>
+        ) : null}
+      </div>
+      <p className="muted">{application.pitch}</p>
+      {effectiveStatus === "rejected" && declineReason ? (
+        <p className="small muted" style={{ marginTop: 4 }}>
+          <strong>Decline reason:</strong> {declineReason}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 function TransactionsPanel({ job }: { job: Job }) {
   const entries: Array<[string, string | undefined]> = [
@@ -143,10 +383,11 @@ export default function JobDetailPage() {
   const [applyAs, setApplyAs] = useState<string>("");
   const [actionError, setActionError] = useState<string | undefined>();
   const [busyAction, setBusyAction] = useState<string | undefined>();
+  const { decline, getEffectiveStatus, getDeclineReason } = useApplicationOverlay();
   const job = getJob(params.id);
 
   if (!job) {
-    if (isSyncing) return <div className="panel"><p className="muted">Loading…</p></div>;
+    if (isSyncing) return <SkeletonPanel lines={6} />;
     notFound();
   }
 
@@ -311,38 +552,29 @@ export default function JobDetailPage() {
                 {applications.map((application) => {
                   const applicantProfile = getProfile(application.applicantProfileId);
                   const applicantAgent = getAgent(application.applicantAgentId);
-                  const displayName =
-                    application.actorType === "agent"
-                      ? applicantAgent?.name ?? "Agent"
-                      : applicantProfile?.displayName ?? "Worker";
-                  const subline =
-                    application.actorType === "agent"
-                      ? `Agent · owner ${getProfile(applicantAgent?.ownerProfileId)?.displayName ?? "?"} · ${application.status}`
-                      : application.status;
+                  const applicantOwnerProfile = getProfile(applicantAgent?.ownerProfileId);
+                  const effectiveStatus = getEffectiveStatus(application.id, application.status);
+                  const declineReason = getDeclineReason(application.id);
                   return (
-                    <div className="card panel" key={application.id}>
-                      <div className="panel-header">
-                        <div className="profile-strip">
-                          <span className="avatar">{displayName.slice(0, 1)}</span>
-                          <div>
-                            <strong>{displayName}</strong>
-                            <div className="small muted">{subline}</div>
-                          </div>
-                        </div>
-                        {application.status === "pending" ? (
-                          <button className="button primary" type="button" onClick={() => accept(application.id)} disabled={Boolean(busyAction)}>
-                            <Check size={16} />
-                            Accept
-                          </button>
-                        ) : null}
-                      </div>
-                      <p className="muted">{application.pitch}</p>
-                    </div>
+                    <ApplicantCard
+                      key={application.id}
+                      application={application}
+                      applicantProfile={applicantProfile}
+                      applicantAgent={applicantAgent}
+                      applicantOwnerProfile={applicantOwnerProfile}
+                      effectiveStatus={effectiveStatus}
+                      declineReason={declineReason}
+                      onAccept={accept}
+                      onDecline={decline}
+                      busy={Boolean(busyAction)}
+                    />
                   );
                 })}
               </div>
             </div>
           ) : null}
+
+          <MessagesPanel job={currentJob} />
 
           <div className="panel">
             <div className="panel-header">

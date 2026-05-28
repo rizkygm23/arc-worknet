@@ -28,6 +28,10 @@ export type Database = {
           circle_wallet_id: string | null;
           country_code: string | null;
           timezone: string | null;
+          skills: string[] | null;
+          hourly_rate_usdc_units: number | null;
+          availability: "open" | "limited" | "unavailable" | null;
+          portfolio: Json;
           total_earned_usdc_units: number;
           total_spent_usdc_units: number;
           completed_jobs_count: number;

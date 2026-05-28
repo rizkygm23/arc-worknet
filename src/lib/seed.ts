@@ -21,6 +21,10 @@ export const seedState: WorkNetState = {
       walletAddress: "0x8C4b8b2f9f76D0A4E4b6645d6F3a9A9b28d2Ab01",
       countryCode: "US",
       timezone: "America/New_York",
+      skills: ["Product strategy", "Payments", "USDC", "Procurement"],
+      hourlyRateUsdcUnits: 120000000,
+      availability: "limited",
+      portfolio: [],
       totalEarnedUsdcUnits: 0,
       totalSpentUsdcUnits: 2480000000,
       completedJobsCount: 9,
@@ -40,6 +44,23 @@ export const seedState: WorkNetState = {
       walletAddress: "0x9c1f4D6eB28cA8c44d0eC08f384A5c446D42c112",
       countryCode: "ID",
       timezone: "Asia/Jakarta",
+      skills: ["TypeScript", "Solidity", "Indexer", "viem", "React", "USDC", "Payments"],
+      hourlyRateUsdcUnits: 85000000,
+      availability: "open",
+      portfolio: [
+        {
+          id: "portfolio_mira_indexer",
+          title: "USDC settlement indexer",
+          url: "https://example.com/work/usdc-indexer",
+          description: "Built a viem-based indexer that tails ERC-8183 escrow events and reconciles to USDC settlements.",
+        },
+        {
+          id: "portfolio_mira_dashboard",
+          title: "On-chain payments dashboard",
+          url: "https://example.com/work/payments-dashboard",
+          description: "React + Next.js dashboard surfacing escrow state and settlement TX explorer links.",
+        },
+      ],
       totalEarnedUsdcUnits: 1715000000,
       totalSpentUsdcUnits: 0,
       completedJobsCount: 14,
@@ -59,6 +80,17 @@ export const seedState: WorkNetState = {
       walletAddress: "0x4cE92f2d7Dd945d35f90F461A4fB28492A6F61A0",
       countryCode: "SG",
       timezone: "Asia/Singapore",
+      skills: ["AI agents", "LLM ops", "Dataset QA", "Code review"],
+      hourlyRateUsdcUnits: 95000000,
+      availability: "open",
+      portfolio: [
+        {
+          id: "portfolio_rafi_lintsmith",
+          title: "LintSmith agent — static review for payments",
+          url: "https://example.com/agents/lintsmith",
+          description: "Production AI agent doing static TypeScript + Solidity review with patch proposals.",
+        },
+      ],
       totalEarnedUsdcUnits: 690000000,
       totalSpentUsdcUnits: 0,
       completedJobsCount: 7,
@@ -213,7 +245,28 @@ export const seedState: WorkNetState = {
       updatedAt: "2026-05-24T02:20:00.000Z",
     },
   ],
-  reviews: [],
+  reviews: [
+    {
+      id: "review_mira_payments",
+      jobId: "job_agent_eval",
+      reviewerProfileId: "profile_client_ada",
+      submissionId: "submission_agent_eval",
+      rating: 5,
+      reviewText:
+        "Mira shipped the indexer ahead of the deadline and pre-empted two settlement edge cases we hadn't even scoped. Strong communication.",
+      createdAt: "2026-04-12T14:05:00.000Z",
+    },
+    {
+      id: "review_rafi_lintsmith",
+      jobId: "job_agent_eval",
+      reviewerProfileId: "profile_client_ada",
+      submissionId: "submission_agent_eval",
+      rating: 5,
+      reviewText:
+        "LintSmith caught a subtle approve/funded race condition. Patch proposal landed cleanly, payment released same day.",
+      createdAt: "2026-05-02T09:30:00.000Z",
+    },
+  ],
   aiEvaluations: [
     {
       id: "evaluation_agent_eval",

@@ -3,7 +3,7 @@
 import { ArrowLeft, Check, CircleDollarSign, Handshake } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
-import { PageHeader } from "@/components/app-shell";
+import { PageHeader, SkeletonPanel } from "@/components/app-shell";
 import { ChainTxLink, EscrowTimeline, JobStatusBadge } from "@/components/job-components";
 import { ARC_USDC_GAS_BUFFER_UNITS, formatUsdcUnits } from "@/lib/money";
 import { nextOnchainAction, useWorkNet } from "@/lib/store";
@@ -14,7 +14,7 @@ export default function FundJobPage() {
   const job = getJob(params.id);
 
   if (!job) {
-    if (isSyncing) return <div className="panel"><p className="muted">Loading…</p></div>;
+    if (isSyncing) return <SkeletonPanel lines={5} />;
     notFound();
   }
 
@@ -44,7 +44,7 @@ export default function FundJobPage() {
           <div className="panel-header">
             <div>
               <h2 className="panel-title">{formatUsdcUnits(job.budgetUsdcUnits)} budget</h2>
-              <p className="small muted" style={{ margin: "4px 0 0" }}>
+              <p className="small muted hide-mobile" style={{ margin: "4px 0 0" }}>
                 Wallet: {hasKnownBalance ? formatUsdcUnits(walletBalanceUnits) : "Not available"}.
                 Required: {formatUsdcUnits(requiredBalanceUnits)} (includes {formatUsdcUnits(ARC_USDC_GAS_BUFFER_UNITS)} for gas).
               </p>

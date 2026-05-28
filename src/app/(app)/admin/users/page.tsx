@@ -16,30 +16,32 @@ export default function AdminUsersPage() {
       />
 
       <section className="panel">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Profile</th>
-              <th>Role</th>
-              <th>Wallet</th>
-              <th>Reputation</th>
-            </tr>
-          </thead>
-          <tbody>
-            {state.profiles.map((profile) => (
-              <tr key={profile.id}>
-                <td>
-                  <Link href="/settings/profile">
-                    <strong>{profile.displayName}</strong>
-                  </Link>
-                </td>
-                <td>{profile.role}</td>
-                <td>{profile.walletAddress}</td>
-                <td>{profile.ratingAvg?.toFixed(2) ?? "n/a"}</td>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Profile</th>
+                <th>Role</th>
+                <th>Wallet</th>
+                <th>Reputation</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {state.profiles.map((profile) => (
+                <tr key={profile.id}>
+                  <td>
+                    <Link href="/settings/profile">
+                      <strong>{profile.displayName}</strong>
+                    </Link>
+                  </td>
+                  <td>{profile.role}</td>
+                  <td>{profile.walletAddress}</td>
+                  <td>{profile.ratingAvg?.toFixed(2) ?? "n/a"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </>
   );

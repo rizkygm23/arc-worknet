@@ -53,7 +53,7 @@ export default function WalletPage() {
             <div className="panel-header">
               <div>
                 <h2 className="panel-title">Escrow actions</h2>
-                <p className="small muted" style={{ margin: "4px 0 0" }}>
+                <p className="small muted hide-mobile" style={{ margin: "4px 0 0" }}>
                   Funding and payout actions appear inside each job.
                 </p>
               </div>

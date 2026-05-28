@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowRight, CheckCircle2, ClipboardList, Plus, WalletCards } from "lucide-react";
+import { ArrowRight, CheckCircle2, ClipboardList, Plus, Sparkles, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { PageHeader, StatCard, WalletPill } from "@/components/app-shell";
 import { ChainTxLink, JobRow } from "@/components/job-components";
 import { formatUsdcUnits } from "@/lib/money";
+import { recommendJobs } from "@/lib/recommendations";
 import { useWorkNet } from "@/lib/store";
 
 export default function DashboardPage() {
@@ -20,6 +21,7 @@ export default function DashboardPage() {
     .filter((job) => ["funded", "submitted", "revision_requested"].includes(job.status))
     .reduce((sum, job) => sum + job.budgetUsdcUnits, 0);
   const profileLabel = activeProfile?.displayName ?? "Guest";
+  const recommendations = activeProfile ? recommendJobs(state.jobs, activeProfile, 5) : [];
 
   return (
     <>
@@ -47,6 +49,54 @@ export default function DashboardPage() {
 
       <section className="layout-with-rail">
         <div className="grid">
+          {recommendations.length > 0 ? (
+            <div className="panel">
+              <div className="panel-header">
+                <div className="profile-strip">
+                  <span className="avatar">
+                    <Sparkles size={18} />
+                  </span>
+                  <div>
+                    <h2 className="panel-title">For you</h2>
+                    <p className="small muted hide-mobile" style={{ margin: "4px 0 0" }}>
+                      Open jobs matched to your skills.
+                    </p>
+                  </div>
+                </div>
+                <Link className="button ghost" href="/jobs">
+                  Browse all
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+              <ul className="recommend-list">
+                {recommendations.map(({ job, matchedSkills }) => (
+                  <li key={job.id}>
+                    <Link className="recommend-row" href={`/jobs/${job.id}`}>
+                      <div>
+                        <strong>{job.title}</strong>
+                        <div className="small muted">
+                          {job.category} · {job.tags.slice(0, 3).join(" / ")}
+                        </div>
+                      </div>
+                      <div className="recommend-meta">
+                        <span className="recommend-budget">
+                          {formatUsdcUnits(job.budgetUsdcUnits, { compact: true })}
+                        </span>
+                        <div className="tags recommend-tags">
+                          {matchedSkills.slice(0, 4).map((skill) => (
+                            <span className="tag matched" key={skill}>
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <div className="panel">
             <div className="panel-header">
               <div>

@@ -1,20 +1,23 @@
 "use client";
 
 import clsx from "clsx";
-import { Check, Copy, ExternalLink, LogOut, Menu, Wallet, X } from "lucide-react";
+import { Bell, Check, Copy, ExternalLink, LogOut, Menu, Wallet, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { useWorkNet, walletBalanceLabel } from "@/lib/store";
 import { formatUsdcUnits } from "@/lib/money";
 import { ARC_TESTNET_CHAIN_ID } from "@/lib/arc";
 import { formatWalletAddress } from "@/lib/wallet";
+import { useReadNotifications } from "@/lib/notifications-read";
+import { needsOnboarding, readOnboardingDismissed } from "@/lib/onboarding";
 
 const ARC_EXPLORER_URL = process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/jobs", label: "Jobs" },
+  { href: "/workers", label: "Workers" },
   { href: "/applications", label: "Applications" },
   { href: "/agents", label: "Agents" },
   { href: "/wallet", label: "Wallet" },
@@ -180,17 +183,153 @@ function WalletPanel() {
   );
 }
 
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const diffSec = Math.round((then - Date.now()) / 1000);
+  const abs = Math.abs(diffSec);
+  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  if (abs < 60) return rtf.format(Math.round(diffSec), "second");
+  if (abs < 3600) return rtf.format(Math.round(diffSec / 60), "minute");
+  if (abs < 86400) return rtf.format(Math.round(diffSec / 3600), "hour");
+  if (abs < 86400 * 30) return rtf.format(Math.round(diffSec / 86400), "day");
+  if (abs < 86400 * 365) return rtf.format(Math.round(diffSec / (86400 * 30)), "month");
+  return rtf.format(Math.round(diffSec / (86400 * 365)), "year");
+}
+
+function NotificationsBell() {
+  const { state, activeProfile } = useWorkNet();
+  const { isRead, markRead, markAllRead, hydrated } = useReadNotifications();
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  const items = activeProfile
+    ? state.notifications
+        .filter((n) => n.profileId === activeProfile.id)
+        .slice()
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 12)
+    : [];
+
+  const unreadCount = hydrated
+    ? items.filter((n) => !n.readAt && !isRead(n.id)).length
+    : 0;
+
+  useEffect(() => {
+    if (!open) return;
+    function onClick(event: MouseEvent) {
+      if (!rootRef.current) return;
+      if (event.target instanceof Node && !rootRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("mousedown", onClick);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onClick);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  if (!activeProfile) return null;
+
+  return (
+    <div className="notifications" ref={rootRef}>
+      <button
+        type="button"
+        className="notifications-button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
+      >
+        <Bell size={15} />
+        {unreadCount > 0 ? (
+          <span className="notifications-badge" aria-hidden>
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        ) : null}
+      </button>
+
+      {open ? (
+        <div className="notifications-popover" role="dialog" aria-label="Notifications">
+          <div className="notifications-popover-head">
+            <span className="label">Notifications</span>
+            {unreadCount > 0 ? (
+              <button
+                type="button"
+                className="button ghost small"
+                onClick={() => markAllRead(items.map((n) => n.id))}
+              >
+                Mark all read
+              </button>
+            ) : null}
+          </div>
+
+          {items.length === 0 ? (
+            <div className="notifications-empty">
+              <span className="muted small">You&apos;re all caught up.</span>
+            </div>
+          ) : (
+            <ul className="notifications-list">
+              {items.map((notification) => {
+                const unread = !notification.readAt && !isRead(notification.id);
+                const body = (
+                  <>
+                    <span className="notification-title">
+                      {unread ? <span className="notification-dot" aria-hidden /> : null}
+                      <strong>{notification.title}</strong>
+                    </span>
+                    <span className="notification-body small">{notification.body}</span>
+                    <span className="notification-time small muted">
+                      {relativeTime(notification.createdAt)}
+                    </span>
+                  </>
+                );
+                return (
+                  <li key={notification.id} className={clsx("notification-item", unread && "unread")}>
+                    {notification.href ? (
+                      <Link
+                        href={notification.href}
+                        onClick={() => {
+                          markRead(notification.id);
+                          setOpen(false);
+                        }}
+                      >
+                        {body}
+                      </Link>
+                    ) : (
+                      <button type="button" onClick={() => markRead(notification.id)}>
+                        {body}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function Sidebar() {
   const pathname = usePathname();
 
   return (
     <aside className="sidebar">
-      <Link href="/jobs" className="brand">
-        <div className="brand-text">
-          <strong>Arc WorkNet</strong>
-          <span>Paid outcomes on Arc</span>
-        </div>
-      </Link>
+      <div className="sidebar-head">
+        <Link href="/jobs" className="brand">
+          <div className="brand-text">
+            <strong>Arc WorkNet</strong>
+            <span>Paid outcomes on Arc</span>
+          </div>
+        </Link>
+        <NotificationsBell />
+      </div>
 
       <nav className="nav" aria-label="Main navigation">
         {navItems.map((item) => {
@@ -249,14 +388,17 @@ function MobileNav() {
           <div className="mobile-drawer-panel">
             <div className="mobile-drawer-head">
               <strong>Arc WorkNet</strong>
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => setOpen(false)}
-                aria-label="Close menu"
-              >
-                <X size={18} />
-              </button>
+              <div className="mobile-drawer-head-actions">
+                <NotificationsBell />
+                <button
+                  type="button"
+                  className="icon-button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close menu"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
             <nav className="mobile-drawer-nav" aria-label="Main navigation">
               {navItems.map((item) => {
@@ -312,9 +454,26 @@ function ErrorToast() {
   );
 }
 
+function OnboardingGuard() {
+  const { activeProfile } = useWorkNet();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!activeProfile) return;
+    if (pathname === "/onboarding") return;
+    if (!needsOnboarding(activeProfile)) return;
+    if (readOnboardingDismissed()) return;
+    router.push("/onboarding");
+  }, [activeProfile, pathname, router]);
+
+  return null;
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-shell">
+      <OnboardingGuard />
       <Sidebar />
       <MobileNav />
       <main className="content">{children}</main>
@@ -371,5 +530,40 @@ export function WalletPill() {
       <Wallet size={12} />
       {formatWalletAddress(activeProfile?.walletAddress ?? wallet.address)}
     </span>
+  );
+}
+
+export function SkeletonPanel({ lines = 3 }: { lines?: number }) {
+  return (
+    <div className="panel" aria-busy="true" aria-live="polite">
+      <div className="skeleton-stack">
+        <span className="skeleton line line-lg" />
+        {Array.from({ length: Math.max(lines - 1, 1) }).map((_, idx) => (
+          <span key={idx} className={clsx("skeleton", "line", idx % 2 === 0 ? "line-md" : "line-sm")} />
+        ))}
+      </div>
+      <span className="sr-only">Loading…</span>
+    </div>
+  );
+}
+
+export function EmptyState({
+  title,
+  description,
+  icon,
+  action,
+}: {
+  title: string;
+  description?: string;
+  icon?: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="empty empty-rich" role="status">
+      {icon ? <span className="empty-icon" aria-hidden>{icon}</span> : null}
+      <strong className="empty-title">{title}</strong>
+      {description ? <span className="empty-desc">{description}</span> : null}
+      {action ? <div className="empty-action">{action}</div> : null}
+    </div>
   );
 }

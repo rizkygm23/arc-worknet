@@ -8,6 +8,7 @@ import type {
   Notification,
   OnchainEvent,
   OnchainTransaction,
+  PortfolioItem,
   Profile,
   WorkNetState,
 } from "@/lib/types";
@@ -39,6 +40,18 @@ function jsonRecord(value: Json): Record<string, unknown> {
     : {};
 }
 
+function portfolioFromJson(value: Json): PortfolioItem[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+    .map((item, index) => ({
+      id: typeof item.id === "string" ? item.id : `portfolio_${index}`,
+      title: typeof item.title === "string" ? item.title : "Untitled",
+      url: typeof item.url === "string" ? item.url : undefined,
+      description: typeof item.description === "string" ? item.description : undefined,
+    }));
+}
+
 function handleFromWallet(walletAddress: string, id: string) {
   return walletAddress
     ? `wallet-${walletAddress.slice(2, 8).toLowerCase()}`
@@ -56,6 +69,10 @@ export function mapProfile(row: Tables["profiles_arcworker"]["Row"]): Profile {
     walletAddress: row.wallet_address,
     countryCode: row.country_code ?? "",
     timezone: row.timezone ?? "",
+    skills: row.skills ?? [],
+    hourlyRateUsdcUnits: nullable(row.hourly_rate_usdc_units),
+    availability: nullable(row.availability),
+    portfolio: portfolioFromJson(row.portfolio),
     totalEarnedUsdcUnits: row.total_earned_usdc_units,
     totalSpentUsdcUnits: row.total_spent_usdc_units,
     completedJobsCount: row.completed_jobs_count,

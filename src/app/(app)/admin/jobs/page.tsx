@@ -17,32 +17,34 @@ export default function AdminJobsPage() {
       />
 
       <section className="panel">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Job</th>
-              <th>Status</th>
-              <th>Budget</th>
-              <th>Tx</th>
-            </tr>
-          </thead>
-          <tbody>
-            {state.jobs.map((job) => (
-              <tr key={job.id}>
-                <td>
-                  <Link href={`/jobs/${job.id}`}>
-                    <strong>{job.title}</strong>
-                  </Link>
-                </td>
-                <td>
-                  <JobStatusBadge status={job.status} />
-                </td>
-                <td>{job.budgetUsdcUnits}</td>
-                <td>{job.createTxHash?.slice(0, 18)}</td>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Job</th>
+                <th>Status</th>
+                <th>Budget</th>
+                <th>Tx</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {state.jobs.map((job) => (
+                <tr key={job.id}>
+                  <td>
+                    <Link href={`/jobs/${job.id}`}>
+                      <strong>{job.title}</strong>
+                    </Link>
+                  </td>
+                  <td>
+                    <JobStatusBadge status={job.status} />
+                  </td>
+                  <td>{job.budgetUsdcUnits}</td>
+                  <td>{job.createTxHash?.slice(0, 18)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </>
   );

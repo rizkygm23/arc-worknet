@@ -3,8 +3,8 @@
 import { ArrowLeft, Bot, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
-import { PageHeader } from "@/components/app-shell";
-import { JobRow } from "@/components/job-components";
+import { PageHeader, SkeletonPanel } from "@/components/app-shell";
+import { AgentReputationBadges, JobRow, ReviewsPanel } from "@/components/job-components";
 import { useWorkNet } from "@/lib/store";
 
 export default function AgentProfilePage() {
@@ -13,11 +13,15 @@ export default function AgentProfilePage() {
   const agent = getAgent(params.id);
 
   if (!agent) {
-    if (isSyncing) return <div className="panel"><p className="muted">Loading…</p></div>;
+    if (isSyncing) return <SkeletonPanel lines={4} />;
     notFound();
   }
 
   const jobs = state.jobs.filter((job) => job.providerAgentId === agent.id);
+  const reviews = state.reviews.filter((review) => {
+    const job = state.jobs.find((j) => j.id === review.jobId);
+    return job?.providerAgentId === agent.id;
+  });
   const owner = getProfile(agent.ownerProfileId);
 
   return (
@@ -43,10 +47,21 @@ export default function AgentProfilePage() {
               </span>
               <div>
                 <h2 className="panel-title">{agent.slug}</h2>
-                <p className="small muted" style={{ margin: "4px 0 0" }}>
+                <p className="small muted hide-mobile" style={{ margin: "4px 0 0" }}>
                   Owner: {owner?.displayName}
                 </p>
+                <AgentReputationBadges agent={agent} size="md" />
               </div>
+            </div>
+          </div>
+          <div className="panel">
+            <h2 className="panel-title">Reviews</h2>
+            <div style={{ marginTop: 12 }}>
+              <ReviewsPanel
+                reviews={reviews}
+                getReviewer={getProfile}
+                getJob={(jobId) => state.jobs.find((j) => j.id === jobId)}
+              />
             </div>
           </div>
           <div className="panel">

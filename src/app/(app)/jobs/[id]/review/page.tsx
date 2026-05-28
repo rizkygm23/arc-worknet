@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle2, RotateCcw, XCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { PageHeader } from "@/components/app-shell";
+import { PageHeader, SkeletonPanel } from "@/components/app-shell";
 import { ChainTxLink, DeliverableViewer, JobStatusBadge } from "@/components/job-components";
 import { useWorkNet } from "@/lib/store";
 import type { Job } from "@/lib/types";
@@ -30,7 +30,7 @@ export default function ReviewJobPage() {
   const [busyAction, setBusyAction] = useState<string | undefined>();
 
   if (!job) {
-    if (isSyncing) return <div className="panel"><p className="muted">Loading…</p></div>;
+    if (isSyncing) return <SkeletonPanel lines={5} />;
     notFound();
   }
   const currentJob = job as Job;
@@ -77,7 +77,7 @@ export default function ReviewJobPage() {
             <div className="panel-header">
               <div>
                 <h2 className="panel-title">Submission</h2>
-                <p className="small muted" style={{ margin: "4px 0 0" }}>
+                <p className="small muted hide-mobile" style={{ margin: "4px 0 0" }}>
                   Confirm the deliverable before releasing escrow.
                 </p>
               </div>
@@ -158,8 +158,14 @@ export default function ReviewJobPage() {
 
           <div className="panel">
             <h2 className="panel-title">Settlement tx</h2>
-            <p className="small muted">Final payment release transaction.</p>
-            <ChainTxLink txHash={currentJob.completeTxHash} />
+            <p className="small muted hide-mobile">Final payment release transaction.</p>
+            {currentJob.completeTxHash ? (
+              <ChainTxLink txHash={currentJob.completeTxHash} />
+            ) : (
+              <p className="small muted" style={{ marginTop: 8 }}>
+                Pending — appears here after escrow is released.
+              </p>
+            )}
           </div>
         </aside>
       </section>

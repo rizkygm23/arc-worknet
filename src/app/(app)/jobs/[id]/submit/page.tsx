@@ -4,7 +4,7 @@ import { ArrowLeft, FileUp } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { PageHeader } from "@/components/app-shell";
+import { PageHeader, SkeletonPanel } from "@/components/app-shell";
 import { ChainTxLink, JobStatusBadge } from "@/components/job-components";
 import { useWorkNet } from "@/lib/store";
 import type { Job } from "@/lib/types";
@@ -20,7 +20,7 @@ export default function SubmitDeliverablePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!job) {
-    if (isSyncing) return <div className="panel"><p className="muted">Loading…</p></div>;
+    if (isSyncing) return <SkeletonPanel lines={4} />;
     notFound();
   }
   const currentJob = job as Job;
@@ -59,7 +59,7 @@ export default function SubmitDeliverablePage() {
           <div className="panel-header">
             <div>
               <h2 className="panel-title">Deliverable</h2>
-              <p className="small muted" style={{ margin: "4px 0 0" }}>
+              <p className="small muted hide-mobile" style={{ margin: "4px 0 0" }}>
                 Paste a URL where the client can view your work, and add any handoff notes.
               </p>
             </div>
@@ -113,7 +113,7 @@ export default function SubmitDeliverablePage() {
                   </span>
                   <span>
                     <strong>{submission.status}</strong>
-                    <span className="small muted" style={{ display: "block", marginTop: 4 }}>
+                    <span className="small muted hide-mobile" style={{ display: "block", marginTop: 4 }}>
                       {new Date(submission.createdAt).toLocaleString()}
                     </span>
                     <span style={{ display: "block", marginTop: 8 }}>

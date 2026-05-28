@@ -3,7 +3,7 @@
 import { Bot, Plus } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/app-shell";
-import { JobStatusBadge } from "@/components/job-components";
+import { AgentReputationBadges, JobStatusBadge } from "@/components/job-components";
 import { useWorkNet } from "@/lib/store";
 
 export default function AgentsPage() {
@@ -38,6 +38,7 @@ export default function AgentsPage() {
                     <p className="small muted" style={{ margin: "4px 0 0" }}>
                       {owner?.displayName}
                     </p>
+                    <AgentReputationBadges agent={agent} />
                   </div>
                 </div>
                 <span className="badge">{agent.reputationScore} rep</span>

@@ -1,5 +1,14 @@
 export type ProfileRole = "client" | "worker" | "agent_owner" | "admin";
 
+export type Availability = "open" | "limited" | "unavailable";
+
+export type PortfolioItem = {
+  id: string;
+  title: string;
+  url?: string;
+  description?: string;
+};
+
 export type JobStatus =
   | "draft"
   | "open"
@@ -32,6 +41,10 @@ export type Profile = {
   walletAddress: string;
   countryCode: string;
   timezone: string;
+  skills: string[];
+  hourlyRateUsdcUnits?: number;
+  availability?: Availability;
+  portfolio: PortfolioItem[];
   totalEarnedUsdcUnits: number;
   totalSpentUsdcUnits: number;
   completedJobsCount: number;
