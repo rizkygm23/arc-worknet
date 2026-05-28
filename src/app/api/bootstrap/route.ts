@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getServiceClientOrResponse } from "@/lib/api";
-import { cachedJson, getCacheVersion } from "@/lib/server/cache";
 import { getWalletSession } from "@/lib/server/wallet-session";
 import { toWorkNetState, type BootstrapRows } from "@/lib/supabase/mappers";
 import { TABLES } from "@/lib/supabase/tables";
@@ -43,51 +42,48 @@ function mergeUnique<T extends { id: string }>(...sets: T[][]) {
 async function loadPublicRows(supabase: ReturnType<typeof getServiceClientOrResponse>["supabase"]) {
   if (!supabase) throw new Error("Supabase service client is not available.");
 
-  const version = await getCacheVersion("bootstrap");
-  return cachedJson<PublicBootstrapRows>(`arcworknet:bootstrap:public:${version}`, 15, async () => {
-    const [profiles, agents, jobs, events] = await Promise.all([
-      selectTable(
-        supabase
-          .from(TABLES.profiles)
-          .select("*")
-          .eq("is_blocked", false)
-          .order("created_at", { ascending: false }),
-      ),
-      selectTable(
-        supabase
-          .from(TABLES.agents)
-          .select("*")
-          .eq("is_public", true)
-          .order("created_at", { ascending: false }),
-      ),
-      selectTable(
-        supabase
-          .from(TABLES.jobs)
-          .select("*")
-          .in("status", [...PUBLIC_JOB_STATUSES])
-          .order("created_at", { ascending: false }),
-      ),
-      selectTable(
-        supabase
-          .from(TABLES.events)
-          .select("*")
-          .order("block_number", { ascending: false })
-          .limit(200),
-      ),
-    ]);
-    const publicJobIds = jobs.map((job) => job.id);
-    const transactions = await selectWhereIn(
+  const [profiles, agents, jobs, events] = await Promise.all([
+    selectTable(
       supabase
-        .from(TABLES.transactions)
+        .from(TABLES.profiles)
         .select("*")
-        .order("created_at", { ascending: false })
-        .limit(100),
-      "job_id",
-      publicJobIds,
-    );
+        .eq("is_blocked", false)
+        .order("created_at", { ascending: false }),
+    ),
+    selectTable(
+      supabase
+        .from(TABLES.agents)
+        .select("*")
+        .eq("is_public", true)
+        .order("created_at", { ascending: false }),
+    ),
+    selectTable(
+      supabase
+        .from(TABLES.jobs)
+        .select("*")
+        .in("status", [...PUBLIC_JOB_STATUSES])
+        .order("created_at", { ascending: false }),
+    ),
+    selectTable(
+      supabase
+        .from(TABLES.events)
+        .select("*")
+        .order("block_number", { ascending: false })
+        .limit(200),
+    ),
+  ]);
+  const publicJobIds = jobs.map((job) => job.id);
+  const transactions = await selectWhereIn(
+    supabase
+      .from(TABLES.transactions)
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100),
+    "job_id",
+    publicJobIds,
+  );
 
-    return { profiles, agents, jobs, transactions, events };
-  });
+  return { profiles, agents, jobs, transactions, events } satisfies PublicBootstrapRows;
 }
 
 export async function GET() {

@@ -63,6 +63,5 @@ export async function cachedJson<T>(key: string, ttlSeconds: number, loader: () 
 }
 
 export async function invalidateBootstrapCache() {
-  await bumpCacheVersion("bootstrap");
   void broadcastBootstrapBump();
 }

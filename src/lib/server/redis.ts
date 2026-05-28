@@ -5,8 +5,10 @@ type RedisRestResponse<T> = {
   error?: string;
 };
 
+let redisDisabled = false;
+
 export function hasRedisConfig() {
-  return Boolean(env.REDIS_REST_URL && env.REDIS_REST_TOKEN);
+  return Boolean(env.REDIS_REST_URL && env.REDIS_REST_TOKEN) && !redisDisabled;
 }
 
 export async function redisCommand<T>(command: unknown[]): Promise<T | undefined> {
@@ -23,7 +25,13 @@ export async function redisCommand<T>(command: unknown[]): Promise<T | undefined
       cache: "no-store",
     });
     const body = (await response.json().catch(() => ({}))) as RedisRestResponse<T>;
-    if (!response.ok || body.error) return undefined;
+    if (!response.ok || body.error) {
+      if (response.status === 401 || response.status === 403) {
+        redisDisabled = true;
+        console.warn(`[redis] disabled after ${response.status}: ${body.error ?? "auth failure"}`);
+      }
+      return undefined;
+    }
     return body.result;
   } catch {
     return undefined;
