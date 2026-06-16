@@ -12,6 +12,7 @@ const PUBLIC_JOB_STATUSES = [
   "submitted",
   "revision_requested",
   "completed",
+  "disputed",
 ] as const;
 
 const PUBLIC_LIST_LIMIT = 200;
