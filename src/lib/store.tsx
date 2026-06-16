@@ -33,7 +33,9 @@ import { ARC_USDC_GAS_BUFFER_UNITS, formatUsdcUnits } from "./money";
 import { seedState } from "./seed";
 import { hasSupabaseBrowserConfig } from "./env";
 import { getBrowserSupabase } from "./supabase/browser";
-import { getJobCreatedArcId, ensureArcNetwork, readArcUsdcBalance, waitForArcReceipt } from "./wallet";
+import { getJobCreatedArcId, ensureArcNetwork, readArcUsdcBalance, readEscrowOwner, waitForArcReceipt } from "./wallet";
+import { ERC8004_REPUTATION_REGISTRY } from "./arc";
+import { reputationRegistryAbi } from "./erc8004";
 import type {
   Agent,
   AiEvaluation,
@@ -63,6 +65,7 @@ type DataContextValue = {
   activeProfile?: Profile;
   backendError?: string;
   isSyncing: boolean;
+  isContractOwner: boolean;
   refreshState: () => Promise<void>;
   setActiveProfile: (profileId: string) => void;
   resetDemo: () => void;
@@ -109,6 +112,8 @@ type ActionsContextValue = {
   requestRevision: (jobId: string, submissionId: string, reason: string) => Promise<void>;
   rejectSubmission: (jobId: string, submissionId: string, reason: string) => Promise<void>;
   completeJob: (jobId: string, submissionId: string, input: { rating: number; reviewText: string }) => Promise<void>;
+  resolveDispute: (jobId: string, providerAmountUsdcUnits: number, reasonText: string) => Promise<void>;
+  raiseWorkerDispute: (jobId: string, reasonText: string) => Promise<void>;
   registerAgent: (input: { name: string; description: string; capabilities: string[]; walletAddress: string }) => Promise<void>;
   updateProfile: (input: UpdateProfileInput) => Promise<void>;
 };
@@ -244,6 +249,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
   const [backendError, setBackendError] = useState<string | undefined>();
   const [isSyncing, setIsSyncing] = useState(true);
   const [isWalletPending, setIsWalletPending] = useState(false);
+  const [escrowOwner, setEscrowOwner] = useState<string | undefined>();
   const verifiedAddressRef = useRef<string | undefined>(undefined);
 
   const { ready, authenticated, user } = usePrivy();
@@ -278,6 +284,23 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       }
     })();
   }, [ready, authenticated, user, primaryWallet, createWallet]);
+
+  // Read the escrow contract owner once so the dispute-resolution UI can be
+  // gated to that wallet only. Best-effort: failure just leaves owner undefined.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const owner = await readEscrowOwner();
+        if (!cancelled) setEscrowOwner(owner.toLowerCase());
+      } catch {
+        // Owner stays undefined; resolve panel simply never shows.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const refreshState = useCallback(async () => {
     setIsSyncing(true);
@@ -919,6 +942,46 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
           decision: input.decision,
         }),
       });
+
+      // Best-effort ERC-8004 reputation write. Only on approval, only for agent
+      // providers with an onchain agent id, only when explicitly enabled. This
+      // MUST NOT throw — the job is already completed and paid at this point.
+      if (
+        input.decision === "approve" &&
+        process.env.NEXT_PUBLIC_ENABLE_ONCHAIN_REPUTATION === "true"
+      ) {
+        try {
+          const agent = job.providerAgentId
+            ? stateRef.current.agents.find((a) => a.id === job.providerAgentId)
+            : undefined;
+          if (agent?.arcAgentId) {
+            const value = Math.round((input.rating ?? 5) * 20); // 1-5 -> 20-100
+            const repData = encodeFunctionData({
+              abi: reputationRegistryAbi,
+              functionName: "giveFeedback",
+              args: [
+                BigInt(agent.arcAgentId),
+                BigInt(value),
+                0, // valueDecimals
+                "arc-worknet",
+                "job-complete",
+                "",
+                "",
+                reasonHashBytes32 as Hex,
+              ],
+            });
+            await sendArcTransactionRef.current({
+              to: ERC8004_REPUTATION_REGISTRY,
+              data: repData,
+            });
+          }
+        } catch (error) {
+          // Reputation registry may be unconfigured, gated, or signature-locked.
+          // Completion already succeeded; swallow.
+          console.warn("Onchain reputation write skipped:", error);
+        }
+      }
+
       await refreshStateRef.current();
     },
     [],
@@ -955,6 +1018,80 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       });
     },
     [reviewSubmission],
+  );
+
+  const resolveDispute = useCallback(
+    async (jobId: string, providerAmountUsdcUnits: number, reasonText: string) => {
+      const walletNow = walletRef.current;
+      if (!walletNow.address) throw new Error("Connect a wallet before resolving a dispute.");
+      const job = stateRef.current.jobs.find((item) => item.id === jobId);
+      if (!job) throw new Error("Job not found.");
+      if (!job.arcJobId) throw new Error("Job has no onchain id to resolve.");
+      if (job.status !== "disputed") throw new Error("Only disputed jobs can be resolved.");
+      if (providerAmountUsdcUnits < 0 || providerAmountUsdcUnits > job.budgetUsdcUnits) {
+        throw new Error("Provider amount must be between 0 and the funded budget.");
+      }
+
+      const reasonHash = await sha256Hex(
+        stableJson({ jobId, providerAmountUsdcUnits, reasonText }),
+      );
+      const data = encodeFunctionData({
+        abi: erc8183Abi,
+        functionName: "resolveDispute",
+        args: [BigInt(job.arcJobId), BigInt(providerAmountUsdcUnits), reasonHash as Hex],
+      });
+      const txHash = await sendArcTransactionRef.current({ to: ERC8183_CONTRACT_ADDRESS, data });
+      const receipt = await waitForArcReceipt(txHash);
+
+      await apiJson(`/api/jobs/${jobId}/resolve-dispute`, {
+        method: "POST",
+        body: JSON.stringify({
+          providerAmountUsdcUnits,
+          reasonText,
+          reasonHashBytes32: reasonHash,
+          resolveTxHash: txHash,
+          blockNumber: Number(receipt.blockNumber),
+        }),
+      });
+      await refreshStateRef.current();
+    },
+    [],
+  );
+
+  const raiseWorkerDispute = useCallback(
+    async (jobId: string, reasonText: string) => {
+      const profile = activeProfileRef.current;
+      const walletNow = walletRef.current;
+      if (!profile) throw new Error("Connect a wallet before opening a dispute.");
+      if (!walletNow.address) throw new Error("Connect a wallet before opening a dispute.");
+      const job = stateRef.current.jobs.find((item) => item.id === jobId);
+      if (!job) throw new Error("Job not found.");
+      if (!job.arcJobId) throw new Error("This job is not funded onchain yet.");
+      if (!["funded", "submitted", "revision_requested"].includes(job.status)) {
+        throw new Error("You can only open a dispute on funded or submitted work.");
+      }
+
+      const reasonHash = await sha256Hex(stableJson({ jobId, reasonText, by: "worker" }));
+      const data = encodeFunctionData({
+        abi: erc8183Abi,
+        functionName: "raiseDispute",
+        args: [BigInt(job.arcJobId), reasonHash as Hex],
+      });
+      const txHash = await sendArcTransactionRef.current({ to: ERC8183_CONTRACT_ADDRESS, data });
+      const receipt = await waitForArcReceipt(txHash);
+
+      await apiJson(`/api/jobs/${jobId}/raise-dispute`, {
+        method: "POST",
+        body: JSON.stringify({
+          reasonText,
+          reasonHashBytes32: reasonHash,
+          disputeTxHash: txHash,
+          blockNumber: Number(receipt.blockNumber),
+        }),
+      });
+      await refreshStateRef.current();
+    },
+    [],
   );
 
   const updateProfile = useCallback(async (input: UpdateProfileInput) => {
@@ -995,6 +1132,9 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       activeProfile,
       backendError,
       isSyncing,
+      isContractOwner: Boolean(
+        escrowOwner && wallet.address && escrowOwner === wallet.address.toLowerCase(),
+      ),
       refreshState,
       setActiveProfile,
       resetDemo,
@@ -1011,6 +1151,8 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       activeProfile,
       backendError,
       isSyncing,
+      escrowOwner,
+      wallet.address,
       refreshState,
       setActiveProfile,
       resetDemo,
@@ -1050,6 +1192,8 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       requestRevision,
       rejectSubmission,
       completeJob,
+      resolveDispute,
+      raiseWorkerDispute,
       registerAgent,
       updateProfile,
     }),

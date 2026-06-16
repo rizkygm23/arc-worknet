@@ -35,12 +35,18 @@ const envSchema = z.object({
   CIRCLE_ENTITY_SECRET: z.string().optional(),
   CIRCLE_APP_KIT_KEY: z.string().optional(),
   CIRCLE_WEBHOOK_SECRET: optionalSecret,
+  NEXT_PUBLIC_CIRCLE_APP_KIT_KEY: z.string().optional(),
+  NEXT_PUBLIC_CIRCLE_ONRAMP_URL: optionalUrl,
   AI_PROVIDER_API_KEY: optionalSecret,
   ADMIN_API_SECRET: optionalSecret,
   DATA_ENCRYPTION_KEY: z.string().min(32).optional().or(z.literal("")),
   PLATFORM_FEE_BPS: z.coerce.number().int().min(0).max(10000).default(100),
   PLATFORM_FEE_RECIPIENT_ADDRESS: optionalAddress,
   NEXT_PUBLIC_ENABLE_DEMO_DATA: z
+    .enum(["true", "false"])
+    .optional()
+    .default("false"),
+  NEXT_PUBLIC_ENABLE_ONCHAIN_REPUTATION: z
     .enum(["true", "false"])
     .optional()
     .default("false"),

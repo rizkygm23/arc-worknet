@@ -63,6 +63,21 @@ export const reviewSchema = z.object({
   decision: z.enum(["approve", "request_revision", "reject"]),
 });
 
+export const resolveDisputeSchema = z.object({
+  providerAmountUsdcUnits: z.number().int().min(0),
+  reasonText: z.string().min(3),
+  reasonHashBytes32: txHashSchema,
+  resolveTxHash: txHashSchema,
+  blockNumber: z.number().int().optional(),
+});
+
+export const raiseDisputeSchema = z.object({
+  reasonText: z.string().min(3),
+  reasonHashBytes32: txHashSchema,
+  disputeTxHash: txHashSchema,
+  blockNumber: z.number().int().optional(),
+});
+
 export async function parseJson<T>(request: Request, schema: z.ZodType<T>) {
   const json = await request.json().catch(() => undefined);
   return schema.safeParse(json);

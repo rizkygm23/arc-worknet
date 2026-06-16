@@ -4,6 +4,7 @@ import { ArrowLeft, Check, CircleDollarSign, Handshake } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { PageHeader, SkeletonPanel } from "@/components/app-shell";
+import { AddFundsButton } from "@/components/add-funds";
 import { ChainTxLink, EscrowTimeline, JobStatusBadge } from "@/components/job-components";
 import { ARC_USDC_GAS_BUFFER_UNITS, formatUsdcUnits } from "@/lib/money";
 import { nextOnchainAction, useWorkNet } from "@/lib/store";
@@ -78,6 +79,7 @@ export default function FundJobPage() {
                   Your wallet balance is below the budget plus the gas buffer.
                 </p>
               ) : null}
+              {!canCoverBudget ? <AddFundsButton /> : null}
             </div>
           ) : (
             <p className="muted">Only the client can fund this escrow.</p>

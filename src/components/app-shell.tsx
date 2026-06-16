@@ -13,6 +13,7 @@ import { useReadNotifications } from "@/lib/notifications-read";
 import { needsOnboarding, readOnboardingDismissed } from "@/lib/onboarding";
 import { readTourDone } from "@/lib/tour";
 import { TourOverlay } from "@/components/tour";
+import { AddFundsButton } from "@/components/add-funds";
 
 const ARC_EXPLORER_URL = process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app";
 
@@ -144,6 +145,10 @@ function WalletPanel() {
           <div className="wallet-stat">
             <span>Escrowed</span>
             <strong>{formatUsdcUnits(escrowed)}</strong>
+          </div>
+
+          <div className="wallet-popover-row">
+            <AddFundsButton compact />
           </div>
 
           {state.profiles.length > 1 ? (

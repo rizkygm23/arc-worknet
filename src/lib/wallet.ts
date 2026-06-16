@@ -10,6 +10,7 @@ import {
   ARC_RPC_URL,
   ARC_TESTNET_CHAIN_ID,
   ARC_USDC_ADDRESS,
+  ERC8183_CONTRACT_ADDRESS,
   arcTestnet,
   erc20UsdcAbi,
   erc8183Abi,
@@ -93,6 +94,14 @@ export async function readArcUsdcBalance(address: Address) {
     abi: erc20UsdcAbi,
     functionName: "balanceOf",
     args: [address],
+  });
+}
+
+export async function readEscrowOwner(): Promise<Address> {
+  return publicClient.readContract({
+    address: ERC8183_CONTRACT_ADDRESS,
+    abi: erc8183Abi,
+    functionName: "owner",
   });
 }
 
