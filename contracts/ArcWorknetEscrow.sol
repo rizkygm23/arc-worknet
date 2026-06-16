@@ -16,7 +16,8 @@ contract ArcWorknetEscrow {
         RevisionRequested,
         Completed,
         Cancelled,
-        Disputed
+        Disputed,
+        Rejected
     }
 
     struct Job {
@@ -35,6 +36,9 @@ contract ArcWorknetEscrow {
 
     uint256 public constant BPS_DENOMINATOR = 10_000;
     uint256 public constant MAX_PLATFORM_FEE_BPS = 1_000;
+    // Penalty the client pays to the worker when rejecting submitted work.
+    // 500 bps = 5%. The client is refunded the remaining 95%. No third party.
+    uint256 public constant REJECTION_PENALTY_BPS = 500;
 
     IERC20 public immutable paymentToken;
     address public owner;
@@ -65,6 +69,14 @@ contract ArcWorknetEscrow {
     );
     event Cancelled(uint256 indexed jobId, address indexed actor);
     event Refunded(uint256 indexed jobId, address indexed client, uint256 amount);
+    event RejectedWithPenalty(
+        uint256 indexed jobId,
+        address indexed client,
+        address indexed provider,
+        uint256 workerPenalty,
+        uint256 clientRefund,
+        bytes32 reasonHash
+    );
     event Disputed(uint256 indexed jobId, address indexed actor, bytes32 reasonHash);
     event DisputeResolved(
         uint256 indexed jobId,
@@ -276,6 +288,34 @@ contract ArcWorknetEscrow {
         _safeTransfer(address(paymentToken), job.provider, providerPayout);
 
         emit Completed(jobId, msg.sender, job.provider, providerPayout, platformFee, reasonHash);
+    }
+
+    // Trustless rejection. When the client (evaluator) rejects submitted work,
+    // the worker still receives a 5% penalty fee and the client is refunded 95%.
+    // No owner, admin, or arbiter is involved — the client signs this directly.
+    function rejectWithPenalty(
+        uint256 jobId,
+        bytes32 reasonHash
+    ) external jobExists(jobId) onlyEvaluator(jobId) nonReentrant {
+        Job storage job = jobs[jobId];
+        if (job.status != JobStatus.Submitted) revert InvalidStatus();
+
+        uint256 amount = job.fundedAmount;
+        uint256 workerPenalty = (amount * REJECTION_PENALTY_BPS) / BPS_DENOMINATOR;
+        uint256 clientRefund = amount - workerPenalty;
+
+        job.status = JobStatus.Rejected;
+        job.completionReasonHash = reasonHash;
+        job.fundedAmount = 0;
+
+        if (workerPenalty > 0) {
+            _safeTransfer(address(paymentToken), job.provider, workerPenalty);
+        }
+        if (clientRefund > 0) {
+            _safeTransfer(address(paymentToken), job.client, clientRefund);
+        }
+
+        emit RejectedWithPenalty(jobId, job.client, job.provider, workerPenalty, clientRefund, reasonHash);
     }
 
     function cancelUnfunded(uint256 jobId) external jobExists(jobId) onlyClient(jobId) {

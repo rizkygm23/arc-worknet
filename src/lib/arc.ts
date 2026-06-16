@@ -140,6 +140,16 @@ export const erc8183Abi = [
   },
   {
     type: "function",
+    name: "rejectWithPenalty",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "jobId", type: "uint256" },
+      { name: "reasonHash", type: "bytes32" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
     name: "owner",
     stateMutability: "view",
     inputs: [],
@@ -191,6 +201,19 @@ export const erc8183Abi = [
       { name: "jobId", type: "uint256", indexed: true },
       { name: "resolver", type: "address", indexed: true },
       { name: "providerPayout", type: "uint256", indexed: false },
+      { name: "clientRefund", type: "uint256", indexed: false },
+      { name: "reasonHash", type: "bytes32", indexed: false },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "RejectedWithPenalty",
+    inputs: [
+      { name: "jobId", type: "uint256", indexed: true },
+      { name: "client", type: "address", indexed: true },
+      { name: "provider", type: "address", indexed: true },
+      { name: "workerPenalty", type: "uint256", indexed: false },
       { name: "clientRefund", type: "uint256", indexed: false },
       { name: "reasonHash", type: "bytes32", indexed: false },
     ],

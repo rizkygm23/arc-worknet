@@ -83,7 +83,7 @@ export default function ReviewJobPage() {
       <PageHeader
         eyebrow="Review"
         title={currentJob.title}
-        subtitle="Approve to pay the worker, ask for changes, or reject to open a dispute if the work is wrong."
+        subtitle="Approve to pay the worker, ask for changes, or reject. Rejecting still pays the worker a 5% fee and refunds you 95% — automatically, with no third party."
         actions={
           <Link className="button ghost" href={`/jobs/${currentJob.id}`}>
             <ArrowLeft size={16} />
@@ -196,19 +196,28 @@ export default function ReviewJobPage() {
                 ) : null}
               </div>
             ) : canReview ? (
-              <div className="actions" style={{ marginTop: 16 }}>
-                <button className="button primary" type="button" disabled={!submission || Boolean(busyAction)} onClick={approve}>
-                  <CheckCircle2 size={16} />
-                  Approve and release
-                </button>
-                <button className="button" type="button" disabled={!submission || Boolean(busyAction)} onClick={revise}>
-                  <RotateCcw size={16} />
-                  Request revision
-                </button>
-                <button className="button" type="button" disabled={!submission || Boolean(busyAction)} onClick={reject}>
-                  <XCircle size={16} />
-                  Reject &amp; open dispute
-                </button>
+              <div className="actions" style={{ marginTop: 16, flexDirection: "column", alignItems: "stretch" }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button className="button primary" type="button" disabled={!submission || Boolean(busyAction)} onClick={approve}>
+                    <CheckCircle2 size={16} />
+                    Approve &amp; pay worker
+                  </button>
+                  <button className="button" type="button" disabled={!submission || Boolean(busyAction)} onClick={revise}>
+                    <RotateCcw size={16} />
+                    Ask for changes
+                  </button>
+                  <button className="button" type="button" disabled={!submission || Boolean(busyAction)} onClick={reject}>
+                    <XCircle size={16} />
+                    Reject (pay 5% to worker)
+                  </button>
+                </div>
+                <p className="small muted" style={{ marginTop: 10 }}>
+                  Rejecting still pays the worker a <strong>5% fee</strong> (
+                  {formatUsdcUnits(Math.floor(currentJob.budgetUsdcUnits * 0.05))}). You are refunded{" "}
+                  <strong>95%</strong> (
+                  {formatUsdcUnits(currentJob.budgetUsdcUnits - Math.floor(currentJob.budgetUsdcUnits * 0.05))}
+                  ). This is automatic on-chain — no admin or third party is involved.
+                </p>
               </div>
             ) : (
               <p className="muted" style={{ marginTop: 16 }}>

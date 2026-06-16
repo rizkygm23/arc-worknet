@@ -914,18 +914,35 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
           ? "complete"
           : input.decision === "request_revision"
             ? "requestRevision"
-            : "raiseDispute";
+            : "rejectWithPenalty";
       const reviewData = encodeFunctionData({
         abi: erc8183Abi,
         functionName: reviewTxMethod,
         args:
-          reviewTxMethod === "raiseDispute"
+          reviewTxMethod === "rejectWithPenalty"
             ? [BigInt(job.arcJobId), reasonHashBytes32 as Hex]
             : [BigInt(job.arcJobId), reasonHashBytes32 as Hex, "0x"],
       });
       const reviewTxHash = await sendArcTransactionRef.current({ to: ERC8183_CONTRACT_ADDRESS, data: reviewData });
       const receipt = await waitForArcReceipt(reviewTxHash);
       const completeTxHash = input.decision === "approve" ? reviewTxHash : undefined;
+
+      if (input.decision === "reject") {
+        // Trustless reject-with-penalty: client pays 5% to worker, gets 95% back.
+        await apiJson(`/api/jobs/${jobId}/reject`, {
+          method: "POST",
+          body: JSON.stringify({
+            reviewerProfileId: profile.id,
+            submissionId,
+            reasonText: input.reviewText,
+            reasonHashBytes32,
+            rejectTxHash: reviewTxHash,
+            blockNumber: Number(receipt.blockNumber),
+          }),
+        });
+        await refreshStateRef.current();
+        return;
+      }
 
       await apiJson(`/api/jobs/${jobId}/complete`, {
         method: "POST",

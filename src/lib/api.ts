@@ -58,7 +58,7 @@ export const reviewSchema = z.object({
   reasonHashBytes32: txHashSchema,
   completeTxHash: txHashSchema.optional(),
   reviewTxHash: txHashSchema,
-  reviewTxMethod: z.enum(["complete", "requestRevision", "raiseDispute"]),
+  reviewTxMethod: z.enum(["complete", "requestRevision", "raiseDispute", "rejectWithPenalty"]),
   blockNumber: z.number().int().optional(),
   decision: z.enum(["approve", "request_revision", "reject"]),
 });
@@ -75,6 +75,15 @@ export const raiseDisputeSchema = z.object({
   reasonText: z.string().min(3),
   reasonHashBytes32: txHashSchema,
   disputeTxHash: txHashSchema,
+  blockNumber: z.number().int().optional(),
+});
+
+export const rejectSchema = z.object({
+  reviewerProfileId: z.string().uuid(),
+  submissionId: z.string().uuid(),
+  reasonText: z.string().min(3),
+  reasonHashBytes32: txHashSchema,
+  rejectTxHash: txHashSchema,
   blockNumber: z.number().int().optional(),
 });
 
