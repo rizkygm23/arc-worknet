@@ -15,9 +15,11 @@ export default function SubmitDeliverablePage() {
   const { activeProfile, getJob, getJobSubmissions, getAgent, submitDeliverable, isSyncing } = useWorkNet();
   const job = getJob(params.id);
   const submissions = getJobSubmissions(params.id);
-  const [url, setUrl] = useState("https://example.com/worknet/deliverable");
+  const [file, setFile] = useState<File | null>(null);
+  const [url, setUrl] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | undefined>();
 
   if (!job) {
     if (isSyncing) return <SkeletonPanel lines={4} />;
@@ -35,9 +37,19 @@ export default function SubmitDeliverablePage() {
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canSubmit) return;
+    if (!file && !url.trim()) {
+      setSubmitError("Attach a file or paste a link before submitting.");
+      return;
+    }
+    setSubmitError(undefined);
     setIsSubmitting(true);
-    await submitDeliverable(currentJob.id, { url, notes });
-    router.push(`/jobs/${currentJob.id}`);
+    try {
+      await submitDeliverable(currentJob.id, { url: url.trim() || undefined, notes, file: file ?? undefined });
+      router.push(`/jobs/${currentJob.id}`);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Submission failed.");
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -60,7 +72,7 @@ export default function SubmitDeliverablePage() {
             <div>
               <h2 className="panel-title">Deliverable</h2>
               <p className="small muted hide-mobile" style={{ margin: "4px 0 0" }}>
-                Paste a URL where the client can view your work, and add any handoff notes.
+                Upload your file — the client can only preview it (watermarked) until they approve and pay. You can also add an optional external link.
               </p>
             </div>
             <JobStatusBadge status={currentJob.status} />
@@ -70,12 +82,29 @@ export default function SubmitDeliverablePage() {
             <>
               <div className="grid">
                 <label className="field">
-                  <span>Deliverable URL</span>
+                  <span>Upload file (protected)</span>
+                  <input
+                    className="input"
+                    type="file"
+                    onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                  />
+                  {file ? (
+                    <span className="small muted">
+                      {file.name} · {(file.size / 1024).toFixed(0)} KB · locked until approval
+                    </span>
+                  ) : (
+                    <span className="small muted">
+                      Images show a watermarked preview; other files show only their name and size until approved.
+                    </span>
+                  )}
+                </label>
+                <label className="field">
+                  <span>External link (optional, not protected)</span>
                   <input
                     className="input"
                     type="url"
-                    required
                     value={url}
+                    placeholder="https://… (anyone with the link can open it)"
                     onChange={(event) => setUrl(event.target.value)}
                   />
                 </label>
@@ -90,10 +119,16 @@ export default function SubmitDeliverablePage() {
                 </label>
               </div>
 
+              {submitError ? (
+                <p className="small" style={{ color: "var(--danger)", marginTop: 12 }}>
+                  {submitError}
+                </p>
+              ) : null}
+
               <div className="actions" style={{ marginTop: 16 }}>
                 <button className="button primary" type="submit" disabled={isSubmitting}>
                   <FileUp size={16} />
-                  Submit deliverable
+                  {isSubmitting ? "Submitting…" : "Submit deliverable"}
                 </button>
               </div>
             </>

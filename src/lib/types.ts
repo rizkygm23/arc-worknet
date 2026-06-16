@@ -132,8 +132,12 @@ export type JobSubmission = {
   submitterProfileId?: string;
   submitterAgentId?: string;
   notes: string;
-  deliverableUrl: string;
+  deliverableUrl?: string;
   deliverableSha256?: string;
+  deliverableStoragePath?: string;
+  deliverableMimeType?: string;
+  deliverableFileName?: string;
+  deliverableSizeBytes?: number;
   deliverablePayload: Record<string, unknown>;
   deliverableHashBytes32?: string;
   status: SubmissionStatus;

@@ -105,7 +105,15 @@ export default function ReviewJobPage() {
               <JobStatusBadge status={currentJob.status} />
             </div>
             <DeliverableViewer
-              url={submission?.deliverableUrl}
+              jobId={currentJob.id}
+              submissionId={submission?.id}
+              mime={submission?.deliverableMimeType}
+              fileName={submission?.deliverableFileName}
+              sizeBytes={submission?.deliverableSizeBytes}
+              sha256={submission?.deliverableSha256}
+              isApproved={submission?.status === "approved" || currentJob.status === "completed"}
+              isProvider={false}
+              externalUrl={submission?.deliverableUrl}
               notes={submission?.notes}
               hash={submission?.deliverableHashBytes32}
             />

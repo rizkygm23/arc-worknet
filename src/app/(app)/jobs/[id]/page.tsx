@@ -704,7 +704,15 @@ export default function JobDetailPage() {
               </div>
             </div>
             <DeliverableViewer
-              url={latestSubmission?.deliverableUrl}
+              jobId={currentJob.id}
+              submissionId={latestSubmission?.id}
+              mime={latestSubmission?.deliverableMimeType}
+              fileName={latestSubmission?.deliverableFileName}
+              sizeBytes={latestSubmission?.deliverableSizeBytes}
+              sha256={latestSubmission?.deliverableSha256}
+              isApproved={latestSubmission?.status === "approved" || currentJob.status === "completed"}
+              isProvider={isProvider}
+              externalUrl={latestSubmission?.deliverableUrl}
               notes={latestSubmission?.notes}
               hash={latestSubmission?.deliverableHashBytes32}
             />

@@ -170,15 +170,27 @@ export function mapApplication(row: Tables["job_applications_arcworker"]["Row"])
 }
 
 export function mapSubmission(row: Tables["job_submissions_arcworker"]["Row"]): JobSubmission {
+  const payload = decryptJson(jsonRecord(row.deliverable_payload));
+  const meta = (payload?.fileMeta ?? {}) as {
+    mimeType?: string;
+    fileName?: string;
+    sizeBytes?: number;
+  };
   return {
     id: row.id,
     jobId: row.job_id,
     submitterProfileId: nullable(row.submitter_profile_id),
     submitterAgentId: nullable(row.submitter_agent_id),
     notes: decryptText(row.notes),
-    deliverableUrl: decryptText(row.deliverable_url),
+    deliverableUrl: decryptText(row.deliverable_url) || undefined,
     deliverableSha256: nullable(row.deliverable_sha256),
-    deliverablePayload: decryptJson(jsonRecord(row.deliverable_payload)),
+    // NOTE: deliverable_storage_path is intentionally NOT mapped to the client.
+    // File access is always brokered through the gated /deliverable endpoint so
+    // a locked deliverable can never be reached directly from client state.
+    deliverableMimeType: meta.mimeType,
+    deliverableFileName: meta.fileName,
+    deliverableSizeBytes: typeof meta.sizeBytes === "number" ? meta.sizeBytes : undefined,
+    deliverablePayload: payload,
     deliverableHashBytes32: nullable(row.deliverable_hash_bytes32),
     status: row.status,
     submitTxHash: nullable(row.submit_tx_hash),

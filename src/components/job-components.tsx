@@ -12,13 +12,16 @@ import {
   Clock3,
   CreditCard,
   Crown,
+  Download,
   ExternalLink,
   FileCheck2,
+  Lock,
   Repeat,
   Sparkles,
   Star,
   UserRound,
 } from "lucide-react";
+import { useState } from "react";
 import Link from "next/link";
 import { explorerTxUrl } from "@/lib/arc";
 import { formatUsdcUnits } from "@/lib/money";
@@ -202,35 +205,125 @@ export function EscrowTimeline({ status }: { status: JobStatus }) {
 }
 
 export function DeliverableViewer({
-  url,
+  jobId,
+  submissionId,
+  mime,
+  fileName,
+  sizeBytes,
+  sha256,
+  isApproved,
+  isProvider,
+  externalUrl,
   notes,
   hash,
 }: {
-  url?: string;
+  jobId?: string;
+  submissionId?: string;
+  mime?: string;
+  fileName?: string;
+  sizeBytes?: number;
+  sha256?: string;
+  isApproved?: boolean;
+  isProvider?: boolean;
+  externalUrl?: string;
   notes?: string;
   hash?: string;
 }) {
-  if (!url && !notes) {
+  const hasFile = Boolean(jobId && submissionId && (mime || fileName));
+  const isImage = (mime ?? "").startsWith("image/");
+  const canSeeFull = Boolean(isApproved || isProvider);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | undefined>();
+
+  if (!hasFile && !externalUrl && !notes) {
     return <div className="empty">No deliverable submitted yet.</div>;
   }
+
+  async function download() {
+    if (!jobId || !submissionId) return;
+    setDownloadError(undefined);
+    setDownloading(true);
+    try {
+      const res = await fetch(
+        `/api/jobs/${jobId}/deliverable?submissionId=${submissionId}&mode=download`,
+      );
+      const body = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !body.url) throw new Error(body.error ?? "Download not available.");
+      window.open(body.url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : "Download failed.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  const sizeLabel = typeof sizeBytes === "number" ? `${(sizeBytes / 1024).toFixed(0)} KB` : undefined;
 
   return (
     <div className="grid">
       <div className="profile-strip">
         <span className="avatar">
-          <FileCheck2 size={18} />
+          {canSeeFull ? <FileCheck2 size={18} /> : <Lock size={18} />}
         </span>
         <div>
-          <strong>Submitted deliverable</strong>
-          <div className="small muted">Open the link to review the work.</div>
+          <strong>{hasFile ? fileName ?? "Uploaded deliverable" : "Submitted deliverable"}</strong>
+          <div className="small muted">
+            {!hasFile
+              ? "Open the link to review the work."
+              : canSeeFull
+                ? "Approved — you can download the original file."
+                : "Locked preview — approve the work to download the original."}
+          </div>
         </div>
       </div>
-      {url ? (
-        <a className="button ghost" href={url} target="_blank" rel="noreferrer">
-          <ExternalLink size={16} />
-          Open deliverable
-        </a>
+
+      {hasFile ? (
+        <>
+          {isImage ? (
+            <img
+              src={`/api/jobs/${jobId}/deliverable?submissionId=${submissionId}&mode=preview`}
+              alt={canSeeFull ? "Deliverable" : "Watermarked preview"}
+              style={{ width: "100%", borderRadius: 12, border: "1px solid var(--border, #2222)" }}
+            />
+          ) : (
+            <div className="copy-box" style={{ display: "grid", gap: 4 }}>
+              <span><strong>File:</strong> {fileName ?? "deliverable"}</span>
+              {sizeLabel ? <span><strong>Size:</strong> {sizeLabel}</span> : null}
+              {mime ? <span><strong>Type:</strong> {mime}</span> : null}
+              {sha256 ? <span className="small muted">sha256: {sha256.slice(0, 24)}…</span> : null}
+              {!canSeeFull ? (
+                <span className="small muted">Contents are locked until you approve the work.</span>
+              ) : null}
+            </div>
+          )}
+
+          {canSeeFull ? (
+            <button className="button primary" type="button" onClick={download} disabled={downloading}>
+              <Download size={16} />
+              {downloading ? "Preparing…" : "Download original"}
+            </button>
+          ) : (
+            <div className="badge" style={{ width: "fit-content" }}>
+              <Lock size={13} />
+              Locked until approved
+            </div>
+          )}
+          {downloadError ? (
+            <p className="small" style={{ color: "var(--danger)" }}>{downloadError}</p>
+          ) : null}
+        </>
       ) : null}
+
+      {externalUrl ? (
+        <div style={{ display: "grid", gap: 4 }}>
+          <a className="button ghost" href={externalUrl} target="_blank" rel="noreferrer">
+            <ExternalLink size={16} />
+            Open external link
+          </a>
+          <span className="small muted">External link — outside platform protection.</span>
+        </div>
+      ) : null}
+
       {notes ? <p className="muted">{notes}</p> : null}
       {hash ? <div className="copy-box">{hash}</div> : null}
     </div>

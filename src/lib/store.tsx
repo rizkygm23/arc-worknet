@@ -108,7 +108,7 @@ type ActionsContextValue = {
   createOnchainJob: (jobId: string) => Promise<void>;
   setBudget: (jobId: string) => Promise<void>;
   approveAndFund: (jobId: string) => Promise<void>;
-  submitDeliverable: (jobId: string, input: { url: string; notes: string }) => Promise<string>;
+  submitDeliverable: (jobId: string, input: { url?: string; notes: string; file?: File }) => Promise<string>;
   requestRevision: (jobId: string, submissionId: string, reason: string) => Promise<void>;
   rejectSubmission: (jobId: string, submissionId: string, reason: string) => Promise<void>;
   completeJob: (jobId: string, submissionId: string, input: { rating: number; reviewText: string }) => Promise<void>;
@@ -852,20 +852,75 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const submitDeliverable = useCallback(
-    async (jobId: string, input: { url: string; notes: string }) => {
+    async (jobId: string, input: { url?: string; notes: string; file?: File }) => {
       const walletNow = walletRef.current;
       if (!walletNow.address) throw new Error("Connect a wallet before submitting deliverables.");
       const job = stateRef.current.jobs.find((item) => item.id === jobId);
       if (!job) throw new Error("Job not found.");
       if (!job.arcJobId) throw new Error("Start and fund the job before submitting deliverables.");
-      const submissionId = crypto.randomUUID();
+      if (!input.file && !input.url) {
+        throw new Error("Attach a file or paste a link before submitting.");
+      }
+
+      // If a file is attached, upload it to private Storage first and hash the
+      // actual bytes for the on-chain proof. The locked file is only reachable
+      // through the gated /deliverable endpoint afterwards.
+      let storagePath: string | undefined;
+      let fileSha256: string | undefined;
+      let fileMeta: { fileName: string; mimeType: string; sizeBytes: number } | undefined;
+      let submissionId = crypto.randomUUID();
+
+      let deliverableHashBytes32: string;
+      if (input.file) {
+        const buffer = await input.file.arrayBuffer();
+        const digest = await crypto.subtle.digest("SHA-256", buffer);
+        const hex = Array.from(new Uint8Array(digest))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+        fileSha256 = hex;
+        deliverableHashBytes32 = `0x${hex}`;
+
+        const upload = await apiJson<{
+          submissionId: string;
+          path: string;
+          token: string;
+          bucket: string;
+        }>(`/api/jobs/${jobId}/deliverable-upload-url`, {
+          method: "POST",
+          body: JSON.stringify({ fileName: input.file.name, contentType: input.file.type }),
+        });
+        submissionId = upload.submissionId;
+        storagePath = upload.path;
+
+        const supabase = getBrowserSupabase();
+        if (!supabase) throw new Error("Storage client is not configured.");
+        const { error: uploadError } = await supabase.storage
+          .from(upload.bucket)
+          .uploadToSignedUrl(upload.path, upload.token, input.file, {
+            contentType: input.file.type || "application/octet-stream",
+          });
+        if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+        fileMeta = {
+          fileName: input.file.name,
+          mimeType: input.file.type || "application/octet-stream",
+          sizeBytes: input.file.size,
+        };
+      } else {
+        // Link-only submission (not protected): hash the metadata payload.
+        deliverableHashBytes32 = await sha256Hex(
+          stableJson({ jobId, submissionId, urls: [input.url], notes: input.notes }),
+        );
+      }
+
       const payload = {
         jobId,
         submissionId,
-        urls: [input.url],
+        urls: input.url ? [input.url] : [],
         notes: input.notes,
+        ...(fileMeta ? { fileMeta } : {}),
       };
-      const deliverableHashBytes32 = await sha256Hex(stableJson(payload));
+
       const data = encodeFunctionData({
         abi: erc8183Abi,
         functionName: "submit",
@@ -886,6 +941,11 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
           deliverableHashBytes32,
           submitTxHash,
           blockNumber,
+          deliverableStoragePath: storagePath,
+          deliverableSha256: fileSha256,
+          deliverableMimeType: fileMeta?.mimeType,
+          deliverableFileName: fileMeta?.fileName,
+          deliverableSizeBytes: fileMeta?.sizeBytes,
         }),
       });
       await refreshStateRef.current();

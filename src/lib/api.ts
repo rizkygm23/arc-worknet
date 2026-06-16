@@ -43,11 +43,23 @@ export const submitSchema = z.object({
   submitterProfileId: z.string().uuid().optional(),
   submitterAgentId: z.string().uuid().optional(),
   notes: z.string().optional(),
-  deliverableUrl: z.string().url(),
+  deliverableUrl: z.string().url().optional(),
   deliverablePayload: z.record(z.string(), z.unknown()),
   deliverableHashBytes32: txHashSchema,
   submitTxHash: txHashSchema,
   blockNumber: z.number().int().optional(),
+  // Uploaded-file deliverable (locked until approval). Optional so an external
+  // link-only submission still validates.
+  deliverableStoragePath: z.string().min(1).optional(),
+  deliverableSha256: z.string().min(1).optional(),
+  deliverableMimeType: z.string().min(1).optional(),
+  deliverableFileName: z.string().min(1).optional(),
+  deliverableSizeBytes: z.number().int().min(0).optional(),
+});
+
+export const uploadUrlSchema = z.object({
+  fileName: z.string().min(1).max(255),
+  contentType: z.string().min(1).max(255),
 });
 
 export const reviewSchema = z.object({
