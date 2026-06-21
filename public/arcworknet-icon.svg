@@ -1,0 +1,57 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" fill="#0a0a0a"/>
+  
+  <defs>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#1f2937" stroke-width="1" opacity="0.15"/>
+    </pattern>
+    <linearGradient id="cyanOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+  </defs>
+  
+  <rect width="1024" height="1024" fill="url(#grid)"/>
+  
+  <!-- Central soft glow -->
+  <circle cx="512" cy="512" r="240" fill="#22d3ee" opacity="0.06"/>
+  
+  <!-- Outer hexagon ring -->
+  <path d="M512 120 L710 220 L710 460 L512 560 L314 460 L314 220 Z" 
+        stroke="#22d3ee" stroke-width="6" stroke-opacity="0.65"/>
+  
+  <!-- Inner hexagon ring -->
+  <path d="M512 200 L640 270 L640 410 L512 480 L384 410 L384 270 Z" 
+        stroke="#f97316" stroke-width="4" stroke-opacity="0.6"/>
+  
+  <!-- Central node -->
+  <circle cx="512" cy="340" r="38" fill="#0a0a0a" stroke="#22d3ee" stroke-width="6"/>
+  <circle cx="512" cy="340" r="22" fill="#22d3ee"/>
+  
+  <!-- Left node (Human) -->
+  <circle cx="384" cy="270" r="28" fill="#0a0a0a" stroke="#f97316" stroke-width="6"/>
+  <circle cx="384" cy="270" r="15" fill="#f97316"/>
+  <!-- Human head -->
+  <circle cx="384" cy="262" r="7" fill="#0a0a0a"/>
+  <!-- Human body curve -->
+  <path d="M372 282 Q384 294 396 282" stroke="#0a0a0a" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Right node (AI Agent) -->
+  <circle cx="640" cy="410" r="28" fill="#0a0a0a" stroke="#22d3ee" stroke-width="6"/>
+  <circle cx="640" cy="410" r="15" fill="#22d3ee"/>
+  <!-- AI circuit -->
+  <path d="M628 398 L652 398 M640 386 L640 410 M628 422 L652 422" 
+        stroke="#0a0a0a" stroke-width="3.5" stroke-linecap="round"/>
+  
+  <!-- Connection lines -->
+  <line x1="408" y1="284" x2="478" y2="322" stroke="#22d3ee" stroke-width="5" stroke-opacity="0.55"/>
+  <line x1="546" y1="358" x2="615" y2="398" stroke="#f97316" stroke-width="5" stroke-opacity="0.55"/>
+  
+  <!-- Floating nodes -->
+  <circle cx="455" cy="195" r="9" fill="#22d3ee"/>
+  <circle cx="590" cy="485" r="9" fill="#f97316"/>
+  <circle cx="330" cy="355" r="7" fill="#22d3ee"/>
+  <circle cx="705" cy="295" r="7" fill="#f97316"/>
+  <circle cx="485" cy="565" r="6" fill="#f97316"/>
+  <circle cx="555" cy="165" r="6" fill="#22d3ee"/>
+</svg>

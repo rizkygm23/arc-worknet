@@ -1,0 +1,77 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" fill="#0a0a0a"/>
+  
+  <!-- Background subtle grid -->
+  <defs>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#1f2937" stroke-width="1" opacity="0.15"/>
+    </pattern>
+    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <rect width="1024" height="1024" fill="url(#grid)"/>
+  
+  <!-- Central glow orb -->
+  <circle cx="512" cy="512" r="210" fill="#22d3ee" opacity="0.07"/>
+  
+  <!-- Outer hexagon -->
+  <path d="M512 140 L680 220 L680 420 L512 500 L344 420 L344 220 Z" 
+        stroke="#22d3ee" stroke-width="5" stroke-opacity="0.6"/>
+  
+  <!-- Inner hexagon -->
+  <path d="M512 200 L620 260 L620 380 L512 440 L404 380 L404 260 Z" 
+        stroke="#f97316" stroke-width="3.5" stroke-opacity="0.55"/>
+  
+  <!-- Central node -->
+  <circle cx="512" cy="320" r="32" fill="#0a0a0a" stroke="#22d3ee" stroke-width="5"/>
+  <circle cx="512" cy="320" r="18" fill="#22d3ee"/>
+  
+  <!-- Left node (Human) -->
+  <circle cx="404" cy="260" r="24" fill="#0a0a0a" stroke="#f97316" stroke-width="5"/>
+  <circle cx="404" cy="260" r="13" fill="#f97316"/>
+  <!-- Human silhouette -->
+  <circle cx="404" cy="252" r="6" fill="#0a0a0a"/>
+  <path d="M394 270 Q404 280 414 270" stroke="#0a0a0a" stroke-width="3.5" stroke-linecap="round"/>
+  
+  <!-- Right node (AI Agent) -->
+  <circle cx="620" cy="380" r="24" fill="#0a0a0a" stroke="#22d3ee" stroke-width="5"/>
+  <circle cx="620" cy="380" r="13" fill="#22d3ee"/>
+  <!-- AI circuit pattern -->
+  <path d="M610 370 L630 370 M620 360 L620 380 M610 390 L630 390" 
+        stroke="#0a0a0a" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Connection lines -->
+  <line x1="425" y1="272" x2="485" y2="305" stroke="#22d3ee" stroke-width="4" stroke-opacity="0.55"/>
+  <line x1="539" y1="335" x2="600" y2="368" stroke="#f97316" stroke-width="4" stroke-opacity="0.55"/>
+  
+  <!-- Floating small nodes -->
+  <circle cx="455" cy="195" r="8" fill="#22d3ee"/>
+  <circle cx="580" cy="450" r="8" fill="#f97316"/>
+  <circle cx="350" cy="340" r="6" fill="#22d3ee"/>
+  <circle cx="685" cy="285" r="6" fill="#f97316"/>
+  
+  <!-- Typography -->
+  <text x="512" y="620" 
+        font-family="Space Grotesk, Inter, system-ui, sans-serif" 
+        font-size="92" font-weight="700" 
+        fill="#ffffff" text-anchor="middle" letter-spacing="-4.5">
+    Arc<tspan fill="url(#brandGradient)">WorkNet</tspan>
+  </text>
+  
+  <text x="512" y="665" 
+        font-family="Inter, system-ui, sans-serif" 
+        font-size="15" font-weight="500" 
+        fill="#71717a" text-anchor="middle" letter-spacing="4">
+    AGENTIC JOB MARKETPLACE
+  </text>
+</svg>
