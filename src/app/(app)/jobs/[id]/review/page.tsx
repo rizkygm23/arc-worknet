@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CheckCircle2, Gavel, RotateCcw, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, RotateCcw, XCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -21,8 +21,6 @@ export default function ReviewJobPage() {
     getJobSubmissions,
     rejectSubmission,
     requestRevision,
-    resolveDispute,
-    isContractOwner,
     isSyncing,
   } = useWorkNet();
   const job = getJob(params.id);
@@ -31,9 +29,6 @@ export default function ReviewJobPage() {
   const [reviewText, setReviewText] = useState("Approved. Deliverable meets the acceptance criteria.");
   const [rating, setRating] = useState(5);
   const [busyAction, setBusyAction] = useState<string | undefined>();
-  const [providerAmount, setProviderAmount] = useState(0);
-  const [resolveReason, setResolveReason] = useState("Dispute resolved by escrow owner.");
-  const [resolveError, setResolveError] = useState<string | undefined>();
 
   if (!job) {
     if (isSyncing) return <SkeletonPanel lines={5} />;
@@ -41,8 +36,6 @@ export default function ReviewJobPage() {
   }
   const currentJob = job as Job;
   const canReview = activeProfile?.id === currentJob.clientProfileId && currentJob.status === "submitted";
-  const isDisputed = currentJob.status === "disputed";
-  const canResolve = isDisputed && isContractOwner;
 
   async function approve() {
     if (!submission || !canReview) return;
@@ -63,19 +56,6 @@ export default function ReviewJobPage() {
     setBusyAction("reject");
     await rejectSubmission(currentJob.id, submission.id, reviewText);
     router.push(`/jobs/${currentJob.id}`);
-  }
-
-  async function resolve() {
-    if (!canResolve) return;
-    setResolveError(undefined);
-    setBusyAction("resolve");
-    try {
-      await resolveDispute(currentJob.id, providerAmount, resolveReason);
-      router.push(`/jobs/${currentJob.id}`);
-    } catch (error) {
-      setResolveError(error instanceof Error ? error.message : "Failed to resolve dispute.");
-      setBusyAction(undefined);
-    }
   }
 
   return (
@@ -142,68 +122,7 @@ export default function ReviewJobPage() {
               </label>
             </div>
 
-            {isDisputed ? (
-              <div className="panel" style={{ marginTop: 16, borderColor: "var(--warn, #b45309)" }}>
-                <div className="profile-strip">
-                  <span className="avatar">
-                    <Gavel size={18} />
-                  </span>
-                  <div>
-                    <h2 className="panel-title">Decide the dispute</h2>
-                    <p className="small muted" style={{ margin: "4px 0 0" }}>
-                      {canResolve
-                        ? "Choose how much of the escrowed USDC goes to the worker. The rest is refunded to the client. Enter 0 to refund the client in full."
-                        : "This job is on hold. Only the neutral arbitrator can decide how the funds are split."}
-                    </p>
-                  </div>
-                </div>
-                {canResolve ? (
-                  <>
-                    <div className="form-grid" style={{ marginTop: 12 }}>
-                      <label className="field">
-                        <span>Pay the worker (USDC units)</span>
-                        <input
-                          className="input"
-                          type="number"
-                          min={0}
-                          max={currentJob.budgetUsdcUnits}
-                          value={providerAmount}
-                          onChange={(event) => setProviderAmount(Number(event.target.value))}
-                        />
-                        <span className="small muted">
-                          Worker gets {formatUsdcUnits(providerAmount)} · client refunded{" "}
-                          {formatUsdcUnits(Math.max(currentJob.budgetUsdcUnits - providerAmount, 0))}
-                        </span>
-                      </label>
-                      <label className="field span-2">
-                        <span>Note your decision</span>
-                        <textarea
-                          className="textarea"
-                          value={resolveReason}
-                          onChange={(event) => setResolveReason(event.target.value)}
-                        />
-                      </label>
-                    </div>
-                    {resolveError ? (
-                      <p className="small" style={{ color: "var(--warn, #b45309)", marginTop: 8 }}>
-                        {resolveError}
-                      </p>
-                    ) : null}
-                    <div className="actions" style={{ marginTop: 12 }}>
-                      <button
-                        className="button primary"
-                        type="button"
-                        disabled={Boolean(busyAction)}
-                        onClick={resolve}
-                      >
-                        <Gavel size={16} />
-                        {busyAction === "resolve" ? "Saving decision…" : "Confirm decision"}
-                      </button>
-                    </div>
-                  </>
-                ) : null}
-              </div>
-            ) : canReview ? (
+            {canReview ? (
               <div className="actions" style={{ marginTop: 16, flexDirection: "column", alignItems: "stretch" }}>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button className="button primary" type="button" disabled={!submission || Boolean(busyAction)} onClick={approve}>

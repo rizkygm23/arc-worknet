@@ -6,7 +6,6 @@ import {
   CircleDollarSign,
   ExternalLink,
   FileUp,
-  Gavel,
   Handshake,
   MessageSquare,
   Plus,
@@ -371,7 +370,6 @@ export default function JobDetailPage() {
     activeProfile,
     applyToJob,
     acceptApplication,
-    raiseWorkerDispute,
     getAgent,
     getJob,
     getJobApplications,
@@ -379,18 +377,12 @@ export default function JobDetailPage() {
     getJobSubmissions,
     getProfile,
     isSyncing,
-    isContractOwner,
     state,
   } = useWorkNet();
   const [pitch, setPitch] = useState("I can deliver this with a reproducible checklist and concise handoff notes.");
   const [applyAs, setApplyAs] = useState<string>("");
   const [actionError, setActionError] = useState<string | undefined>();
   const [busyAction, setBusyAction] = useState<string | undefined>();
-  const [showWorkerDispute, setShowWorkerDispute] = useState(false);
-  const [workerDisputeReason, setWorkerDisputeReason] = useState(
-    "I finished the work as described, but the client has not approved payment.",
-  );
-  const [workerDisputeError, setWorkerDisputeError] = useState<string | undefined>();
   const { decline, getEffectiveStatus, getDeclineReason } = useApplicationOverlay();
   const job = getJob(params.id);
 
@@ -417,21 +409,7 @@ export default function JobDetailPage() {
   const isProvider = activeProfile?.id === currentJob.providerProfileId || isOwnerOfProviderAgent;
   const canSubmit =
     isProvider && ["funded", "submitted", "revision_requested"].includes(currentJob.status);
-  const canWorkerDispute =
-    isProvider && ["funded", "submitted", "revision_requested"].includes(currentJob.status);
 
-  async function openWorkerDispute() {
-    setWorkerDisputeError(undefined);
-    setBusyAction("worker-dispute");
-    try {
-      await raiseWorkerDispute(currentJob.id, workerDisputeReason);
-      setShowWorkerDispute(false);
-    } catch (error) {
-      setWorkerDisputeError(error instanceof Error ? error.message : "Could not open the dispute.");
-    } finally {
-      setBusyAction(undefined);
-    }
-  }
   const ownApplication = activeProfile
     ? applications.find(
         (application) =>
@@ -496,101 +474,6 @@ export default function JobDetailPage() {
 
       <section className="layout-with-rail">
         <div className="grid">
-          {currentJob.status === "disputed" ? (
-            <div
-              className="panel"
-              style={{ borderColor: "var(--warn, #b45309)", background: "rgba(180,83,9,0.06)" }}
-            >
-              <div className="profile-strip">
-                <span className="avatar">
-                  <Gavel size={18} />
-                </span>
-                <div>
-                  <h2 className="panel-title">Payment on hold — dispute opened</h2>
-                  <p className="small muted" style={{ margin: "4px 0 0" }}>
-                    {isContractOwner
-                      ? "You are the arbitrator. Open review to decide how the escrowed funds are split."
-                      : "The escrowed USDC is frozen and safe. A neutral arbitrator will decide who gets paid. No one can move the money until then."}
-                  </p>
-                </div>
-              </div>
-              {isContractOwner ? (
-                <div className="actions" style={{ marginTop: 12 }}>
-                  <Link className="button primary" href={`/jobs/${currentJob.id}/review`}>
-                    <Gavel size={16} />
-                    Review and decide
-                  </Link>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {canWorkerDispute ? (
-            <div className="panel">
-              <div className="profile-strip">
-                <span className="avatar">
-                  <Gavel size={18} />
-                </span>
-                <div>
-                  <h2 className="panel-title">Not getting paid for finished work?</h2>
-                  <p className="small muted" style={{ margin: "4px 0 0" }}>
-                    If you delivered the work but the client won&apos;t approve payment, you can open a
-                    dispute. This freezes the escrowed USDC and asks a neutral arbitrator to decide.
-                    Use this only when the work is genuinely done.
-                  </p>
-                </div>
-              </div>
-
-              {showWorkerDispute ? (
-                <>
-                  <label className="field span-2" style={{ marginTop: 12 }}>
-                    <span>Tell the arbitrator what happened</span>
-                    <textarea
-                      className="textarea"
-                      value={workerDisputeReason}
-                      onChange={(event) => setWorkerDisputeReason(event.target.value)}
-                    />
-                  </label>
-                  {workerDisputeError ? (
-                    <p className="small" style={{ color: "var(--danger)", marginTop: 8 }}>
-                      {workerDisputeError}
-                    </p>
-                  ) : null}
-                  <div className="actions" style={{ marginTop: 12 }}>
-                    <button
-                      className="button primary"
-                      type="button"
-                      disabled={Boolean(busyAction)}
-                      onClick={openWorkerDispute}
-                    >
-                      <Gavel size={16} />
-                      {busyAction === "worker-dispute" ? "Opening dispute…" : "Open dispute"}
-                    </button>
-                    <button
-                      className="button ghost"
-                      type="button"
-                      disabled={Boolean(busyAction)}
-                      onClick={() => setShowWorkerDispute(false)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="actions" style={{ marginTop: 12 }}>
-                  <button
-                    className="button"
-                    type="button"
-                    onClick={() => setShowWorkerDispute(true)}
-                  >
-                    <Gavel size={16} />
-                    Open a dispute
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : null}
-
           <div className="panel">
             <div className="panel-header">
               <div>

@@ -119,27 +119,6 @@ export const erc8183Abi = [
   },
   {
     type: "function",
-    name: "raiseDispute",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "jobId", type: "uint256" },
-      { name: "reasonHash", type: "bytes32" },
-    ],
-    outputs: [],
-  },
-  {
-    type: "function",
-    name: "resolveDispute",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "jobId", type: "uint256" },
-      { name: "providerAmount", type: "uint256" },
-      { name: "reasonHash", type: "bytes32" },
-    ],
-    outputs: [],
-  },
-  {
-    type: "function",
     name: "rejectWithPenalty",
     stateMutability: "nonpayable",
     inputs: [
@@ -147,13 +126,6 @@ export const erc8183Abi = [
       { name: "reasonHash", type: "bytes32" },
     ],
     outputs: [],
-  },
-  {
-    type: "function",
-    name: "owner",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ name: "", type: "address" }],
   },
   {
     type: "function",
@@ -181,28 +153,6 @@ export const erc8183Abi = [
       { name: "jobId", type: "uint256", indexed: true },
       { name: "client", type: "address", indexed: true },
       { name: "provider", type: "address", indexed: true },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "event",
-    name: "Disputed",
-    inputs: [
-      { name: "jobId", type: "uint256", indexed: true },
-      { name: "actor", type: "address", indexed: true },
-      { name: "reasonHash", type: "bytes32", indexed: false },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "event",
-    name: "DisputeResolved",
-    inputs: [
-      { name: "jobId", type: "uint256", indexed: true },
-      { name: "resolver", type: "address", indexed: true },
-      { name: "providerPayout", type: "uint256", indexed: false },
-      { name: "clientRefund", type: "uint256", indexed: false },
-      { name: "reasonHash", type: "bytes32", indexed: false },
     ],
     anonymous: false,
   },

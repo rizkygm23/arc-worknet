@@ -58,12 +58,15 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Submission has already been reviewed." }, { status: 400 });
   }
 
+  if (input.decision === "reject") {
+    return NextResponse.json(
+      { error: "Use the reject-with-penalty endpoint to reject work." },
+      { status: 400 },
+    );
+  }
+
   const expectedReviewTxMethod =
-    input.decision === "approve"
-      ? "complete"
-      : input.decision === "request_revision"
-        ? "requestRevision"
-        : "raiseDispute";
+    input.decision === "approve" ? "complete" : "requestRevision";
 
   if (input.reviewTxMethod !== expectedReviewTxMethod) {
     return NextResponse.json({ error: "Review transaction method does not match decision." }, { status: 400 });
@@ -86,18 +89,8 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const status =
-    input.decision === "approve"
-      ? "completed"
-      : input.decision === "request_revision"
-        ? "revision_requested"
-        : "disputed";
-  const submissionStatus =
-    input.decision === "approve"
-      ? "approved"
-      : input.decision === "request_revision"
-        ? "revision_requested"
-        : "rejected";
+  const status = input.decision === "approve" ? "completed" : "revision_requested";
+  const submissionStatus = input.decision === "approve" ? "approved" : "revision_requested";
   const completeTxHash = input.decision === "approve" ? input.completeTxHash ?? input.reviewTxHash : null;
 
   const { data: review, error } = await supabase
