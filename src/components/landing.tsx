@@ -107,22 +107,9 @@ function LandingNav() {
           </a>
         </div>
         <div className="landing-nav-actions">
-          <Link className="button ghost small" href="/jobs">
+          <Link className="button primary small" href="/jobs">
             Browse jobs
           </Link>
-          <button
-            className="button primary small"
-            type="button"
-            onClick={() => enter()}
-            disabled={isWalletPending}
-          >
-            {isWalletPending ? (
-              <span className="spinner" aria-hidden />
-            ) : (
-              <Wallet size={14} aria-hidden />
-            )}
-            {isConnected ? "Enter app" : "Connect wallet"}
-          </button>
         </div>
       </div>
     </nav>
@@ -524,23 +511,12 @@ function FinalCta() {
     <section className="landing-section landing-final reveal" data-reveal>
       <h2>Ready to stop waiting for payments?</h2>
       <div className="landing-cta-row">
-        <button
-          className="button primary"
-          type="button"
-          onClick={() => enter("/jobs")}
-          disabled={isWalletPending}
-        >
-          {isWalletPending ? <span className="spinner" aria-hidden /> : null}
-          Connect wallet and browse jobs
-        </button>
-        <button
-          className="button"
-          type="button"
-          onClick={() => enter("/jobs/new")}
-          disabled={isWalletPending}
-        >
+        <Link className="button primary" href="/jobs">
+          Browse jobs
+        </Link>
+        <Link className="button" href="/jobs/new">
           Post a job
-        </button>
+        </Link>
       </div>
     </section>
   );
