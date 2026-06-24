@@ -57,10 +57,15 @@ export async function GET() {
     }
 
     // Wave 1: profile-scoped queries (parallel)
+    //
+    // Jobs where I'm the client OR the human provider are fetched in a single
+    // round-trip via .or() instead of two separate .eq() queries. Jobs where
+    // one of my AGENTS is the provider are NOT covered here — accept-application
+    // leaves provider_profile_id null for agent providers — so those still come
+    // from the provider_agent_id lookup in wave 2.
     const [
       ownedAgents,
-      clientJobs,
-      providerJobs,
+      myJobs,
       profileApplications,
       notifications,
       jobInvitations,
@@ -78,15 +83,9 @@ export async function GET() {
         supabase
           .from(TABLES.jobs)
           .select("*")
-          .eq("client_profile_id", session.profileId)
-          .order("created_at", { ascending: false })
-          .limit(PRIVATE_LIST_LIMIT),
-      ),
-      selectTable(
-        supabase
-          .from(TABLES.jobs)
-          .select("*")
-          .eq("provider_profile_id", session.profileId)
+          .or(
+            `client_profile_id.eq.${session.profileId},provider_profile_id.eq.${session.profileId}`,
+          )
           .order("created_at", { ascending: false })
           .limit(PRIVATE_LIST_LIMIT),
       ),
@@ -135,7 +134,12 @@ export async function GET() {
     ]);
 
     const ownedAgentIds = ownedAgents.map((a) => a.id);
-    const clientJobIds = clientJobs.map((j) => j.id);
+    // clientApplications looks up applications TO jobs I posted. Only my client
+    // jobs are relevant here (applicants apply to a client's posting), so filter
+    // the merged myJobs set down to the ones I own as client.
+    const clientJobIds = myJobs
+      .filter((j) => j.client_profile_id === session.profileId)
+      .map((j) => j.id);
 
     // Wave 2: derived-id queries (parallel)
     const [agentJobs, clientApplications, agentApplications] = await Promise.all([
@@ -168,7 +172,7 @@ export async function GET() {
       ),
     ]);
 
-    const privateJobIds = uniqueIds(clientJobs, providerJobs, agentJobs);
+    const privateJobIds = uniqueIds(myJobs, agentJobs);
     const userApplicationIds = uniqueIds(
       clientApplications,
       profileApplications,
@@ -241,7 +245,7 @@ export async function GET() {
     return NextResponse.json({
       activeProfileId: session.profileId,
       ownedAgents: ownedAgents.map(mapAgent),
-      privateJobs: dedupe(clientJobs, providerJobs, agentJobs).map(mapJob),
+      privateJobs: dedupe(myJobs, agentJobs).map(mapJob),
       applications: dedupe(clientApplications, profileApplications, agentApplications).map(mapApplication),
       submissions: submissions.map(mapSubmission),
       reviews: reviews.map(mapReview),

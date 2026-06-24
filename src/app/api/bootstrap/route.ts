@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceClientOrResponse } from "@/lib/api";
+import { getPublicBootstrapCache, setPublicBootstrapCache } from "@/lib/server/cache";
 import { toWorkNetState, type BootstrapRows } from "@/lib/supabase/mappers";
 import { TABLES } from "@/lib/supabase/tables";
 
@@ -32,7 +33,30 @@ async function selectWhereIn<T>(
   return selectTable<T>(query.in(column, values));
 }
 
-export async function GET() {
+function jsonWithEtag(json: string, etag: string, status = 200) {
+  return new NextResponse(status === 304 ? null : json, {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      ETag: etag,
+      // Public marketplace data; clients may hold it briefly but must
+      // revalidate so a mutation's invalidation is picked up promptly.
+      "Cache-Control": "no-cache",
+    },
+  });
+}
+
+export async function GET(request: Request) {
+  // Serve from the in-memory cache when warm. Mutations clear it via
+  // invalidateBootstrapCache(), and a 10s TTL bounds staleness otherwise.
+  const cached = getPublicBootstrapCache();
+  if (cached) {
+    if (request.headers.get("if-none-match") === cached.etag) {
+      return jsonWithEtag(cached.json, cached.etag, 304);
+    }
+    return jsonWithEtag(cached.json, cached.etag);
+  }
+
   const { supabase, response } = getServiceClientOrResponse();
   if (response) return response;
 
@@ -99,7 +123,13 @@ export async function GET() {
       applicationOverlays: [],
     };
 
-    return NextResponse.json({ state: toWorkNetState(rows) });
+    const json = JSON.stringify({ state: toWorkNetState(rows) });
+    const entry = setPublicBootstrapCache(json);
+
+    if (request.headers.get("if-none-match") === entry.etag) {
+      return jsonWithEtag(entry.json, entry.etag, 304);
+    }
+    return jsonWithEtag(entry.json, entry.etag);
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to load production data." },
