@@ -35,30 +35,15 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # ---- Build Next.js App ----
-      - name: Build Next.js
-        env:
-          # Minimal env vars needed for build to succeed.
-          # These are dummy values — the landing page test
-          # does NOT hit real APIs.
-          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
-          NEXT_PUBLIC_PRIVY_APP_ID: placeholder-privy-id
-          NEXT_PUBLIC_ARC_CHAIN_ID: "5042002"
-          NEXT_PUBLIC_ARC_RPC_URL: https://rpc.testnet.arc.network
-          NEXT_PUBLIC_ARC_EXPLORER_URL: https://testnet.arcscan.app
-          NEXT_PUBLIC_ARC_USDC_ADDRESS: "0x3600000000000000000000000000000000000000"
-          NEXT_PUBLIC_ERC8183_CONTRACT_ADDRESS: "0xFD9C4D6fe5a770f148C0Cc49Bc293015525BA955"
-          NEXT_PUBLIC_ENABLE_DEMO_DATA: "false"
-          NEXT_PUBLIC_ENABLE_ONCHAIN_REPUTATION: "false"
-        run: npm run build
-
       # ---- Run Cypress Tests ----
+      # Using `next dev` instead of build+start to avoid prerendering
+      # errors caused by placeholder env vars (Privy validates app ID
+      # during SSG). Dev mode renders pages on-demand, so only visited
+      # pages are rendered — landing page tests don't trigger Privy.
       - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
-          # Start the production server on port 3001
-          start: npx next start -p 3001
+          start: npx next dev -p 3001
           wait-on: "http://localhost:3001"
           wait-on-timeout: 120
           browser: chrome
