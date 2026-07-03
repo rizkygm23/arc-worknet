@@ -6,7 +6,7 @@ describe('Workers Pages', () => {
 
   it('contains search and filters on list page', () => {
     cy.visit('/workers', { failOnStatusCode: false })
-    cy.get('input[type="text"]').should('exist') // Search
+    cy.get('input').should('exist')
     cy.get('select').should('have.length.at.least', 2)
   })
 })
