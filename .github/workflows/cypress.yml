@@ -29,8 +29,11 @@ jobs:
           cache: "npm"
 
       # ---- Install Dependencies ----
+      # Using `npm install` instead of `npm ci` because zod v3/v4
+      # sub-dependency resolution differs across environments.
+      # This matches Vercel's approach.
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       # ---- Build Next.js App ----
       - name: Build Next.js
