@@ -122,9 +122,9 @@ function Hero() {
     <section className="landing-section landing-hero">
       <div>
         <h1 className="landing-hero-title">
-          <span className="line">Escrow USDC.</span>
-          <span className="line">Get work done by humans or agents.</span>
-          <span className="line">Settle on Arc.</span>
+          <span className="line">Onchain escrow for</span>
+          <span className="line"><span className="accent-money">USDC</span> jobs.</span>
+          <span className="line">Humans &amp; agents. Settled on Arc.</span>
         </h1>
         <p className="landing-hero-sub">
           A job marketplace where payment is locked onchain before work starts.
@@ -161,35 +161,12 @@ function Hero() {
         </div>
       </div>
       <div className="landing-hero-visual" data-reveal>
-        <div className="landing-terminal" aria-hidden>
-          <div className="landing-terminal-head">
-            <span className="landing-terminal-dot" />
-            <span className="landing-terminal-dot" />
-            <span className="landing-terminal-dot" />
-          </div>
-          <div className="landing-terminal-body">
-            <p>
-              <span className="t-prompt">&gt;</span> arc-cli job create --title
-              &quot;Smart Contract Audit&quot; --budget 850USDC
-            </p>
-            <p className="t-dim">Tx 0x8f4a…3b21 confirmed in 0.4s</p>
-            <p className="t-open">[STATUS: OPEN]</p>
-            <p className="t-gap" />
-            <p>
-              <span className="t-prompt">&gt;</span> arc-cli job assign --job_id
-              492 --agent 0xAgent1…
-            </p>
-            <p className="t-dim">Escrow locking 850 USDC…</p>
-            <p className="t-dim">Tx 0x9a2c…1f88 confirmed in 0.6s</p>
-            <p className="t-funded">[STATUS: FUNDED]</p>
-            <p className="t-gap" />
-            <p>
-              <span className="t-prompt">&gt;</span> arc-cli job complete
-              --job_id 492 --release
-            </p>
-            <p className="t-done t-cursor">[STATUS: COMPLETED]</p>
-          </div>
-        </div>
+        <img
+          className="landing-img landing-img-hero"
+          src="/img/usdc_escrow_lock.png"
+          alt="USDC escrow lock illustration — shield encasing a coin"
+          loading="eager"
+        />
       </div>
     </section>
   );
@@ -215,7 +192,13 @@ const PROBLEMS = [
 
 function Problem() {
   return (
-    <section className="landing-section">
+    <section className="landing-section landing-ambient-section">
+      <img
+        className="landing-ambient-img"
+        src="/img/problem.png"
+        alt=""
+        aria-hidden
+      />
       <h2 className="landing-h2 reveal" data-reveal>
         The old way still sucks.
       </h2>
@@ -229,7 +212,7 @@ function Problem() {
               data-reveal
               data-delay={i + 1}
             >
-              <span className="landing-card-icon">
+              <span className="landing-card-icon card-icon-sunset">
                 <Icon size={17} aria-hidden />
               </span>
               <h3 className="landing-card-title">{p.title}</h3>
@@ -288,27 +271,37 @@ function HowItWorks() {
       <h2 className="landing-h2 reveal" data-reveal>
         Work happens in six clear steps.
       </h2>
-      <div className="landing-flow">
-        {STEPS.map((s, i) => (
-          <div
-            key={s.title}
-            className={
-              s.final ? "landing-step is-final reveal" : "landing-step reveal"
-            }
-            data-reveal
-          >
-            <span className="landing-step-num">{i + 1}</span>
-            <div className="landing-step-head">
-              <h3 className="landing-step-title">{s.title}</h3>
-              {s.badge ? (
-                <span className={`status-badge ${s.badgeClass}`}>
-                  {s.badge}
-                </span>
-              ) : null}
+      <div className="landing-flow-wrap">
+        <div className="landing-flow">
+          {STEPS.map((s, i) => (
+            <div
+              key={s.title}
+              className={
+                s.final ? "landing-step is-final reveal" : "landing-step reveal"
+              }
+              data-reveal
+            >
+              <span className="landing-step-num">{i + 1}</span>
+              <div className="landing-step-head">
+                <h3 className="landing-step-title">{s.title}</h3>
+                {s.badge ? (
+                  <span className={`status-badge ${s.badgeClass}`}>
+                    {s.badge}
+                  </span>
+                ) : null}
+              </div>
+              <p className="landing-step-body">{s.body}</p>
             </div>
-            <p className="landing-step-body">{s.body}</p>
-          </div>
-        ))}
+          ))}
+        </div>
+        <div className="landing-flow-visual" data-reveal>
+          <img
+            className="landing-img-aside"
+            src="/img/how_it_works.png"
+            alt="3D pipeline diagram: 6 connected nodes from briefcase to checkmark"
+            loading="lazy"
+          />
+        </div>
       </div>
       <p className="landing-note reveal" data-reveal>
         Every state change is either recorded on Arc or synchronized instantly
@@ -328,7 +321,13 @@ const CLIENT_POINTS = [
 function Marketplace() {
   const { enter, isWalletPending } = useEnterApp();
   return (
-    <section className="landing-section">
+    <section className="landing-section landing-ambient-section">
+      <img
+        className="landing-ambient-img"
+        src="/img/marketplace.png"
+        alt=""
+        aria-hidden
+      />
       <div className="landing-grid-2">
         <div className="reveal" data-reveal id="clients">
           <h2 className="landing-h2">Post work. Lock payment. Get results.</h2>
@@ -410,7 +409,13 @@ const WHY_ICONS = [Zap, DollarSign, Boxes, ShieldCheck];
 
 function WhyArc() {
   return (
-    <section className="landing-section">
+    <section className="landing-section landing-ambient-section">
+      <img
+        className="landing-ambient-img"
+        src="/img/why_arc.png"
+        alt=""
+        aria-hidden
+      />
       <h2 className="landing-h2 reveal" data-reveal>
         Built for this.
       </h2>
@@ -509,14 +514,26 @@ function FinalCta() {
   const { enter, isWalletPending } = useEnterApp();
   return (
     <section className="landing-section landing-final reveal" data-reveal>
-      <h2>Ready to stop waiting for payments?</h2>
-      <div className="landing-cta-row">
-        <Link className="button primary" href="/jobs">
-          Browse jobs
-        </Link>
-        <Link className="button" href="/jobs/new">
-          Post a job
-        </Link>
+      <div className="landing-final-grid">
+        <div className="landing-final-visual" data-reveal>
+          <img
+            className="landing-img-hero"
+            src="/img/cta.png"
+            alt="3D illustration: glowing USDC coin above an open geometric palm"
+            loading="lazy"
+          />
+        </div>
+        <div>
+          <h2>Ready to stop waiting for payments?</h2>
+          <div className="landing-cta-row">
+            <Link className="button primary" href="/jobs">
+              Browse jobs
+            </Link>
+            <Link className="button" href="/jobs/new">
+              Post a job
+            </Link>
+          </div>
+        </div>
       </div>
     </section>
   );

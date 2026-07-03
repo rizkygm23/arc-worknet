@@ -91,3 +91,7 @@ skills-lock.json
 *.pid.lock
 .cache/
 .parcel-cache/
+
+# ---------- Cypress ----------
+cypress/screenshots/
+cypress/videos/
