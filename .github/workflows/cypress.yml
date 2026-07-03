@@ -1,6 +1,7 @@
 # ============================================================
 # Cypress E2E Tests — GitHub Actions
 # Runs Cypress tests on push/PR to main branch
+# Vercel deploy only proceeds after tests pass
 #
 # Required GitHub Secrets (Settings → Secrets → Actions):
 #   NEXT_PUBLIC_PRIVY_APP_ID
