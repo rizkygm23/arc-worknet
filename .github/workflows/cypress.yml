@@ -68,6 +68,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           max_timeout: 450 # 7.5 minutes
+          vercel_protection_bypass_header: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
       # ---- Run Cypress Tests ----
       - name: Cypress run
@@ -75,7 +76,7 @@ jobs:
         with:
           browser: chrome
         env:
-          CYPRESS_baseUrl: ${{ steps.waitForVercel.outputs.url }}
+          CYPRESS_baseUrl: ${{ steps.waitForVercel.outputs.url }}?_x_vercel_protection_bypass=${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
       # ---- Upload Screenshots on Failure ----
       - name: Upload Cypress screenshots
