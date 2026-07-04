@@ -61,18 +61,21 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # ---- Build Next.js App ----
-      - name: Build Next.js
-        run: npm run build
+      # ---- Wait for Vercel Deployment ----
+      - name: Wait for Vercel Preview
+        uses: patrickedqvist/wait-for-vercel-preview@v1.3.3
+        id: waitForVercel
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max_timeout: 450 # 7.5 minutes
 
       # ---- Run Cypress Tests ----
       - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
-          start: npx next start -p 3001
-          wait-on: "http://localhost:3001"
-          wait-on-timeout: 120
           browser: chrome
+        env:
+          CYPRESS_baseUrl: ${{ steps.waitForVercel.outputs.url }}
 
       # ---- Upload Screenshots on Failure ----
       - name: Upload Cypress screenshots
