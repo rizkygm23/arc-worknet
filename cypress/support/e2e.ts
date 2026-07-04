@@ -73,10 +73,17 @@ Cypress.Commands.add("loginAs", (role: "client" | "worker") => {
   });
 });
 
-beforeEach(() => {
+before(() => {
   const bypassSecret = Cypress.env("VERCEL_AUTOMATION_BYPASS_SECRET");
   if (bypassSecret) {
-    cy.setCookie("_x_vercel_protection_bypass", bypassSecret);
+    cy.request({
+      url: "/",
+      headers: {
+        "x-vercel-protection-bypass": bypassSecret,
+        "x-vercel-set-bypass-cookie": "true",
+      },
+      failOnStatusCode: false,
+    });
   }
 });
 
