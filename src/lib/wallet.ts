@@ -140,9 +140,9 @@ export function createCypressMockWallet(privateKey: string) {
     },
     getEthereumProvider: async () => {
       return {
-        request: async ({ method, params }: { method: string; params?: any[] }) => {
+        request: async ({ method, params }: { method: string; params?: unknown[] }) => {
           if (method === "eth_estimateGas") {
-            const tx = params?.[0];
+            const tx = params?.[0] as { to?: string; data?: `0x${string}`; value?: string | number };
             const gas = await publicClient.estimateGas({
               account,
               to: tx.to as Address,
@@ -152,7 +152,7 @@ export function createCypressMockWallet(privateKey: string) {
             return `0x${gas.toString(16)}`;
           }
           if (method === "eth_sendTransaction") {
-            const tx = params?.[0];
+            const tx = params?.[0] as { to?: string; data?: `0x${string}`; value?: string | number; gas?: string | number };
             const hash = await walletClient.sendTransaction({
               account,
               to: tx.to as Address,
@@ -163,7 +163,10 @@ export function createCypressMockWallet(privateKey: string) {
             return hash;
           }
           // Fallback: request via publicClient transport
-          return (publicClient as any).transport.request({ method, params });
+          const transport = publicClient.transport as unknown as {
+            request: (args: { method: string; params?: unknown }) => Promise<unknown>;
+          };
+          return transport.request({ method, params });
         },
       };
     },

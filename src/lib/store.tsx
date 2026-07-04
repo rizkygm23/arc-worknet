@@ -267,7 +267,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
   const primaryWallet = useMemo(() => {
     if (isCypress) {
       const pk = window.localStorage.getItem("CYPRESS_ACTIVE_PRIVATE_KEY")!;
-      return createCypressMockWallet(pk) as any;
+      return createCypressMockWallet(pk) as unknown as typeof wallets[0];
     }
     return wallets[0];
   }, [isCypress, wallets]);
