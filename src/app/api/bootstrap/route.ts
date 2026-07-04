@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceClientOrResponse } from "@/lib/api";
+
+export const dynamic = "force-dynamic";
 import { getPublicBootstrapCache, setPublicBootstrapCache } from "@/lib/server/cache";
 import { toWorkNetState, type BootstrapRows } from "@/lib/supabase/mappers";
 import { TABLES } from "@/lib/supabase/tables";

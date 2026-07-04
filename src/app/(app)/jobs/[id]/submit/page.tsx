@@ -12,7 +12,7 @@ import type { Job } from "@/lib/types";
 export default function SubmitDeliverablePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { activeProfile, getJob, getJobSubmissions, getAgent, submitDeliverable, isSyncing } = useWorkNet();
+  const { activeProfile, getJob, getJobSubmissions, getAgent, submitDeliverable, isSyncing, wallet } = useWorkNet();
   const job = getJob(params.id);
   const submissions = getJobSubmissions(params.id);
   const [file, setFile] = useState<File | null>(null);
@@ -126,7 +126,7 @@ export default function SubmitDeliverablePage() {
               ) : null}
 
               <div className="actions" style={{ marginTop: 16 }}>
-                <button className="button primary" type="submit" disabled={isSubmitting}>
+                <button className="button primary" type="submit" disabled={isSubmitting || !wallet.address}>
                   <FileUp size={16} />
                   {isSubmitting ? "Submitting…" : "Submit deliverable"}
                 </button>

@@ -1,10 +1,12 @@
 import {
   createPublicClient,
+  createWalletClient,
   decodeEventLog,
   http,
   type Address,
   type Hash,
 } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import {
   ARC_EXPLORER_URL,
   ARC_RPC_URL,
@@ -27,6 +29,8 @@ type Eip1193Provider = {
 type WalletLike = {
   chainId?: string;
   getEthereumProvider: () => Promise<Eip1193Provider>;
+  address?: string;
+  sign?: (message: string) => Promise<string>;
 };
 
 // MetaMask requires nativeCurrency.decimals === 18 when adding a chain via
@@ -118,4 +122,53 @@ export function getJobCreatedArcId(receipt: Awaited<ReturnType<typeof waitForArc
 
 export function formatWalletAddress(address?: string) {
   return address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Not connected";
+}
+
+export function createCypressMockWallet(privateKey: string) {
+  const account = privateKeyToAccount(privateKey as `0x${string}`);
+  const walletClient = createWalletClient({
+    account,
+    chain: arcTestnet,
+    transport: http(ARC_RPC_URL),
+  });
+
+  return {
+    address: account.address,
+    chainId: `eip155:${ARC_TESTNET_CHAIN_ID}`,
+    sign: async (message: string) => {
+      return walletClient.signMessage({ message });
+    },
+    getEthereumProvider: async () => {
+      return {
+        request: async ({ method, params }: { method: string; params?: unknown[] }) => {
+          if (method === "eth_estimateGas") {
+            const tx = params?.[0] as { to?: string; data?: `0x${string}`; value?: string | number };
+            const gas = await publicClient.estimateGas({
+              account,
+              to: tx.to as Address,
+              data: tx.data,
+              value: tx.value ? BigInt(tx.value) : undefined,
+            });
+            return `0x${gas.toString(16)}`;
+          }
+          if (method === "eth_sendTransaction") {
+            const tx = params?.[0] as { to?: string; data?: `0x${string}`; value?: string | number; gas?: string | number };
+            const hash = await walletClient.sendTransaction({
+              account,
+              to: tx.to as Address,
+              data: tx.data,
+              value: tx.value ? BigInt(tx.value) : undefined,
+              gas: tx.gas ? BigInt(tx.gas) : undefined,
+            });
+            return hash;
+          }
+          // Fallback: request via publicClient transport
+          const transport = publicClient.transport as unknown as {
+            request: (args: { method: string; params?: unknown }) => Promise<unknown>;
+          };
+          return transport.request({ method, params });
+        },
+      };
+    },
+  };
 }

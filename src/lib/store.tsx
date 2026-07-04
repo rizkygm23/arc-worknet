@@ -33,7 +33,7 @@ import { ARC_USDC_GAS_BUFFER_UNITS, formatUsdcUnits } from "./money";
 import { seedState } from "./seed";
 import { hasSupabaseBrowserConfig } from "./env";
 import { getBrowserSupabase } from "./supabase/browser";
-import { getJobCreatedArcId, ensureArcNetwork, readArcUsdcBalance, waitForArcReceipt } from "./wallet";
+import { getJobCreatedArcId, ensureArcNetwork, readArcUsdcBalance, waitForArcReceipt, createCypressMockWallet } from "./wallet";
 import { ERC8004_REPUTATION_REGISTRY } from "./arc";
 import { reputationRegistryAbi } from "./erc8004";
 import type {
@@ -131,6 +131,7 @@ type ApiErrorBody = {
 export async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     credentials: "include",
+    cache: "no-store",
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -235,8 +236,13 @@ function mergePrivate(
 }
 
 async function refreshWalletBalance(address: string) {
-  const balance = await readArcUsdcBalance(address as Address);
-  return Number(balance);
+  try {
+    const balance = await readArcUsdcBalance(address as Address);
+    return Number(balance);
+  } catch (error) {
+    console.warn("[refreshWalletBalance] failed to fetch balance:", error);
+    return 0;
+  }
 }
 
 export function WorkNetProvider({ children }: { children: ReactNode }) {
@@ -248,13 +254,23 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
   const [isWalletPending, setIsWalletPending] = useState(false);
   const verifiedAddressRef = useRef<string | undefined>(undefined);
 
-  const { ready, authenticated, user } = usePrivy();
+  const { ready: privyReady, authenticated: privyAuthenticated, user } = usePrivy();
   const { login } = useLogin();
   const { logout } = useLogout();
   const { wallets } = useWallets();
   const { createWallet } = useCreateWallet();
 
-  const primaryWallet = wallets[0];
+  const isCypress = typeof window !== "undefined" && window.localStorage.getItem("CYPRESS_ACTIVE_PRIVATE_KEY") !== null;
+  const ready = isCypress ? true : privyReady;
+  const authenticated = isCypress ? true : privyAuthenticated;
+
+  const primaryWallet = useMemo(() => {
+    if (isCypress) {
+      const pk = window.localStorage.getItem("CYPRESS_ACTIVE_PRIVATE_KEY")!;
+      return createCypressMockWallet(pk) as unknown as typeof wallets[0];
+    }
+    return wallets[0];
+  }, [isCypress, wallets]);
   const creatingWalletRef = useRef(false);
 
   // Fallback: if auto-creation didn't fire (OAuth flow, config skew),
@@ -285,7 +301,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     setIsSyncing(true);
     try {
       // Public data first — fast, unblocks UI immediately.
-      const { state: publicState } = await apiJson<{ state: WorkNetState }>("/api/bootstrap");
+      const { state: publicState } = await apiJson<{ state: WorkNetState }>(`/api/bootstrap?t=${Date.now()}`);
       setBackendError(undefined);
       setState((current) => mergeState(current, publicState, wallet.address));
     } catch (error) {
@@ -299,7 +315,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     // Private slice — fetched lazily so the UI can render with public data
     // immediately. Failures here don't block the dashboard from rendering.
     try {
-      const priv = await apiJson<PrivateBootstrapResponse>("/api/bootstrap/private");
+      const priv = await apiJson<PrivateBootstrapResponse>(`/api/bootstrap/private?t=${Date.now()}`);
       if (priv && "activeProfileId" in priv && priv.activeProfileId) {
         setState((current) => mergePrivate(current, priv));
       }
@@ -500,12 +516,23 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
   // a profile matching this wallet (cookie still valid). Waits for bootstrap
   // to finish so we don't race-check against an empty profiles array.
   useEffect(() => {
-    if (!ready || !authenticated || !primaryWallet?.address) return;
-    if (verifiedAddressRef.current === primaryWallet.address) return;
-    if (signInFlightRef.current) return;
+    console.log("[SIWE effect] ready:", ready, "authenticated:", authenticated, "primaryWallet:", primaryWallet?.address);
+    if (!ready || !authenticated || !primaryWallet?.address) {
+      console.log("[SIWE effect] returned early (missing ready/auth/address)");
+      return;
+    }
+    if (verifiedAddressRef.current === primaryWallet.address) {
+      console.log("[SIWE effect] returned early (already verified address)", primaryWallet.address);
+      return;
+    }
+    if (signInFlightRef.current) {
+      console.log("[SIWE effect] returned early (sign in flight)");
+      return;
+    }
 
     let cancelled = false;
     signInFlightRef.current = true;
+    console.log("[SIWE effect] starting verification IIFE for address:", primaryWallet.address);
 
     void (async () => {
       try {
@@ -580,6 +607,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      signInFlightRef.current = false;
     };
   }, [ready, authenticated, primaryWallet, verifyWalletSession]);
 
@@ -711,6 +739,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
 
   const createOnchainJob = useCallback(async (jobId: string) => {
     const walletNow = walletRef.current;
+    console.log("[createOnchainJob] walletNow:", walletNow);
     if (!walletNow.address) throw new Error("Connect a wallet before starting the job.");
     const job = stateRef.current.jobs.find((item) => item.id === jobId);
     if (!job) return;

@@ -310,7 +310,7 @@ function TransactionsPanel({ job }: { job: Job }) {
 }
 
 function NextStepAction({ job }: { job: Job }) {
-  const { activeProfile, createOnchainJob, setBudget, approveAndFund } = useWorkNet();
+  const { activeProfile, createOnchainJob, setBudget, approveAndFund, wallet } = useWorkNet();
   const action = nextOnchainAction(job.status);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -356,7 +356,7 @@ function NextStepAction({ job }: { job: Job }) {
       <p className="small muted" style={{ margin: "0 0 8px" }}>Next step</p>
       <p className="muted" style={{ margin: "0 0 12px" }}>{copy.text}</p>
       {error ? <p className="small" style={{ color: "var(--danger)", margin: "0 0 8px" }}>{error}</p> : null}
-      <button className="button primary" type="button" onClick={copy.onClick} disabled={isBusy}>
+      <button className="button primary" type="button" onClick={copy.onClick} disabled={isBusy || !wallet.address}>
         {copy.icon}
         {copy.label}
       </button>
@@ -378,6 +378,7 @@ export default function JobDetailPage() {
     getProfile,
     isSyncing,
     state,
+    wallet,
   } = useWorkNet();
   const [pitch, setPitch] = useState("I can deliver this with a reproducible checklist and concise handoff notes.");
   const [applyAs, setApplyAs] = useState<string>("");
@@ -532,7 +533,7 @@ export default function JobDetailPage() {
                 aria-label="Application pitch"
               />
               {actionError ? <p className="small" style={{ color: "var(--danger)" }}>{actionError}</p> : null}
-              <button className="button primary" type="button" onClick={apply} disabled={Boolean(busyAction)} style={{ marginTop: 12 }}>
+              <button className="button primary" type="button" onClick={apply} disabled={Boolean(busyAction) || !wallet.address} style={{ marginTop: 12 }}>
                 <Send size={16} />
                 {ownApplication ? "Update application" : "Apply"}
               </button>
@@ -567,7 +568,7 @@ export default function JobDetailPage() {
                       declineReason={declineReason}
                       onAccept={accept}
                       onDecline={decline}
-                      busy={Boolean(busyAction)}
+                      busy={Boolean(busyAction) || !wallet.address}
                     />
                   );
                 })}

@@ -7,6 +7,9 @@
 #   NEXT_PUBLIC_PRIVY_APP_ID
 #   NEXT_PUBLIC_SUPABASE_URL
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY
+#   SUPABASE_SERVICE_ROLE_KEY
+#   CYPRESS_TEST_CLIENT_PRIVATE_KEY
+#   CYPRESS_TEST_WORKER_PRIVATE_KEY
 # ============================================================
 
 name: Cypress E2E Tests
@@ -27,7 +30,11 @@ jobs:
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
+      CYPRESS_TEST_CLIENT_PRIVATE_KEY: ${{ secrets.CYPRESS_TEST_CLIENT_PRIVATE_KEY }}
+      CYPRESS_TEST_WORKER_PRIVATE_KEY: ${{ secrets.CYPRESS_TEST_WORKER_PRIVATE_KEY }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       NEXT_PUBLIC_ARC_CHAIN_ID: "5042002"
       NEXT_PUBLIC_ARC_RPC_URL: https://rpc.testnet.arc.network
       NEXT_PUBLIC_ARC_EXPLORER_URL: https://testnet.arcscan.app
@@ -35,6 +42,7 @@ jobs:
       NEXT_PUBLIC_ERC8183_CONTRACT_ADDRESS: "0x1E40AE030e03E0a7E481046647B2a0E021F8A6F1"
       NEXT_PUBLIC_ENABLE_DEMO_DATA: "false"
       NEXT_PUBLIC_ENABLE_ONCHAIN_REPUTATION: "false"
+      CYPRESS_baseUrl: http://localhost:3001
 
     steps:
       # ---- Checkout ----
@@ -54,18 +62,22 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # ---- Build Next.js App ----
-      - name: Build Next.js
-        run: npm run build
+      # ---- Wait for Vercel Deployment ----
+      - name: Wait for Vercel Preview
+        uses: patrickedqvist/wait-for-vercel-preview@v1.3.3
+        id: waitForVercel
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max_timeout: 450 # 7.5 minutes
+          vercel_protection_bypass_header: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
       # ---- Run Cypress Tests ----
       - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
-          start: npx next start -p 3001
-          wait-on: "http://localhost:3001"
-          wait-on-timeout: 120
           browser: chrome
+        env:
+          CYPRESS_baseUrl: ${{ steps.waitForVercel.outputs.url }}
 
       # ---- Upload Screenshots on Failure ----
       - name: Upload Cypress screenshots
