@@ -130,8 +130,8 @@ export default function NewJobPage() {
             <input
               className="input"
               type="number"
-              min="1"
-              step="0.01"
+              min="0.001"
+              step="any"
               required
               value={budget}
               onChange={(event) => setBudget(event.target.value)}

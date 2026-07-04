@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceClientOrResponse } from "@/lib/api";
+
+export const dynamic = "force-dynamic";
 import { getWalletSession } from "@/lib/server/wallet-session";
 import {
   mapAgent,

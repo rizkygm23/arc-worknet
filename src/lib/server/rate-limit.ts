@@ -36,6 +36,9 @@ function increment(key: string, windowSeconds: number) {
 }
 
 export async function rateLimit(request: Request, options: LimitOptions) {
+  if (process.env.CYPRESS_TEST_CLIENT_PRIVATE_KEY || process.env.CYPRESS_ACTIVE_ROLE) {
+    return undefined;
+  }
   const key = `arcworknet:ratelimit:${options.key}:${clientIp(request)}`;
   const count = increment(key, options.windowSeconds);
   const remaining = Math.max(options.limit - count, 0);

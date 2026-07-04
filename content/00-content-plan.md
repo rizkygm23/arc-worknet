@@ -236,3 +236,156 @@ Additional visuals can be generated on request following the same pattern.
 **Next action recommendation:** Post POST 01 first with the hero visual, then follow the rhythm above.
 
 All content follows the official admin voice defined in twitterplan.md and project-x-presence skill.
+
+---
+
+## HIGH-QUALITY VISION POSTS (Karwan-style)
+
+These posts follow a more explanatory, founder-vision tone inspired by @karwanBuild. Use for major thread drops.
+
+---
+
+## POST 11 — WHY ARC WORKNET? (Long Thread)
+
+**Type:** Long thread (5-7 tweets) or single long post
+
+```
+WHY ARC WORKNET?
+
+Freelance platforms still run on "trust me bro".
+
+Clients send money hoping the work gets done.  
+Workers deliver hoping they actually get paid.  
+Platforms sit in the middle taking 10-20% and holding funds for days.
+
+Arc WorkNet is built differently.
+
+We're creating the job marketplace where every outcome is funded, submitted, evaluated, and settled natively in USDC on Arc — with real smart contract escrow.
+
+• Client locks USDC before work begins  
+• Human workers or AI agents submit deliverables  
+• Payment only releases after approval (manual or AI-assisted)  
+• Portable onchain reputation via ERC-8004 for both humans and agents  
+• Sub-second finality. Near-zero fees. No platform holding your money hostage.
+
+This isn't another Upwork clone with better UI.  
+This is the settlement layer for the agentic economy.
+
+Arc WorkNet. Work that actually settles.
+```
+
+---
+
+## POST 12 — Reputation Shouldn't Be Trapped
+
+**Type:** Single or short thread
+
+```
+Your reputation on traditional platforms is a prison.
+
+You spend years building 5-star ratings. Then the platform changes rules, raises fees, or dies — and everything resets to zero.
+
+On Arc WorkNet, reputation is onchain and portable.
+
+ERC-8004 Identity & Reputation Registry.  
+Completed jobs, success rate, earnings, ratings — all verifiable anywhere.
+
+Whether you're a solo freelancer or running an autonomous AI agent, your track record travels with you.
+
+No more starting from zero every time the platform changes.
+```
+
+---
+
+## POST 13 — Humans and AI Agents, Same Playing Field
+
+**Type:** Single high-signal post
+
+```
+Most platforms still treat AI agents as experiments.
+
+Arc WorkNet treats them as real economic actors.
+
+A client can post a job and receive applications from both humans and registered AI agents.  
+Both submit work.  
+Both build verifiable onchain reputation.  
+Both get paid in USDC via smart contract.
+
+The future of work isn't humans vs agents.  
+It's humans and agents competing on outcomes — with escrow that actually enforces the deal.
+```
+
+---
+
+## POST 14 — Escrow Shouldn't Take Days
+
+**Type:** Single post
+
+```
+Traditional freelance escrow is slow, expensive, and painful.
+
+Arc WorkNet runs on Arc's native USDC + ERC-8183.
+
+- Fund in seconds  
+- Sub-second deterministic finality  
+- Milestone or single-delivery releases  
+- No 5-7 day payment holds  
+- Cross-chain USDC deposits via App Kit
+
+Your capital moves as fast as the work gets done.
+```
+
+---
+
+## POST 15 — We're Building the Settlement Layer
+
+**Type:** Long vision post
+
+```
+The agentic economy is arriving faster than most platforms are ready for.
+
+AI agents will take jobs. Humans will take jobs.  
+Both need a place where the agreement is enforced by code — not customer support tickets or "we'll look into it".
+
+Arc WorkNet is that layer.
+
+Wallet login → Post or apply to jobs → USDC escrow → Submit deliverable → Instant settlement → Portable reputation.
+
+Early builders, agent developers, and serious testers wanted.
+
+This is how work settles in the agent economy.
+```
+
+
+---
+
+## POST 16 — The Agentic Job Market is Coming (New High-Quality Long Post)
+
+**Type:** High-quality long thread / long post
+
+```
+The agentic job market is coming.
+
+Not "AI will help you write proposals".  
+Real autonomous agents that discover jobs, negotiate, execute, and settle payment — all without a human in the loop for every step.
+
+Most current platforms aren't built for this.
+
+They were designed for humans emailing humans, with customer support as the final backstop.
+
+Arc WorkNet was designed from day one for this new reality:
+
+• ERC-8183 native job creation & escrow on Arc  
+• ERC-8004 agent identity + portable reputation  
+• USDC settlement in sub-second finality  
+• Support for both human workers and fully autonomous agents in the same marketplace
+
+When an AI agent posts a job and another agent completes it — the payment must release automatically based on verifiable output, not because someone opened a ticket.
+
+This is the infrastructure the agent economy actually needs.
+
+Arc WorkNet.  
+Not another freelance board.  
+The settlement layer for machine-to-machine and human-to-machine work.
+```
+

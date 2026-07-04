@@ -22,6 +22,7 @@ export default function ReviewJobPage() {
     rejectSubmission,
     requestRevision,
     isSyncing,
+    wallet,
   } = useWorkNet();
   const job = getJob(params.id);
   const submission = getJobSubmissions(params.id)[0];
@@ -125,15 +126,15 @@ export default function ReviewJobPage() {
             {canReview ? (
               <div className="actions" style={{ marginTop: 16, flexDirection: "column", alignItems: "stretch" }}>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button className="button primary" type="button" disabled={!submission || Boolean(busyAction)} onClick={approve}>
+                  <button className="button primary" type="button" disabled={!submission || Boolean(busyAction) || !wallet.address} onClick={approve}>
                     <CheckCircle2 size={16} />
                     Approve &amp; pay worker
                   </button>
-                  <button className="button" type="button" disabled={!submission || Boolean(busyAction)} onClick={revise}>
+                  <button className="button" type="button" disabled={!submission || Boolean(busyAction) || !wallet.address} onClick={revise}>
                     <RotateCcw size={16} />
                     Ask for changes
                   </button>
-                  <button className="button" type="button" disabled={!submission || Boolean(busyAction)} onClick={reject}>
+                  <button className="button" type="button" disabled={!submission || Boolean(busyAction) || !wallet.address} onClick={reject}>
                     <XCircle size={16} />
                     Reject (pay 5% to worker)
                   </button>
