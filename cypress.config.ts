@@ -48,6 +48,8 @@ export default defineConfig({
         process.env.CYPRESS_TEST_CLIENT_PRIVATE_KEY ?? "",
       TEST_WORKER_PRIVATE_KEY:
         process.env.CYPRESS_TEST_WORKER_PRIVATE_KEY ?? "",
+      VERCEL_AUTOMATION_BYPASS_SECRET:
+        process.env.VERCEL_AUTOMATION_BYPASS_SECRET ?? "",
     },
     setupNodeEvents(on) {
       on("task", {

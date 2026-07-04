@@ -73,6 +73,13 @@ Cypress.Commands.add("loginAs", (role: "client" | "worker") => {
   });
 });
 
+beforeEach(() => {
+  const bypassSecret = Cypress.env("VERCEL_AUTOMATION_BYPASS_SECRET");
+  if (bypassSecret) {
+    cy.setCookie("_x_vercel_protection_bypass", bypassSecret);
+  }
+});
+
 Cypress.on("window:before:load", (win) => {
   win.localStorage.setItem("arcworknet_tour_done", "1");
   const activeRole = Cypress.env("CYPRESS_ACTIVE_ROLE");
