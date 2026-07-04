@@ -82,7 +82,7 @@ Cypress.Commands.add("loginAs", (role: "client" | "worker") => {
   });
 });
 
-before(() => {
+beforeEach(() => {
   const bypassSecret = Cypress.env("VERCEL_AUTOMATION_BYPASS_SECRET");
   const baseUrl = Cypress.config("baseUrl") || "";
   
