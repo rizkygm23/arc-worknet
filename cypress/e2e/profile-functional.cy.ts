@@ -3,6 +3,7 @@ describe("Profile Settings — Functional", () => {
     beforeEach(() => {
       cy.loginAs("client");
       cy.visit("/settings/profile", { failOnStatusCode: false });
+      cy.contains("button", "Connect", { timeout: 30000 }).should("not.exist");
     });
 
     it("renders profile form with wallet address", () => {
@@ -72,6 +73,7 @@ describe("Profile Settings — Functional", () => {
     beforeEach(() => {
       cy.loginAs("worker");
       cy.visit("/settings/profile", { failOnStatusCode: false });
+      cy.contains("button", "Connect", { timeout: 30000 }).should("not.exist");
     });
 
     it("fills and saves worker profile with skills", () => {
