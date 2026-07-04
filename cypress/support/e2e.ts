@@ -45,6 +45,15 @@ Cypress.Commands.add("loginAs", (role: "client" | "worker") => {
       timeout: 60000,
     }).then((nonceRes) => {
       expect(nonceRes.status).to.eq(200);
+      
+      if (typeof nonceRes.body !== "object" || !nonceRes.body || !nonceRes.body.message) {
+        throw new Error(
+          "Failed to retrieve SIWE nonce. The Vercel preview deployment is protected by Vercel Authentication. " +
+          "Please verify that you have generated an 'Automation Bypass Secret' in Vercel Project Settings " +
+          "and saved it as 'VERCEL_AUTOMATION_BYPASS_SECRET' in your GitHub Repository Secrets."
+        );
+      }
+
       const { message, nonce } = nonceRes.body;
 
       // 3. Sign the SIWE message with private key (runs in Node via task)
@@ -75,6 +84,12 @@ Cypress.Commands.add("loginAs", (role: "client" | "worker") => {
 
 before(() => {
   const bypassSecret = Cypress.env("VERCEL_AUTOMATION_BYPASS_SECRET");
+  const baseUrl = Cypress.config("baseUrl") || "";
+  
+  if (!bypassSecret && baseUrl.includes("vercel.app")) {
+    cy.log("WARNING: VERCEL_AUTOMATION_BYPASS_SECRET is not set. Requests to Vercel preview deployments will likely fail with 401 Unauthorized.");
+  }
+  
   if (bypassSecret) {
     cy.request({
       url: "/",
