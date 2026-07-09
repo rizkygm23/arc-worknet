@@ -295,12 +295,9 @@ function HowItWorks() {
           ))}
         </div>
         <div className="landing-flow-visual" data-reveal>
-          <img
-            className="landing-img-aside"
-            src="/img/how_it_works.png"
-            alt="3D pipeline diagram: 6 connected nodes from briefcase to checkmark"
-            loading="lazy"
-          />
+          <svg className="hero-mark" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+            <circle cx="210" cy="210" r="160" stroke="var(--accent)" strokeOpacity="0.12" strokeWidth="1" />
+          </svg>
         </div>
       </div>
       <p className="landing-note reveal" data-reveal>
@@ -516,12 +513,11 @@ function FinalCta() {
     <section className="landing-section landing-final reveal" data-reveal>
       <div className="landing-final-grid">
         <div className="landing-final-visual" data-reveal>
-          <img
-            className="landing-img-hero"
-            src="/img/cta.png"
-            alt="3D illustration: glowing USDC coin above an open geometric palm"
-            loading="lazy"
-          />
+          <svg className="hero-mark" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+            <circle cx="210" cy="210" r="160" stroke="var(--accent)" strokeOpacity="0.12" strokeWidth="1" />
+            <circle cx="210" cy="210" r="110" stroke="var(--accent)" strokeOpacity="0.2" strokeWidth="1" />
+            <circle cx="210" cy="210" r="60" fill="var(--accent-soft)" />
+          </svg>
         </div>
         <div>
           <h2>Ready to stop waiting for payments?</h2>

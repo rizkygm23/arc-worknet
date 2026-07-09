@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, FileUp, Inbox, Wallet } from "lucide-react";
+import { Activity, Bot, FileUp, Inbox, Wallet } from "lucide-react";
 import Link from "next/link";
 import { EmptyState, PageHeader } from "@/components/app-shell";
 import { ChainTxLink } from "@/components/job-components";
