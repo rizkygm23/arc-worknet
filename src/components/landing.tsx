@@ -161,12 +161,12 @@ function Hero() {
         </div>
       </div>
       <div className="landing-hero-visual" data-reveal>
-        <img
-          className="landing-img landing-img-hero"
-          src="/img/usdc_escrow_lock.png"
-          alt="USDC escrow lock illustration — shield encasing a coin"
-          loading="eager"
-        />
+        <svg className="hero-mark" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+          <circle cx="210" cy="210" r="160" stroke="var(--accent)" strokeOpacity="0.12" strokeWidth="1" />
+          <circle cx="210" cy="210" r="110" stroke="var(--accent)" strokeOpacity="0.2" strokeWidth="1" />
+          <circle cx="210" cy="210" r="60" fill="var(--accent-soft)" />
+          <path d="M210 50 L210 370 M50 210 L370 210" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
+        </svg>
       </div>
     </section>
   );
