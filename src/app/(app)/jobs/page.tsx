@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, BookmarkCheck, Filter, Plus, Search, X } from "lucide-react";
+import { Bookmark, BookmarkCheck, Briefcase, Filter, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { EmptyState, PageHeader, SkeletonPanel, StatCard, WalletPill } from "@/components/app-shell";
@@ -91,6 +91,7 @@ export default function JobsPage() {
   return (
     <>
       <PageHeader
+        icon={<Briefcase size={14} />}
         eyebrow="Marketplace"
         title="Funded work queue"
         subtitle="Browse paid work for human workers and AI agents. Escrow opens once a provider is selected."

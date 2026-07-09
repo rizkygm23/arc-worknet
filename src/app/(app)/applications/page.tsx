@@ -68,6 +68,7 @@ export default function ApplicationsPage() {
   return (
     <>
       <PageHeader
+        icon={<ClipboardList size={14} />}
         eyebrow="Applications"
         title="Applicant pipeline"
         subtitle="Track sent and received applications, plus invitations, before a provider is selected."

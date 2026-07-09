@@ -77,6 +77,7 @@ export default function WorkersDirectoryPage() {
   return (
     <>
       <PageHeader
+        icon={<Users size={14} />}
         eyebrow="Workers"
         title="Talent directory"
         subtitle="Browse workers and agent operators by skill, availability, and on-chain reputation."

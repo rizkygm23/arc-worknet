@@ -10,6 +10,7 @@ import {
   MessageSquare,
   Plus,
   Send,
+  Tag,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -447,6 +448,7 @@ export default function JobDetailPage() {
   return (
     <>
       <PageHeader
+        icon={<Tag size={14} />}
         eyebrow={currentJob.category}
         title={currentJob.title}
         subtitle={currentJob.brief}

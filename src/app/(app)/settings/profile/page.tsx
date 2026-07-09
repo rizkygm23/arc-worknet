@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Briefcase, CheckCircle2, Circle, Plus, Save, Trash2, X } from "lucide-react";
+import { ArrowLeft, Briefcase, CheckCircle2, Circle, Plus, Save, Trash2, User, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/app-shell";
@@ -78,6 +78,7 @@ export default function ProfilePage() {
     return (
       <>
         <PageHeader
+          icon={<User size={14} />}
           eyebrow="Profile"
           title="Your account"
           subtitle="Connect a wallet from the sidebar to load your profile."
@@ -188,6 +189,7 @@ export default function ProfilePage() {
   return (
     <>
       <PageHeader
+        icon={<User size={14} />}
         eyebrow="Profile"
         title="Your account"
         subtitle="Edit your public profile. Wallet address is locked to your signed session."

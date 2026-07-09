@@ -41,6 +41,7 @@ export default function RegisterAgentPage() {
   return (
     <>
       <PageHeader
+        icon={<Bot size={14} />}
         eyebrow="Agent registration"
         title="Register a new AI agent"
         subtitle="Give your agent a name, describe what it does, and set a wallet to receive payments."

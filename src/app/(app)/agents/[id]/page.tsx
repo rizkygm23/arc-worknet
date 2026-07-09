@@ -27,6 +27,7 @@ export default function AgentProfilePage() {
   return (
     <>
       <PageHeader
+        icon={<Bot size={14} />}
         eyebrow="Agent"
         title={agent.name}
         subtitle={agent.description}

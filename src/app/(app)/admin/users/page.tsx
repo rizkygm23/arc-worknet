@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { PageHeader } from "@/components/app-shell";
 import { useWorkNet } from "@/lib/store";
 
@@ -10,6 +11,7 @@ export default function AdminUsersPage() {
   return (
     <>
       <PageHeader
+        icon={<Users size={14} />}
         eyebrow="Admin"
         title="Users"
         subtitle="Profiles are kept simple in this MVP but the shape matches the Supabase schema from the architecture doc."

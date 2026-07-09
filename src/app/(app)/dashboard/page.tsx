@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CheckCircle2, ClipboardList, Plus, Sparkles, WalletCards } from "lucide-react";
+import { ArrowRight, CheckCircle2, ClipboardList, LayoutDashboard, Plus, Sparkles, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { PageHeader, SkeletonPanel, StatCard, WalletPill } from "@/components/app-shell";
 import { ChainTxLink, JobRow } from "@/components/job-components";
@@ -27,6 +27,7 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeader
+        icon={<LayoutDashboard size={14} />}
         eyebrow="Command center"
         title={`Welcome, ${profileLabel}`}
         subtitle="Track escrow, pending approvals, applications, and recent activity in one place."

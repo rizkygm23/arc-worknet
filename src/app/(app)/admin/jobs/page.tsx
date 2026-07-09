@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/app-shell";
 import { JobStatusBadge } from "@/components/job-components";
 import { useWorkNet } from "@/lib/store";
@@ -11,6 +12,7 @@ export default function AdminJobsPage() {
   return (
     <>
       <PageHeader
+        icon={<ShieldAlert size={14} />}
         eyebrow="Admin"
         title="Job moderation"
         subtitle="Admin views are reserved for moderation, disputes, and platform-level event inspection."

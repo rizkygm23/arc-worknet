@@ -16,6 +16,7 @@ export default function ActivityPage() {
   return (
     <>
       <PageHeader
+        icon={<Activity size={14} />}
         eyebrow="Activity"
         title="Activity feed"
         subtitle="Job events, submissions, and payments in one place."

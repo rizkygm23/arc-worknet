@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, PlusCircle, Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -54,6 +54,7 @@ export default function NewJobPage() {
   return (
     <>
       <PageHeader
+        icon={<PlusCircle size={14} />}
         eyebrow="Create job"
         title="Define a paid outcome"
         subtitle="Public marketplace jobs stay offchain until a provider is selected. Budgets are stored as integer USDC base units."

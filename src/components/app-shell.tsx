@@ -70,9 +70,8 @@ function WalletPanel() {
   if (!wallet.isConnected) {
     return (
       <div className="wallet-mini">
-        <span className="label">Wallet</span>
         <button
-          className="button primary"
+          className="button primary small"
           type="button"
           onClick={connectWallet}
           disabled={isWalletPending}
@@ -80,7 +79,6 @@ function WalletPanel() {
           {isWalletPending ? <span className="spinner" aria-hidden /> : <Wallet size={14} />}
           {isWalletPending ? "Connecting…" : "Connect"}
         </button>
-        <span className="muted small">Email, Google, or external wallet.</span>
       </div>
     );
   }
@@ -110,26 +108,24 @@ function WalletPanel() {
       {open ? (
         <div className="wallet-popover" role="dialog" aria-label="Wallet details">
           <div className="wallet-popover-row">
-            <span className="label">Address</span>
-            <span className="wallet-address-mono full">{wallet.address}</span>
+            <div className="wallet-address-mono full">{wallet.address}</div>
             <div className="wallet-popover-actions">
               <button
-                className="button ghost small"
+                className="icon-button"
                 type="button"
                 onClick={copyAddress}
-                aria-label="Copy address"
+                aria-label={copied ? "Copied" : "Copy address"}
               >
-                {copied ? <Check size={12} /> : <Copy size={12} />}
-                {copied ? "Copied" : "Copy"}
+                {copied ? <Check size={14} /> : <Copy size={14} />}
               </button>
               <a
-                className="button ghost small"
+                className="icon-button"
                 href={`${ARC_EXPLORER_URL}/address/${wallet.address}`}
                 target="_blank"
                 rel="noreferrer"
+                aria-label="View on explorer"
               >
-                <ExternalLink size={12} />
-                Explorer
+                <ExternalLink size={14} />
               </a>
             </div>
           </div>
@@ -330,6 +326,7 @@ function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-head">
         <Link href="/jobs" className="brand">
+          <span className="brand-mark" aria-hidden>A</span>
           <div className="brand-text">
             <strong>Arc WorkNet</strong>
             <span>Paid outcomes on Arc</span>
@@ -509,11 +506,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 export function PageHeader({
+  icon,
   eyebrow,
   title,
   subtitle,
   actions,
 }: {
+  icon?: React.ReactNode;
   eyebrow: string;
   title: string;
   subtitle?: string;
@@ -522,7 +521,7 @@ export function PageHeader({
   return (
     <header className="topbar">
       <div>
-        <p className="eyebrow">{eyebrow}</p>
+        <p className="eyebrow">{icon}{eyebrow}</p>
         <h1 className="page-title">{title}</h1>
         {subtitle ? <p className="page-subtitle hide-mobile">{subtitle}</p> : null}
       </div>
