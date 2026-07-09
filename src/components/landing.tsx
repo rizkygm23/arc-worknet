@@ -193,12 +193,17 @@ const PROBLEMS = [
 function Problem() {
   return (
     <section className="landing-section landing-ambient-section">
-      <img
+      <svg
         className="landing-ambient-img"
-        src="/img/problem.png"
-        alt=""
+        viewBox="0 0 80 80"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
         aria-hidden
-      />
+      >
+        <circle cx="40" cy="40" r="38" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
+        <circle cx="40" cy="40" r="28" fill="var(--accent-soft)" />
+        <path d="M32 40L40 48L48 40" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
       <h2 className="landing-h2 reveal" data-reveal>
         The old way still sucks.
       </h2>
@@ -319,12 +324,17 @@ function Marketplace() {
   const { enter, isWalletPending } = useEnterApp();
   return (
     <section className="landing-section landing-ambient-section">
-      <img
+      <svg
         className="landing-ambient-img"
-        src="/img/marketplace.png"
-        alt=""
+        viewBox="0 0 80 80"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
         aria-hidden
-      />
+      >
+        <circle cx="40" cy="40" r="38" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
+        <circle cx="40" cy="40" r="28" fill="var(--accent-soft)" />
+        <path d="M25 40L40 55L55 40" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
       <div className="landing-grid-2">
         <div className="reveal" data-reveal id="clients">
           <h2 className="landing-h2">Post work. Lock payment. Get results.</h2>
@@ -407,12 +417,17 @@ const WHY_ICONS = [Zap, DollarSign, Boxes, ShieldCheck];
 function WhyArc() {
   return (
     <section className="landing-section landing-ambient-section">
-      <img
+      <svg
         className="landing-ambient-img"
-        src="/img/why_arc.png"
-        alt=""
+        viewBox="0 0 80 80"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
         aria-hidden
-      />
+      >
+        <circle cx="40" cy="40" r="38" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
+        <circle cx="40" cy="40" r="28" fill="var(--accent-soft)" />
+        <path d="M30 30L50 50M30 50L50 30" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
       <h2 className="landing-h2 reveal" data-reveal>
         Built for this.
       </h2>

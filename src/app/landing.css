@@ -550,3 +550,27 @@
     gap: var(--space-4);
   }
 }
+
+/* ── Ambient section: SVG geometric marks replace generic 3D images ── */
+.landing-ambient-section {
+  position: relative;
+}
+
+.landing-ambient-img {
+  position: absolute;
+  right: var(--space-8);
+  top: var(--space-8);
+  width: 80px;
+  height: 80px;
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .landing-ambient-img {
+    right: var(--space-4);
+    top: var(--space-4);
+    width: 60px;
+    height: 60px;
+  }
+}

@@ -18,11 +18,11 @@
   --accent-soft: var(--color-accent-sunset-soft);
   --accent-lime: var(--color-accent-twilight);
   --warning: var(--color-warning);
-  --warning-soft: #fbf3d6;
+  --warning-soft: var(--color-warning-soft);
   --danger: var(--color-error);
-  --danger-soft: #fde8e8;
+  --danger-soft: var(--color-danger-soft);
   --success: var(--color-success);
-  --success-soft: #d4f5e0;
+  --success-soft: var(--color-success-soft);
   --info: var(--color-info);
   --shadow: var(--shadow-sm);
   color-scheme: light;
@@ -75,7 +75,7 @@ button:disabled {
 
 :focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(var(--accent) 20%, transparent);
   border-radius: var(--radius-sm);
 }
 
@@ -166,6 +166,7 @@ button:disabled {
 .nav-link {
   display: flex;
   align-items: center;
+  gap: var(--space-3);
   min-height: 40px;
   border: 0;
   border-radius: var(--radius-md);
@@ -178,6 +179,10 @@ button:disabled {
   transition:
     background-color var(--dur-short) var(--ease-out),
     color var(--dur-short) var(--ease-out);
+}
+
+.nav-link svg {
+  flex: none;
 }
 
 .nav-link:hover {
@@ -251,7 +256,7 @@ button:disabled {
 }
 
 .wallet-error {
-  border: var(--rule-thin) solid color-mix(in srgb, var(--danger) 40%, var(--hairline));
+  border: var(--rule-thin) solid color-mix(var(--danger) 40%, var(--hairline));
   border-radius: var(--radius-sm);
   background: var(--danger-soft);
   padding: var(--space-3) var(--space-4);
@@ -288,8 +293,8 @@ button:disabled {
   width: 8px;
   height: 8px;
   border-radius: 9999px;
-  background: var(--success, #4ade80);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success, #4ade80) 25%, transparent);
+  background: var(--success);
+  box-shadow: 0 0 0 3px color-mix(var(--success) 25%, transparent);
 }
 
 .wallet-address-mono {
@@ -364,8 +369,8 @@ button:disabled {
   height: 18px;
   padding: 0 5px;
   border-radius: 9999px;
-  background: var(--accent, var(--ink));
-  color: var(--on-accent, var(--bg));
+  background: var(--accent);
+  color: var(--on-accent);
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
@@ -460,7 +465,7 @@ button:disabled {
   width: 6px;
   height: 6px;
   border-radius: 9999px;
-  background: var(--accent, var(--ink));
+  background: var(--accent);
 }
 
 .notification-body {
@@ -636,7 +641,7 @@ button:disabled {
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 1.5px solid color-mix(in srgb, currentColor 30%, transparent);
+  border: 1.5px solid color-mix(currentColor 30%, transparent);
   border-top-color: currentColor;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
@@ -655,9 +660,9 @@ button:disabled {
   display: block;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--ink) 4%, transparent) 0%,
-    color-mix(in srgb, var(--ink) 8%, transparent) 50%,
-    color-mix(in srgb, var(--ink) 4%, transparent) 100%
+    color-mix(var(--ink) 4%, transparent) 0%,
+    color-mix(var(--ink) 8%, transparent) 50%,
+    color-mix(var(--ink) 4%, transparent) 100%
   );
   background-size: 200% 100%;
   border-radius: var(--radius-sm);
@@ -861,7 +866,7 @@ button:disabled {
 .textarea:focus {
   border-color: var(--accent);
   background: var(--surface);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(var(--accent) 20%, transparent);
 }
 
 .field {
@@ -1050,13 +1055,13 @@ button:disabled {
 }
 
 .chip.success {
-  border-color: color-mix(in srgb, var(--success) 50%, var(--hairline));
+  border-color: color-mix(var(--success) 50%, var(--hairline));
   color: var(--success);
   background: var(--success-soft);
 }
 
 .chip.warning {
-  border-color: color-mix(in srgb, var(--warning) 50%, var(--hairline));
+  border-color: color-mix(var(--warning) 50%, var(--hairline));
   color: var(--warning);
   background: var(--warning-soft);
 }
@@ -1234,11 +1239,11 @@ button:disabled {
 .stars {
   display: inline-flex;
   gap: 2px;
-  color: var(--accent, var(--ink));
+  color: var(--accent);
 }
 
 .stars .star-off {
-  color: color-mix(in srgb, var(--muted) 50%, transparent);
+  color: color-mix(var(--muted) 50%, transparent);
 }
 
 /* ─── Portfolio ─── */
@@ -1299,16 +1304,16 @@ a.portfolio-title:hover {
 }
 
 .availability-open::before {
-  background: var(--success, #4ade80);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success, #4ade80) 25%, transparent);
+  background: var(--success);
+  box-shadow: 0 0 0 3px color-mix(var(--success) 25%, transparent);
 }
 
 .availability-limited::before {
-  background: var(--warning, #f59e0b);
+  background: var(--warning);
 }
 
 .availability-unavailable::before {
-  background: var(--danger, #f87171);
+  background: var(--danger);
 }
 
 /* ─── Profile completeness ─── */
@@ -1340,7 +1345,7 @@ a.portfolio-title:hover {
 .completeness-bar-fill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: var(--accent, var(--ink));
+  background: var(--accent);
   transition: width var(--dur-mid) var(--ease-out);
 }
 
@@ -1366,7 +1371,7 @@ a.portfolio-title:hover {
 }
 
 .completeness-checklist li.done svg {
-  color: var(--success, #4ade80);
+  color: var(--success);
 }
 
 /* ─── Worker directory ─── */
@@ -1771,18 +1776,18 @@ pre {
 }
 
 .toast.error {
-  border-color: color-mix(in srgb, var(--danger) 50%, var(--hairline));
+  border-color: color-mix(var(--danger) 50%, var(--hairline));
   background: var(--danger-soft);
 }
 
 .toast.success {
-  border-color: color-mix(in srgb, var(--success) 50%, var(--hairline));
+  border-color: color-mix(var(--success) 50%, var(--hairline));
   background: var(--success-soft);
 }
 
 .toast.info {
-  border-color: color-mix(in srgb, var(--info) 50%, var(--hairline));
-  background: color-mix(in srgb, var(--info) 10%, var(--surface-elevated));
+  border-color: color-mix(var(--info) 50%, var(--hairline));
+  background: color-mix(var(--info) 10%, var(--surface-elevated));
 }
 
 .toast .toast-label {
@@ -1845,7 +1850,7 @@ pre {
     gap: var(--space-3);
     padding: var(--space-3) var(--space-4);
     padding-top: calc(var(--space-3) + env(safe-area-inset-top, 0px));
-    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    background: color-mix(var(--bg) 92%, transparent);
     backdrop-filter: blur(12px) saturate(1.4);
     -webkit-backdrop-filter: blur(12px) saturate(1.4);
     border-bottom: var(--rule-thin) solid var(--hairline);
@@ -1869,7 +1874,7 @@ pre {
   .mobile-drawer-backdrop {
     position: absolute;
     inset: 0;
-    background: color-mix(in srgb, var(--bg) 60%, transparent);
+    background: color-mix(var(--bg) 60%, transparent);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     animation: backdrop-in 200ms ease;
@@ -2436,7 +2441,7 @@ pre {
 }
 
 .message-item.message-mine {
-  border-color: color-mix(in srgb, var(--accent, var(--ink)) 35%, var(--hairline));
+  border-color: color-mix(var(--accent) 35%, var(--hairline));
   background: var(--accent-soft);
 }
 
@@ -2542,12 +2547,12 @@ pre {
 
 .invite-status.invite-accepted {
   color: var(--success);
-  border-color: color-mix(in srgb, var(--success) 35%, var(--hairline));
+  border-color: color-mix(var(--success) 35%, var(--hairline));
 }
 
 .invite-status.invite-declined {
   color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 35%, var(--hairline));
+  border-color: color-mix(var(--danger) 35%, var(--hairline));
 }
 
 /* ─── Application status badges ─── */
@@ -2557,7 +2562,7 @@ pre {
 
 .application-status.application-accepted {
   color: var(--success);
-  border-color: color-mix(in srgb, var(--success) 35%, var(--hairline));
+  border-color: color-mix(var(--success) 35%, var(--hairline));
 }
 
 .application-status.application-rejected,
@@ -2720,7 +2725,7 @@ pre {
 .tour-backdrop {
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, #000 65%, transparent);
+  background: color-mix(var(--color-gray-900) 65%, transparent);
   pointer-events: auto;
   cursor: pointer;
 }
@@ -2729,8 +2734,8 @@ pre {
   position: absolute;
   border-radius: 12px;
   box-shadow:
-    0 0 0 2px var(--accent, #fff),
-    0 0 0 9999px color-mix(in srgb, #000 65%, transparent);
+    0 0 0 2px var(--accent),
+    0 0 0 9999px color-mix(var(--color-gray-900) 65%, transparent);
   transition: top 220ms ease, left 220ms ease, width 220ms ease, height 220ms ease;
   pointer-events: none;
   animation: tour-spot-pulse 1800ms ease-in-out infinite;
@@ -2789,6 +2794,6 @@ pre {
 }
 
 @keyframes tour-spot-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px var(--accent, #fff), 0 0 0 9999px color-mix(in srgb, #000 65%, transparent); }
-  50% { box-shadow: 0 0 0 3px var(--accent, #fff), 0 0 22px 4px color-mix(in srgb, var(--accent, #fff) 30%, transparent), 0 0 0 9999px color-mix(in srgb, #000 65%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 2px var(--accent), 0 0 0 9999px color-mix(var(--color-gray-900) 65%, transparent); }
+  50% { box-shadow: 0 0 0 3px var(--accent), 0 0 22px 4px color-mix(var(--accent) 30%, transparent), 0 0 0 9999px color-mix(var(--color-gray-900) 65%, transparent); }
 }

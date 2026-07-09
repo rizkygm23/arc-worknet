@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { Bell, Check, Copy, ExternalLink, LogOut, Menu, Wallet, X } from "lucide-react";
+import { Activity, Bell, Briefcase, Bot, Check, Copy, ExternalLink, FileText, LayoutDashboard, LogOut, Menu, ShieldCheck, User, Users, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -18,15 +18,15 @@ import { AddFundsButton } from "@/components/add-funds";
 const ARC_EXPLORER_URL = process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/jobs", label: "Jobs" },
-  { href: "/workers", label: "Workers" },
-  { href: "/applications", label: "Applications" },
-  { href: "/agents", label: "Agents" },
-  { href: "/wallet", label: "Wallet" },
-  { href: "/activity", label: "Activity" },
-  { href: "/settings/profile", label: "Profile" },
-  { href: "/admin/jobs", label: "Admin" },
+  { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
+  { href: "/jobs", label: "Jobs", Icon: Briefcase },
+  { href: "/workers", label: "Workers", Icon: Users },
+  { href: "/applications", label: "Applications", Icon: FileText },
+  { href: "/agents", label: "Agents", Icon: Bot },
+  { href: "/wallet", label: "Wallet", Icon: Wallet },
+  { href: "/activity", label: "Activity", Icon: Activity },
+  { href: "/settings/profile", label: "Profile", Icon: User },
+  { href: "/admin/jobs", label: "Admin", Icon: ShieldCheck },
 ];
 
 function WalletPanel() {
@@ -326,7 +326,12 @@ function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-head">
         <Link href="/jobs" className="brand">
-          <span className="brand-mark" aria-hidden>A</span>
+          <span className="brand-mark" aria-hidden>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" fill="none" />
+              <path d="M5 8L8 11L11 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
           <div className="brand-text">
             <strong>Arc WorkNet</strong>
             <span>Paid outcomes on Arc</span>
@@ -339,9 +344,11 @@ function Sidebar() {
         {navItems.map((item) => {
           const active =
             pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
+          const Icon = item.Icon;
           return (
             <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")}>
-              {item.label}
+              <Icon size={16} aria-hidden strokeWidth={1.75} />
+              <span>{item.label}</span>
             </Link>
           );
         })}
@@ -408,13 +415,15 @@ function MobileNav() {
               {navItems.map((item) => {
                 const active =
                   pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
+                const Icon = item.Icon;
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     className={clsx("nav-link", active && "active")}
                   >
-                    {item.label}
+                    <Icon size={18} aria-hidden strokeWidth={1.75} />
+                    <span>{item.label}</span>
                   </Link>
                 );
               })}
