@@ -17,16 +17,36 @@ import { AddFundsButton } from "@/components/add-funds";
 
 const ARC_EXPLORER_URL = process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
-  { href: "/jobs", label: "Jobs", Icon: Briefcase },
-  { href: "/workers", label: "Workers", Icon: Users },
-  { href: "/applications", label: "Applications", Icon: FileText },
-  { href: "/agents", label: "Agents", Icon: Bot },
-  { href: "/wallet", label: "Wallet", Icon: Wallet },
-  { href: "/activity", label: "Activity", Icon: Activity },
-  { href: "/settings/profile", label: "Profile", Icon: User },
-  { href: "/admin/jobs", label: "Admin", Icon: ShieldCheck },
+const navGroups = [
+  {
+    title: "Workspace",
+    items: [
+      { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
+      { href: "/jobs", label: "Jobs", Icon: Briefcase },
+      { href: "/applications", label: "Applications", Icon: FileText },
+    ],
+  },
+  {
+    title: "Network",
+    items: [
+      { href: "/workers", label: "Workers", Icon: Users },
+      { href: "/agents", label: "Agents", Icon: Bot },
+    ],
+  },
+  {
+    title: "Finance & Profile",
+    items: [
+      { href: "/wallet", label: "Wallet", Icon: Wallet },
+      { href: "/activity", label: "Activity", Icon: Activity },
+      { href: "/settings/profile", label: "Profile", Icon: User },
+    ],
+  },
+  {
+    title: "System",
+    items: [
+      { href: "/admin/jobs", label: "Admin", Icon: ShieldCheck },
+    ],
+  },
 ];
 
 function WalletPanel() {
@@ -341,17 +361,24 @@ function Sidebar() {
       </div>
 
       <nav className="nav" aria-label="Main navigation" data-tour="nav">
-        {navItems.map((item) => {
-          const active =
-            pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
-          const Icon = item.Icon;
-          return (
-            <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")}>
-              <Icon size={16} aria-hidden strokeWidth={1.75} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+        {navGroups.map((group) => (
+          <div key={group.title} className="nav-group">
+            <div className="nav-group-title">{group.title}</div>
+            <div className="nav-group-items">
+              {group.items.map((item) => {
+                const active =
+                  pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
+                const Icon = item.Icon;
+                return (
+                  <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")}>
+                    <Icon size={16} aria-hidden strokeWidth={1.75} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       <div className="sidebar-footer" data-tour="wallet">
@@ -412,21 +439,28 @@ function MobileNav() {
               </div>
             </div>
             <nav className="mobile-drawer-nav" aria-label="Main navigation">
-              {navItems.map((item) => {
-                const active =
-                  pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
-                const Icon = item.Icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={clsx("nav-link", active && "active")}
-                  >
-                    <Icon size={18} aria-hidden strokeWidth={1.75} />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
+              {navGroups.map((group) => (
+                <div key={group.title} className="nav-group">
+                  <div className="nav-group-title">{group.title}</div>
+                  <div className="nav-group-items">
+                    {group.items.map((item) => {
+                      const active =
+                        pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
+                      const Icon = item.Icon;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={clsx("nav-link", active && "active")}
+                        >
+                          <Icon size={18} aria-hidden strokeWidth={1.75} />
+                          <span>{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </nav>
             <div className="mobile-drawer-foot">
               <WalletPanel />

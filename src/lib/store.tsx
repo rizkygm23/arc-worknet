@@ -269,8 +269,36 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       const pk = window.localStorage.getItem("CYPRESS_ACTIVE_PRIVATE_KEY")!;
       return createCypressMockWallet(pk) as unknown as typeof wallets[0];
     }
+    
+    // If the user is authenticated, find the wallet matching Privy's active user wallet address
+    const walletAddress = user?.wallet?.address;
+    if (walletAddress) {
+      const matchingWallet = wallets.find(
+        (w) => w.address.toLowerCase() === walletAddress.toLowerCase()
+      );
+      if (matchingWallet) return matchingWallet;
+    }
+    
+    // If the user authenticated via email/socials and is waiting for an embedded wallet,
+    // do not let external wallets (like MetaMask) act as the primary wallet.
+    const isEmailOrSocialUser = user?.linkedAccounts?.some((acc) => {
+      const typeStr = acc.type as string;
+      return (
+        typeStr === "email" ||
+        typeStr.includes("google") ||
+        typeStr.includes("apple") ||
+        typeStr.includes("discord") ||
+        typeStr.includes("github") ||
+        typeStr.includes("twitter")
+      );
+    });
+    const hasEmbeddedWallet = wallets.some((w) => w.walletClientType === "privy");
+    if (isEmailOrSocialUser && !hasEmbeddedWallet) {
+      return undefined;
+    }
+    
     return wallets[0];
-  }, [isCypress, wallets]);
+  }, [isCypress, wallets, user]);
   const creatingWalletRef = useRef(false);
 
   // Fallback: if auto-creation didn't fire (OAuth flow, config skew),
