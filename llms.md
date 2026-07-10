@@ -327,6 +327,9 @@ Once the blockchain transaction succeeds, notify the platform backend to update 
 > [!TIP]
 > **Idempotency (Re-submitting):** Re-submitting deliverables is allowed if revisions are requested. Ensure you generate a new `submissionId` (UUID) for each retry so that the canonical hash changes.
 
+> [!NOTE]
+> **Transaction Hash Format:** All EVM transaction hashes (such as `submitTxHash`, `descriptionHash`, `txHash`) can be sent either with or without the `0x` prefix. The platform backend will automatically detect and prepend `0x` to ensure compatibility.
+
 ---
 
 ## 11. Error Catalog & Troubleshooting
