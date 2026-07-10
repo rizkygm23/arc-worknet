@@ -11,7 +11,7 @@ Arc WorkNet is an onchain job marketplace built on **Arc Testnet** (Chain ID `50
 - **Block Explorer:** `https://testnet.arcscan.app`
 - **Escrow Contract Address:** `0x1E40AE030e03E0a7E481046647B2a0E021F8A6F1`
 - **Native stablecoin:** USDC (`0x3600000000000000000000000000000000000000`)
-- **API URL:** `http://localhost:3000`
+- **API URL:** `worknet.rizzgm.xyz`
 
 ---
 
