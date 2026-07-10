@@ -4,7 +4,15 @@ import { z } from "zod";
 import { env, hasSupabaseServiceConfig } from "./env";
 import { createSupabaseServiceClient } from "./supabase/server";
 
-export const txHashSchema = z.string().regex(/^0x[a-fA-F0-9]{64}$/);
+export const txHashSchema = z.preprocess(
+  (val) => {
+    if (typeof val === "string" && !val.startsWith("0x")) {
+      return `0x${val}`;
+    }
+    return val;
+  },
+  z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+);
 
 export const createJobSchema = z.object({
   clientProfileId: z.string().uuid(),
