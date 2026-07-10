@@ -122,6 +122,17 @@ function LandingNav() {
 
 function Hero() {
   const { enter, isWalletPending } = useEnterApp();
+  const { state } = useWorkNet();
+
+  const clientCount = state.profiles?.filter((p) => p.role === "client").length ?? 0;
+  const workerCount = state.profiles?.filter((p) => p.role === "worker").length ?? 0;
+  const agentCount = state.agents?.length ?? 0;
+  const totalJobs = state.jobs?.length ?? 0;
+  const completedJobs = state.jobs?.filter((j) => j.status === "completed").length ?? 0;
+  const openJobs = totalJobs - completedJobs;
+  const totalSpentUnits = state.profiles?.reduce((sum, p) => sum + (p.totalSpentUsdcUnits || 0), 0) ?? 0;
+  const totalVolume = (totalSpentUnits / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 0 });
+
   return (
     <section className="landing-section landing-hero">
       <div>
@@ -149,7 +160,7 @@ function Hero() {
             Browse open jobs
           </Link>
         </div>
-        <div className="landing-stats">
+        <div className="landing-stats" style={{ marginBottom: "24px" }}>
           <span className="landing-stat">
             <Zap size={15} aria-hidden /> &lt;1s finality
           </span>
@@ -162,6 +173,60 @@ function Hero() {
           <span className="landing-stat">
             <Fingerprint size={15} aria-hidden /> ERC-8004 reputation
           </span>
+        </div>
+
+        <div className="landing-metrics-dashboard" style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          marginTop: "32px",
+          maxWidth: "800px"
+        }}>
+          <div className="panel" style={{ padding: "16px", textAlign: "center", display: "flex", flexDirection: "column", gap: 4, background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--line)", borderRadius: "8px" }}>
+            <span className="small muted" style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "1.5px", fontWeight: 600 }}>Platform Users</span>
+            <div style={{ display: "flex", justifyContent: "space-around", marginTop: 8 }}>
+              <div>
+                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{clientCount}</span>
+                <span className="small muted" style={{ fontSize: "9px" }}>Clients</span>
+              </div>
+              <div style={{ borderLeft: "1px solid var(--line)", height: "24px" }} />
+              <div>
+                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{workerCount}</span>
+                <span className="small muted" style={{ fontSize: "9px" }}>Workers</span>
+              </div>
+              <div style={{ borderLeft: "1px solid var(--line)", height: "24px" }} />
+              <div>
+                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{agentCount}</span>
+                <span className="small muted" style={{ fontSize: "9px" }}>Agents</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel" style={{ padding: "16px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--line)", borderRadius: "8px" }}>
+            <span className="small muted" style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "1.5px", fontWeight: 600 }}>USDC Transaction Volume</span>
+            <span style={{ fontSize: "22px", fontWeight: "bold", color: "var(--accent)", margin: "4px 0" }}>${totalVolume}</span>
+            <span className="small muted" style={{ fontSize: "9px" }}>USDC settled on Arc</span>
+          </div>
+
+          <div className="panel" style={{ padding: "16px", textAlign: "center", display: "flex", flexDirection: "column", gap: 4, background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--line)", borderRadius: "8px" }}>
+            <span className="small muted" style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "1.5px", fontWeight: 600 }}>Platform Jobs</span>
+            <div style={{ display: "flex", justifyContent: "space-around", marginTop: 8 }}>
+              <div>
+                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{totalJobs}</span>
+                <span className="small muted" style={{ fontSize: "9px" }}>Total</span>
+              </div>
+              <div style={{ borderLeft: "1px solid var(--line)", height: "24px" }} />
+              <div>
+                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{completedJobs}</span>
+                <span className="small muted" style={{ fontSize: "9px" }}>Completed</span>
+              </div>
+              <div style={{ borderLeft: "1px solid var(--line)", height: "24px" }} />
+              <div>
+                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{openJobs}</span>
+                <span className="small muted" style={{ fontSize: "9px" }}>Active</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div className="landing-hero-visual" data-reveal>
