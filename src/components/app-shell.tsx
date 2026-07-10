@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { Activity, Bell, Briefcase, Bot, Check, Copy, ExternalLink, FileText, LayoutDashboard, LogOut, Menu, ShieldCheck, User, Users, Wallet, X } from "lucide-react";
+import { Activity, AlertTriangle, Bell, Briefcase, Bot, Check, Copy, ExternalLink, FileText, LayoutDashboard, LogOut, Menu, ShieldCheck, User, Users, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -536,12 +536,22 @@ function TourGate() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const { clockError } = useWorkNet();
+
   return (
     <div className="app-shell">
       <OnboardingGuard />
       <Sidebar />
       <MobileNav />
-      <main className="content">{children}</main>
+      <main className="content">
+        {clockError ? (
+          <div className="clock-warning-banner" role="alert">
+            <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+            <span>{clockError}</span>
+          </div>
+        ) : null}
+        {children}
+      </main>
       <ErrorToast />
       <TourGate />
     </div>

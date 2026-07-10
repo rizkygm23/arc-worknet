@@ -1779,6 +1779,21 @@ pre {
   min-width: 140px;
 }
 
+/* ─── Clock Warning Banner ─── */
+.clock-warning-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--warning-soft);
+  border: var(--rule-thin) solid color-mix(in srgb, var(--warning) 40%, var(--hairline));
+  border-radius: var(--radius-md);
+  color: var(--warning);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  margin-bottom: var(--space-6);
+}
+
 /* ─── Toast ─── */
 .toast-stack {
   position: fixed;

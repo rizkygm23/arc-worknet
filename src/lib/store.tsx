@@ -64,6 +64,7 @@ type DataContextValue = {
   state: WorkNetState;
   activeProfile?: Profile;
   backendError?: string;
+  clockError?: string;
   isSyncing: boolean;
   refreshState: () => Promise<void>;
   setActiveProfile: (profileId: string) => void;
@@ -250,6 +251,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
   const [wallet, setWallet] = useState<WalletState>({ isConnected: false });
   const [walletError, setWalletError] = useState<string | undefined>();
   const [backendError, setBackendError] = useState<string | undefined>();
+  const [clockError, setClockError] = useState<string | undefined>();
   const [isSyncing, setIsSyncing] = useState(true);
   const [isWalletPending, setIsWalletPending] = useState(false);
   const verifiedAddressRef = useRef<string | undefined>(undefined);
@@ -329,7 +331,33 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     setIsSyncing(true);
     try {
       // Public data first — fast, unblocks UI immediately.
-      const { state: publicState } = await apiJson<{ state: WorkNetState }>(`/api/bootstrap?t=${Date.now()}`);
+      const response = await fetch(`/api/bootstrap?t=${Date.now()}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      // Verify user device clock synchronization
+      const dateHeader = response.headers.get("date");
+      if (dateHeader) {
+        const serverTime = new Date(dateHeader).getTime();
+        const clientTime = Date.now();
+        const skew = Math.abs(serverTime - clientTime);
+        if (skew > 120_000) { // 2 minutes skew limit
+          setClockError(
+            `Device clock is out of sync by ${Math.round(skew / 1000)}s. Please synchronize your system time to prevent login/RPC failures.`
+          );
+        } else {
+          setClockError(undefined);
+        }
+      } else {
+        setClockError(undefined);
+      }
+
+      if (!response.ok) {
+        throw new Error(`Bootstrap failed with ${response.status}`);
+      }
+      const data = (await response.json()) as { state: WorkNetState };
+      const publicState = data.state;
       setBackendError(undefined);
       setState((current) => mergeState(current, publicState, wallet.address));
     } catch (error) {
@@ -1170,6 +1198,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       state,
       activeProfile,
       backendError,
+      clockError,
       isSyncing,
       refreshState,
       setActiveProfile,
@@ -1186,6 +1215,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       state,
       activeProfile,
       backendError,
+      clockError,
       isSyncing,
       refreshState,
       setActiveProfile,
