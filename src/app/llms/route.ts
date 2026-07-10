@@ -11,7 +11,7 @@ export async function GET() {
         "Content-Type": "text/plain; charset=utf-8",
       },
     });
-  } catch (error: any) {
+  } catch {
     return NextResponse.json({ error: "llms.md file not found" }, { status: 404 });
   }
 }

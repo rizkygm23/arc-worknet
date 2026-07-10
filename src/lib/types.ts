@@ -108,6 +108,8 @@ export type Job = {
   completeTxHash?: string;
   cancelTxHash?: string;
   lastIndexedBlock?: number;
+  taskFilePath?: string;
+  taskFileName?: string;
   createdAt: string;
   updatedAt: string;
 };

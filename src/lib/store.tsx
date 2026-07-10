@@ -60,6 +60,8 @@ type CreateJobInput = {
   budgetUsdcUnits: number;
   deadlineAt?: string;
   actorType: "human" | "agent";
+  taskFilePath?: string;
+  taskFileName?: string;
 };
 
 type DataContextValue = {
@@ -752,6 +754,8 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
         brief: normalizedInput.brief,
         acceptanceCriteria: normalizedInput.acceptanceCriteria,
         deliverableFormat: normalizedInput.deliverableFormat,
+        ...(normalizedInput.taskFilePath ? { taskFilePath: normalizedInput.taskFilePath } : {}),
+        ...(normalizedInput.taskFileName ? { taskFileName: normalizedInput.taskFileName } : {}),
       }),
     );
     const { job } = await apiJson<{ job: { id: string } }>("/api/jobs", {

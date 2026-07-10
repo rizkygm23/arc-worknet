@@ -125,6 +125,8 @@ export type Database = {
           complete_tx_hash: string | null;
           cancel_tx_hash: string | null;
           last_indexed_block: number | null;
+          task_file_path: string | null;
+          task_file_name: string | null;
           created_at: string;
           updated_at: string;
         };

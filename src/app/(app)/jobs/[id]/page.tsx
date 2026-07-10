@@ -4,7 +4,9 @@ import {
   ArrowLeft,
   Check,
   CircleDollarSign,
+  Download,
   ExternalLink,
+  FileText,
   FileUp,
   Handshake,
   MessageSquare,
@@ -491,6 +493,29 @@ export default function JobDetailPage() {
             <p className="muted" style={{ lineHeight: 1.6 }}>
               {currentJob.acceptanceCriteria}
             </p>
+
+            {currentJob.taskFilePath ? (
+              <div style={{ marginTop: 16, marginBottom: 16, padding: 12, background: "var(--surface-muted)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <FileText size={20} className="muted" />
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 500, display: "block" }}>{currentJob.taskFileName || "Task Document"}</span>
+                    <span className="small muted">Attached task description file</span>
+                  </div>
+                </div>
+                <a
+                  className="button secondary small"
+                  href={`/api/jobs/${currentJob.id}/task-file`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                >
+                  <Download size={14} />
+                  Download
+                </a>
+              </div>
+            ) : null}
+
             <div className="tags">
               {currentJob.tags.map((tag) => (
                 <span className="tag" key={tag}>

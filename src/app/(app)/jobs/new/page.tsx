@@ -21,6 +21,8 @@ export default function NewJobPage() {
   const [budget, setBudget] = useState("250");
   const [deadline, setDeadline] = useState("");
   const [actorType, setActorType] = useState<ActorType>("human");
+  const [creationMode, setCreationMode] = useState<"manual" | "file">("manual");
+  const [taskFile, setTaskFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
@@ -29,10 +31,40 @@ export default function NewJobPage() {
     setIsSaving(true);
     setError(undefined);
     try {
+      let finalBrief = brief;
+      let finalAcceptance = acceptanceCriteria;
+      let taskFilePath: string | undefined;
+      let taskFileName: string | undefined;
+
+      if (creationMode === "file") {
+        if (!taskFile) {
+          throw new Error("Please select a task document file to upload.");
+        }
+        const formData = new FormData();
+        formData.append("file", taskFile);
+
+        const uploadRes = await fetch("/api/jobs/upload-task", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          const errData = await uploadRes.json();
+          throw new Error(errData.error || "Failed to upload task document.");
+        }
+
+        const uploadData = await uploadRes.json();
+        taskFilePath = uploadData.path;
+        taskFileName = uploadData.name;
+
+        finalBrief = `Task details are attached as a file: ${taskFileName}`;
+        finalAcceptance = `Please refer to the attached document "${taskFileName}" for acceptance criteria.`;
+      }
+
       const jobId = await createJob({
         title,
-        brief,
-        acceptanceCriteria,
+        brief: finalBrief,
+        acceptanceCriteria: finalAcceptance,
         deliverableFormat,
         category,
         tags: tags
@@ -42,6 +74,8 @@ export default function NewJobPage() {
         budgetUsdcUnits: usdcUnitsFromInput(budget),
         deadlineAt: deadline ? new Date(deadline).toISOString() : undefined,
         actorType,
+        taskFilePath,
+        taskFileName,
       });
       router.push(`/jobs/${jobId}`);
     } catch (caught) {
@@ -90,40 +124,103 @@ export default function NewJobPage() {
             />
           </label>
 
-          <label className="field span-2">
-            <span>Brief</span>
-            <textarea
-              className="textarea"
-              required
-              value={brief}
-              onChange={(event) => setBrief(event.target.value)}
-              placeholder="Describe the outcome, constraints, context, and expected implementation surface."
-            />
-          </label>
+          <div className="field span-2">
+            <span>Task Details Type</span>
+            <div style={{ display: "flex", gap: 16, marginTop: 4 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
+                <input
+                  type="radio"
+                  name="creationMode"
+                  checked={creationMode === "manual"}
+                  onChange={() => setCreationMode("manual")}
+                />
+                Input details manually
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
+                <input
+                  type="radio"
+                  name="creationMode"
+                  checked={creationMode === "file"}
+                  onChange={() => setCreationMode("file")}
+                />
+                Upload task document (PDF, DOCX, TXT)
+              </label>
+            </div>
+          </div>
 
-          <label className="field span-2">
-            <span>Acceptance criteria</span>
-            <textarea
-              className="textarea"
-              required
-              value={acceptanceCriteria}
-              onChange={(event) => setAcceptanceCriteria(event.target.value)}
-              placeholder="List the checks a reviewer will use before releasing escrow."
-            />
-          </label>
+          {creationMode === "manual" ? (
+            <>
+              <label className="field span-2">
+                <span>Brief</span>
+                <textarea
+                  className="textarea"
+                  required
+                  value={brief}
+                  onChange={(event) => setBrief(event.target.value)}
+                  placeholder="Describe the outcome, constraints, context, and expected implementation surface."
+                />
+              </label>
+
+              <label className="field span-2">
+                <span>Acceptance criteria</span>
+                <textarea
+                  className="textarea"
+                  required
+                  value={acceptanceCriteria}
+                  onChange={(event) => setAcceptanceCriteria(event.target.value)}
+                  placeholder="List the checks a reviewer will use before releasing escrow."
+                />
+              </label>
+            </>
+          ) : (
+            <label className="field span-2">
+              <span>Task Document (PDF, DOCX, TXT)</span>
+              <input
+                className="input"
+                type="file"
+                accept=".pdf,.doc,.docx,.txt"
+                required
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) setTaskFile(file);
+                }}
+              />
+            </label>
+          )}
 
           <label className="field">
             <span>Deliverable format</span>
-            <input
-              className="input"
+            <select
+              className="select"
               value={deliverableFormat}
               onChange={(event) => setDeliverableFormat(event.target.value)}
-            />
+            >
+              <option value="Pull request URL">Pull request URL</option>
+              <option value="IPFS metadata URI">IPFS metadata URI</option>
+              <option value="PDF Report">PDF Report</option>
+              <option value="ZIP archive">ZIP archive</option>
+              <option value="Text notes / URL link">Text notes / URL link</option>
+              <option value="Figma design link">Figma design link</option>
+              <option value="Video / Audio file">Video / Audio file</option>
+              <option value="Other">Other</option>
+            </select>
           </label>
 
           <label className="field">
             <span>Category</span>
-            <input className="input" value={category} onChange={(event) => setCategory(event.target.value)} />
+            <select
+              className="select"
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+            >
+              <option value="Engineering">Engineering</option>
+              <option value="Design">Design</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Writing">Writing</option>
+              <option value="Audit & Security">Audit & Security</option>
+              <option value="Data & Indexing">Data & Indexing</option>
+              <option value="Other">Other</option>
+            </select>
           </label>
 
           <label className="field">

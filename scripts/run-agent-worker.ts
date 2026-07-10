@@ -10,8 +10,9 @@ function runPrivyCommand(args: string): string {
   try {
     const cmd = `npx --package=@privy-io/agent-wallet-cli privy-agent-wallet ${args}`;
     return execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-  } catch (error: any) {
-    throw new Error(`Privy CLI error: ${error.stderr || error.message}`);
+  } catch (error: unknown) {
+    const err = error as { stderr?: string; message?: string };
+    throw new Error(`Privy CLI error: ${err.stderr || err.message}`);
   }
 }
 
@@ -28,16 +29,15 @@ function getAgentWallet(): string {
   return ethMatch[1];
 }
 
-// Fetch open jobs from the platform API
 async function fetchOpenJobs() {
   console.log(`Fetching jobs from ${PLATFORM_URL}...`);
   const response = await fetch(`${PLATFORM_URL}/api/bootstrap`);
   if (!response.ok) {
     throw new Error(`Failed to bootstrap: ${response.statusText}`);
   }
-  const data = (await response.json()) as any;
+  const data = (await response.json()) as { state?: { jobs?: Array<{ id: string; status: string; tags: string; title: string; brief: string; budgetUsdcUnits: number }> } };
   const jobs = data?.state?.jobs || [];
-  return jobs.filter((job: any) => job.status === "open");
+  return jobs.filter((job) => job.status === "open");
 }
 
 // Main autonomous loop
@@ -54,7 +54,7 @@ async function main() {
     console.log(`Found ${openJobs.length} open jobs on the marketplace.`);
 
     // 3. Match jobs based on tags & skills
-    const matchedJobs = openJobs.filter((job: any) => {
+    const matchedJobs = openJobs.filter((job) => {
       const jobTags = (job.tags || "").split(",").map((t: string) => t.trim().toLowerCase());
       return jobTags.some((tag: string) => 
         AGENT_SKILLS.some(skill => skill.toLowerCase() === tag)
@@ -107,8 +107,9 @@ async function main() {
     }
 
     console.log("\nLoop completed. Agent is waiting for Client approval...");
-  } catch (error: any) {
-    console.error(`\nError: ${error.message}`);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error(`\nError: ${err.message}`);
   }
 }
 

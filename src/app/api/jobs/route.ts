@@ -46,6 +46,8 @@ export async function POST(request: Request) {
       arc_chain_id: ARC_TESTNET_CHAIN_ID,
       evaluator_address: session.walletAddress,
       description_hash: input.descriptionHash,
+      task_file_path: input.taskFilePath,
+      task_file_name: input.taskFileName,
     })
     .select("*")
     .single();

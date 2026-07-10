@@ -150,6 +150,8 @@ export function mapJob(row: Tables["jobs_arcworker"]["Row"]): Job {
     completeTxHash: nullable(row.complete_tx_hash),
     cancelTxHash: nullable(row.cancel_tx_hash),
     lastIndexedBlock: nullable(row.last_indexed_block),
+    taskFilePath: nullable(row.task_file_path),
+    taskFileName: nullable(row.task_file_name),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

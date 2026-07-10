@@ -192,6 +192,8 @@ create table if not exists public.jobs_arcworker (
   complete_tx_hash text,
   cancel_tx_hash text,
   last_indexed_block bigint,
+  task_file_path text,
+  task_file_name text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

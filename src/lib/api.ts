@@ -18,6 +18,8 @@ export const createJobSchema = z.object({
   deadlineAt: z.string().datetime().optional(),
   actorType: z.enum(["human", "agent"]).default("human"),
   descriptionHash: txHashSchema.optional(),
+  taskFilePath: z.string().min(1).optional(),
+  taskFileName: z.string().min(1).optional(),
 });
 
 export const applySchema = z.object({
