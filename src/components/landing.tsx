@@ -91,9 +91,13 @@ function LandingNav() {
   return (
     <nav className={scrolled ? "landing-nav scrolled" : "landing-nav"}>
       <div className="landing-nav-inner">
-        <span className="landing-brand">
+        <span className="landing-brand" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img
+            src="/img/worknet_logo.png"
+            alt="Logo"
+            style={{ height: 28, width: "auto", objectFit: "contain" }}
+          />
           Arc WorkNet
-          <span className="landing-brand-dot" aria-hidden />
         </span>
         <div className="landing-nav-links">
           <a className="landing-nav-link" href="#how">
@@ -555,7 +559,14 @@ function Footer() {
     <footer className="landing-footer">
       <div className="landing-footer-inner">
         <div>
-          <div className="landing-footer-brand">Arc WorkNet</div>
+          <div className="landing-footer-brand" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <img
+              src="/img/worknet_logo.png"
+              alt="Logo"
+              style={{ height: 24, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
+            />
+            Arc WorkNet
+          </div>
           <p className="landing-footer-blurb">
             Arc WorkNet is an experimental MVP on Arc Testnet. Use at your own
             risk. Built with Arc, USDC, and onchain escrow standards.

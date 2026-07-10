@@ -360,11 +360,12 @@ function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-head">
         <Link href="/jobs" className="brand">
-          <span className="brand-mark" aria-hidden>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" fill="none" />
-              <path d="M5 8L8 11L11 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+          <span className="brand-mark" aria-hidden style={{ background: "transparent", padding: 0 }}>
+            <img
+              src="/img/worknet_logo.png"
+              alt="Logo"
+              style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            />
           </span>
           <div className="brand-text">
             <strong>Arc WorkNet</strong>
@@ -422,7 +423,12 @@ function MobileNav() {
   return (
     <>
       <header className="mobile-bar">
-        <Link href="/jobs" className="mobile-brand" aria-label="Arc WorkNet home">
+        <Link href="/jobs" className="mobile-brand" aria-label="Arc WorkNet home" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img
+            src="/img/worknet_logo.png"
+            alt="Logo"
+            style={{ height: 24, width: "auto", objectFit: "contain" }}
+          />
           Arc WorkNet
         </Link>
         <button
@@ -440,7 +446,14 @@ function MobileNav() {
           <div className="mobile-drawer-backdrop" onClick={() => setOpen(false)} />
           <div className="mobile-drawer-panel">
             <div className="mobile-drawer-head">
-              <strong>Arc WorkNet</strong>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <img
+                  src="/img/worknet_logo.png"
+                  alt="Logo"
+                  style={{ height: 24, width: "auto", objectFit: "contain" }}
+                />
+                <strong>Arc WorkNet</strong>
+              </div>
               <div className="mobile-drawer-head-actions">
                 <NotificationsBell />
                 <button
