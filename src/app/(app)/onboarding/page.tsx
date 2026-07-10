@@ -3,11 +3,11 @@
 import { ArrowLeft, ArrowRight, Check, Plus, Sparkles, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { dismissOnboarding } from "@/lib/onboarding";
+import { dismissOnboarding, needsOnboarding } from "@/lib/onboarding";
 import { useWorkNet } from "@/lib/store";
 import type { Availability } from "@/lib/types";
 
-type EditableRole = "client" | "worker" | "agent_owner";
+type EditableRole = "client" | "worker";
 
 type WizardState = {
   role: EditableRole;
@@ -22,7 +22,6 @@ type WizardState = {
 const ROLE_OPTIONS: { value: EditableRole; label: string; hint: string }[] = [
   { value: "worker", label: "Worker", hint: "I want to find and deliver paid work." },
   { value: "client", label: "Client", hint: "I want to post jobs and hire talent." },
-  { value: "agent_owner", label: "Agent owner", hint: "I run autonomous agents that earn." },
 ];
 
 const AVAILABILITY_OPTIONS: { value: Availability | ""; label: string }[] = [
@@ -44,10 +43,15 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | undefined>();
   const [form, setForm] = useState<WizardState | null>(null);
 
+  const isNewUser = useMemo(() => {
+    if (!activeProfile) return false;
+    return needsOnboarding(activeProfile);
+  }, [activeProfile]);
+
   useEffect(() => {
     if (activeProfile && !form) {
       setForm({
-        role: activeProfile.role === "admin" ? "worker" : activeProfile.role,
+        role: activeProfile.role === "client" ? "client" : "worker",
         displayName: activeProfile.displayName,
         handle: activeProfile.handle,
         bio: activeProfile.bio,
@@ -146,9 +150,11 @@ export default function OnboardingPage() {
           <p className="eyebrow">
             <Sparkles size={12} /> Welcome to Arc WorkNet
           </p>
-          <button type="button" className="button ghost small" onClick={handleSkip} disabled={saving}>
-            Skip for now
-          </button>
+          {!isNewUser ? (
+            <button type="button" className="button ghost small" onClick={handleSkip} disabled={saving}>
+              Skip for now
+            </button>
+          ) : null}
         </div>
 
         <div className="onboarding-steps" aria-label="Progress">

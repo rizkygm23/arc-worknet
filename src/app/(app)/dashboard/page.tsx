@@ -2,6 +2,7 @@
 
 import { ArrowRight, CheckCircle2, ClipboardList, LayoutDashboard, Plus, Sparkles, WalletCards } from "lucide-react";
 import Link from "next/link";
+import { useMemo } from "react";
 import { PageHeader, SkeletonPanel, StatCard, WalletPill } from "@/components/app-shell";
 import { ChainTxLink, JobRow } from "@/components/job-components";
 import { formatUsdcUnits } from "@/lib/money";
@@ -13,9 +14,27 @@ export default function DashboardPage() {
   const myJobs = state.jobs.filter(
     (job) => job.clientProfileId === activeProfile?.id || job.providerProfileId === activeProfile?.id,
   );
-  const pendingReviews = state.jobs.filter(
-    (job) => job.clientProfileId === activeProfile?.id && job.status === "submitted",
-  );
+  const pendingReviews = useMemo(() => {
+    if (!activeProfile) return [];
+    const role = activeProfile.role;
+    if (role === "admin") {
+      return state.jobs.filter((job) => job.status === "submitted");
+    }
+    if (role === "client") {
+      return state.jobs.filter(
+        (job) => job.clientProfileId === activeProfile.id && job.status === "submitted"
+      );
+    }
+    if (role === "worker") {
+      // Workers need to submit work for assigned, funded, or revision requested jobs
+      return state.jobs.filter(
+        (job) =>
+          job.providerProfileId === activeProfile.id &&
+          ["funded", "assigned", "revision_requested"].includes(job.status)
+      );
+    }
+    return [];
+  }, [state.jobs, activeProfile]);
   const openApplications = state.applications.filter((application) => application.status === "pending");
   const escrowed = state.jobs
     .filter((job) => ["funded", "submitted", "revision_requested"].includes(job.status))
@@ -34,10 +53,12 @@ export default function DashboardPage() {
         actions={
           <>
             <WalletPill />
-            <Link className="button primary" href="/jobs/new">
-              <Plus size={17} />
-              New job
-            </Link>
+            {(activeProfile?.role === "client" || activeProfile?.role === "admin") ? (
+              <Link className="button primary" href="/jobs/new">
+                <Plus size={17} />
+                New job
+              </Link>
+            ) : null}
           </>
         }
       />
@@ -144,20 +165,31 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="activity-list" style={{ marginTop: 16 }}>
-              {pendingReviews.map((job) => (
-                <Link className="activity-item" key={job.id} href={`/jobs/${job.id}/review`}>
-                  <span className="activity-icon">
-                    <CheckCircle2 size={16} />
-                  </span>
-                  <span>
-                    <strong>{job.title}</strong>
-                    <span className="small muted hide-mobile" style={{ display: "block", marginTop: 3 }}>
-                      Review submitted deliverable
+              {pendingReviews.map((job) => {
+                const isWorkerAction =
+                  activeProfile?.role === "worker" &&
+                  ["funded", "assigned", "revision_requested"].includes(job.status);
+                const actionHref = isWorkerAction ? `/jobs/${job.id}/submit` : `/jobs/${job.id}/review`;
+                const actionLabel = isWorkerAction ? "Submit deliverable" : "Review submitted deliverable";
+                return (
+                  <Link className="activity-item" key={job.id} href={actionHref}>
+                    <span className="activity-icon">
+                      <CheckCircle2 size={16} />
                     </span>
-                  </span>
-                </Link>
-              ))}
-              {pendingReviews.length === 0 ? <p className="muted">No approvals waiting.</p> : null}
+                    <span>
+                      <strong>{job.title}</strong>
+                      <span className="small muted hide-mobile" style={{ display: "block", marginTop: 3 }}>
+                        {actionLabel}
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
+              {pendingReviews.length === 0 ? (
+                <p className="muted">
+                  {activeProfile?.role === "worker" ? "No deliverables to submit." : "No approvals waiting."}
+                </p>
+              ) : null}
             </div>
           </div>
 

@@ -654,7 +654,7 @@ export default function JobDetailPage() {
 
           <TransactionsPanel job={currentJob} />
 
-          {currentJob.status === "open" ? (
+          {currentJob.status === "open" && (activeProfile?.role === "client" || activeProfile?.role === "admin") ? (
             <Link className="button primary" href="/jobs/new">
               <Plus size={16} />
               Create similar job

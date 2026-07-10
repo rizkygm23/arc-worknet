@@ -1,10 +1,12 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import clsx from "clsx";
 import { Activity, AlertTriangle, Bell, Briefcase, Bot, Check, Copy, ExternalLink, FileText, LayoutDashboard, LogOut, Menu, ShieldCheck, User, Users, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useWorkNet, walletBalanceLabel } from "@/lib/store";
 import { formatUsdcUnits } from "@/lib/money";
 import { ARC_TESTNET_CHAIN_ID } from "@/lib/arc";
@@ -48,6 +50,35 @@ const navGroups = [
     ],
   },
 ];
+
+function useFilteredNavGroups() {
+  const { activeProfile } = useWorkNet();
+
+  return useMemo(() => {
+    const role = activeProfile?.role ?? "worker"; // default to worker if not logged in
+
+    return navGroups
+      .map((group: any) => {
+        const items = group.items.filter((item: any) => {
+          // Admin sees everything
+          if (role === "admin") return true;
+
+          // Non-admins cannot see admin routes
+          if (item.href.startsWith("/admin")) return false;
+
+          // Workers cannot see talent browsing routes (workers, agents)
+          if (role === "worker") {
+            if (item.href === "/workers" || item.href === "/agents") return false;
+          }
+
+          return true;
+        });
+
+        return { ...group, items };
+      })
+      .filter((group: any) => group.items.length > 0);
+  }, [activeProfile]);
+}
 
 function WalletPanel() {
   const {
@@ -341,6 +372,7 @@ function NotificationsBell() {
 
 function Sidebar() {
   const pathname = usePathname();
+  const filteredNavGroups = useFilteredNavGroups();
 
   return (
     <aside className="sidebar">
@@ -361,11 +393,11 @@ function Sidebar() {
       </div>
 
       <nav className="nav" aria-label="Main navigation" data-tour="nav">
-        {navGroups.map((group) => (
+        {filteredNavGroups.map((group: any) => (
           <div key={group.title} className="nav-group">
             <div className="nav-group-title">{group.title}</div>
             <div className="nav-group-items">
-              {group.items.map((item) => {
+              {group.items.map((item: any) => {
                 const active =
                   pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
                 const Icon = item.Icon;
@@ -391,6 +423,7 @@ function Sidebar() {
 function MobileNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const filteredNavGroups = useFilteredNavGroups();
 
   useEffect(() => {
     setOpen(false);
@@ -439,11 +472,11 @@ function MobileNav() {
               </div>
             </div>
             <nav className="mobile-drawer-nav" aria-label="Main navigation">
-              {navGroups.map((group) => (
+              {filteredNavGroups.map((group: any) => (
                 <div key={group.title} className="nav-group">
                   <div className="nav-group-title">{group.title}</div>
                   <div className="nav-group-items">
-                    {group.items.map((item) => {
+                    {group.items.map((item: any) => {
                       const active =
                         pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
                       const Icon = item.Icon;
@@ -535,12 +568,54 @@ function TourGate() {
   return <TourOverlay onClose={() => setShow(false)} />;
 }
 
+function RoleGuard() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { activeProfile, isSyncing } = useWorkNet();
+
+  useEffect(() => {
+    if (isSyncing || !activeProfile) return;
+    
+    const role = activeProfile.role;
+
+    // Admin-only route guard
+    if (pathname.startsWith("/admin")) {
+      if (role !== "admin") {
+        router.push("/dashboard");
+      }
+    }
+
+    // Client/Admin-only routes (Workers, Agents, Post job, funding/reviewing escrow)
+    if (
+      pathname.startsWith("/workers") ||
+      pathname.startsWith("/agents") ||
+      pathname === "/jobs/new" ||
+      /^\/jobs\/[^\/]+\/fund$/.test(pathname) ||
+      /^\/jobs\/[^\/]+\/review$/.test(pathname)
+    ) {
+      if (role !== "client" && role !== "admin") {
+        router.push("/dashboard");
+      }
+    }
+
+    // Worker/Admin-only routes (submitting deliverables)
+    if (/^\/jobs\/[^\/]+\/submit$/.test(pathname)) {
+      if (role !== "worker" && role !== "admin") {
+        router.push("/dashboard");
+      }
+    }
+  }, [activeProfile, pathname, router, isSyncing]);
+
+  return null;
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { clockError } = useWorkNet();
 
   return (
     <div className="app-shell">
       <OnboardingGuard />
+      <RoleGuard />
       <Sidebar />
       <MobileNav />
       <main className="content">
