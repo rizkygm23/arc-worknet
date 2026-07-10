@@ -151,7 +151,7 @@ We are active Web3 and AI developers with hands-on experience in full-stack engi
 
 ## Are you live on Arc?
 
-**Yes** *(Our custom Escrow contract is successfully deployed on Arc Testnet at `0x0747EEf0706327138c69792bF28Cd525089e4583`)*
+**Yes** *(Our custom Escrow contract is successfully deployed on Arc Testnet at `0x1E40AE030e03E0a7E481046647B2a0E021F8A6F1`)*
 
 ---
 

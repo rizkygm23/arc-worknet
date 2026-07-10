@@ -250,6 +250,13 @@ export type ApplicationOverlayEntry = {
   updatedAt: string;
 };
 
+export type Skill = {
+  id: string;
+  name: string;
+  category: string;
+  createdAt: string;
+};
+
 export type WorkNetState = {
   activeProfileId: string;
   profiles: Profile[];
@@ -266,6 +273,7 @@ export type WorkNetState = {
   jobInvitations: JobInvitation[];
   savedJobs: SavedJob[];
   applicationOverlays: ApplicationOverlayEntry[];
+  skills: Skill[];
 };
 
 export type WalletState = {

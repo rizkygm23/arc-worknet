@@ -23,6 +23,7 @@ export default function WalletPage() {
   return (
     <>
       <PageHeader
+        icon={<Wallet size={14} />}
         eyebrow="Wallet"
         title="Arc wallet"
         subtitle="Your balance, network, and escrow at a glance."

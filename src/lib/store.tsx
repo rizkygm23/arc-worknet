@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import {
   createContext,
   useCallback,
@@ -64,6 +66,7 @@ type DataContextValue = {
   state: WorkNetState;
   activeProfile?: Profile;
   backendError?: string;
+  clockError?: string;
   isSyncing: boolean;
   refreshState: () => Promise<void>;
   setActiveProfile: (profileId: string) => void;
@@ -113,6 +116,8 @@ type ActionsContextValue = {
   completeJob: (jobId: string, submissionId: string, input: { rating: number; reviewText: string }) => Promise<void>;
   registerAgent: (input: { name: string; description: string; capabilities: string[]; walletAddress: string }) => Promise<void>;
   updateProfile: (input: UpdateProfileInput) => Promise<void>;
+  addSkill: (name: string, category: string) => Promise<void>;
+  deleteSkill: (id: string) => Promise<void>;
 };
 
 type StoreContextValue = DataContextValue & WalletContextValue & ActionsContextValue;
@@ -250,6 +255,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
   const [wallet, setWallet] = useState<WalletState>({ isConnected: false });
   const [walletError, setWalletError] = useState<string | undefined>();
   const [backendError, setBackendError] = useState<string | undefined>();
+  const [clockError, setClockError] = useState<string | undefined>();
   const [isSyncing, setIsSyncing] = useState(true);
   const [isWalletPending, setIsWalletPending] = useState(false);
   const verifiedAddressRef = useRef<string | undefined>(undefined);
@@ -269,8 +275,36 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       const pk = window.localStorage.getItem("CYPRESS_ACTIVE_PRIVATE_KEY")!;
       return createCypressMockWallet(pk) as unknown as typeof wallets[0];
     }
+    
+    // If the user is authenticated, find the wallet matching Privy's active user wallet address
+    const walletAddress = user?.wallet?.address;
+    if (walletAddress) {
+      const matchingWallet = wallets.find(
+        (w: any) => w.address.toLowerCase() === walletAddress.toLowerCase()
+      );
+      if (matchingWallet) return matchingWallet;
+    }
+    
+    // If the user authenticated via email/socials and is waiting for an embedded wallet,
+    // do not let external wallets (like MetaMask) act as the primary wallet.
+    const isEmailOrSocialUser = user?.linkedAccounts?.some((acc: any) => {
+      const typeStr = acc.type as string;
+      return (
+        typeStr === "email" ||
+        typeStr.includes("google") ||
+        typeStr.includes("apple") ||
+        typeStr.includes("discord") ||
+        typeStr.includes("github") ||
+        typeStr.includes("twitter")
+      );
+    });
+    const hasEmbeddedWallet = wallets.some((w: any) => w.walletClientType === "privy");
+    if (isEmailOrSocialUser && !hasEmbeddedWallet) {
+      return undefined;
+    }
+    
     return wallets[0];
-  }, [isCypress, wallets]);
+  }, [isCypress, wallets, user]);
   const creatingWalletRef = useRef(false);
 
   // Fallback: if auto-creation didn't fire (OAuth flow, config skew),
@@ -279,7 +313,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     if (!ready || !authenticated || !user) return;
     if (primaryWallet) return;
     const hasEmbedded = user.linkedAccounts?.some(
-      (acc) => acc.type === "wallet" && (acc as { chainType?: string }).chainType === "ethereum",
+      (acc: any) => acc.type === "wallet" && (acc as { chainType?: string }).chainType === "ethereum",
     );
     if (hasEmbedded) return;
     if (creatingWalletRef.current) return;
@@ -301,7 +335,33 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     setIsSyncing(true);
     try {
       // Public data first — fast, unblocks UI immediately.
-      const { state: publicState } = await apiJson<{ state: WorkNetState }>(`/api/bootstrap?t=${Date.now()}`);
+      const response = await fetch(`/api/bootstrap?t=${Date.now()}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      // Verify user device clock synchronization
+      const dateHeader = response.headers.get("date");
+      if (dateHeader) {
+        const serverTime = new Date(dateHeader).getTime();
+        const clientTime = Date.now();
+        const skew = Math.abs(serverTime - clientTime);
+        if (skew > 120_000) { // 2 minutes skew limit
+          setClockError(
+            `Device clock is out of sync by ${Math.round(skew / 1000)}s. Please synchronize your system time to prevent login/RPC failures.`
+          );
+        } else {
+          setClockError(undefined);
+        }
+      } else {
+        setClockError(undefined);
+      }
+
+      if (!response.ok) {
+        throw new Error(`Bootstrap failed with ${response.status}`);
+      }
+      const data = (await response.json()) as { state: WorkNetState };
+      const publicState = data.state;
       setBackendError(undefined);
       setState((current) => mergeState(current, publicState, wallet.address));
     } catch (error) {
@@ -1115,6 +1175,26 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     await refreshStateRef.current();
   }, []);
 
+  const addSkill = useCallback(async (name: string, category: string) => {
+    const profile = activeProfileRef.current;
+    if (!profile) throw new Error("Connect a wallet first.");
+    await apiJson("/api/skills", {
+      method: "POST",
+      body: JSON.stringify({ name, category }),
+    });
+    await refreshStateRef.current();
+  }, []);
+
+  const deleteSkill = useCallback(async (id: string) => {
+    const profile = activeProfileRef.current;
+    if (!profile) throw new Error("Connect a wallet first.");
+    await apiJson("/api/skills", {
+      method: "DELETE",
+      body: JSON.stringify({ id }),
+    });
+    await refreshStateRef.current();
+  }, []);
+
   const registerAgent = useCallback(
     async (input: { name: string; description: string; capabilities: string[]; walletAddress: string }) => {
       const profile = activeProfileRef.current;
@@ -1142,6 +1222,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       state,
       activeProfile,
       backendError,
+      clockError,
       isSyncing,
       refreshState,
       setActiveProfile,
@@ -1158,6 +1239,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       state,
       activeProfile,
       backendError,
+      clockError,
       isSyncing,
       refreshState,
       setActiveProfile,
@@ -1200,6 +1282,8 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       completeJob,
       registerAgent,
       updateProfile,
+      addSkill,
+      deleteSkill,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],

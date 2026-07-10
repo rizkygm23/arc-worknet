@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BadgeCheck, Briefcase, Check, Send, WalletCards, X } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Briefcase, Check, Send, User, WalletCards, X } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -184,6 +184,7 @@ export default function WorkerProfilePage() {
   return (
     <>
       <PageHeader
+        icon={<User size={14} />}
         eyebrow="Worker"
         title={profile.displayName}
         subtitle={profile.bio}

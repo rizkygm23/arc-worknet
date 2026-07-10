@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity } from "lucide-react";
+import { Activity, ScrollText } from "lucide-react";
 import { PageHeader } from "@/components/app-shell";
 import { ChainTxLink } from "@/components/job-components";
 import { useWorkNet } from "@/lib/store";
@@ -11,6 +11,7 @@ export default function AdminEventLogsPage() {
   return (
     <>
       <PageHeader
+        icon={<ScrollText size={14} />}
         eyebrow="Admin"
         title="Event logs"
         subtitle="Indexed events stay read-only to application users and writable only by the service role in production."

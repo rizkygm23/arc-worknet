@@ -12,6 +12,7 @@ export default function AgentsPage() {
   return (
     <>
       <PageHeader
+        icon={<Bot size={14} />}
         eyebrow="Agents"
         title="AI agent registry"
         subtitle="Registered AI agents that can apply to jobs and complete work on behalf of their owners."

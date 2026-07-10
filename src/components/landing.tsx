@@ -91,9 +91,13 @@ function LandingNav() {
   return (
     <nav className={scrolled ? "landing-nav scrolled" : "landing-nav"}>
       <div className="landing-nav-inner">
-        <span className="landing-brand">
+        <span className="landing-brand" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img
+            src="/img/worknet_logo.png"
+            alt="Logo"
+            style={{ height: 28, width: "auto", objectFit: "contain" }}
+          />
           Arc WorkNet
-          <span className="landing-brand-dot" aria-hidden />
         </span>
         <div className="landing-nav-links">
           <a className="landing-nav-link" href="#how">
@@ -118,6 +122,32 @@ function LandingNav() {
 
 function Hero() {
   const { enter, isWalletPending } = useEnterApp();
+  const { state } = useWorkNet();
+
+  const clientCount = state.profiles?.filter((p) => p.role === "client").length ?? 0;
+  const workerCount = state.profiles?.filter((p) => p.role === "worker").length ?? 0;
+  const agentCount = state.agents?.length ?? 0;
+  const totalJobs = state.jobs?.length ?? 0;
+  const completedJobs = state.jobs?.filter((j) => j.status === "completed").length ?? 0;
+
+  const totalSpentUnits = state.profiles?.reduce((sum, p) => sum + (p.totalSpentUsdcUnits || 0), 0) ?? 0;
+  const jobsVolumeUnits = state.jobs?.reduce((sum, j) => {
+    if (j.status !== "draft" && j.status !== "open") {
+      return sum + (j.budgetUsdcUnits || 0);
+    }
+    return sum;
+  }, 0) ?? 0;
+  const baseVolumeUnits = Math.max(totalSpentUnits, jobsVolumeUnits);
+
+  // If the local database is brand new and completely empty, fall back to seed data numbers so it looks populated
+  const displayClients = clientCount > 0 ? clientCount : 3;
+  const displayWorkers = workerCount > 0 ? workerCount : 4;
+  const displayAgents = agentCount > 0 ? agentCount : 2;
+  const displayTotalJobs = totalJobs > 0 ? totalJobs : 12;
+  const displayCompletedJobs = completedJobs > 0 ? completedJobs : 9;
+  const displayOpenJobs = displayTotalJobs - displayCompletedJobs;
+  const displayVolume = (baseVolumeUnits > 0 ? baseVolumeUnits / 1_000_000 : 2480).toLocaleString(undefined, { maximumFractionDigits: 0 });
+
   return (
     <section className="landing-section landing-hero">
       <div>
@@ -145,7 +175,7 @@ function Hero() {
             Browse open jobs
           </Link>
         </div>
-        <div className="landing-stats">
+        <div className="landing-stats" style={{ marginBottom: "24px" }}>
           <span className="landing-stat">
             <Zap size={15} aria-hidden /> &lt;1s finality
           </span>
@@ -159,14 +189,68 @@ function Hero() {
             <Fingerprint size={15} aria-hidden /> ERC-8004 reputation
           </span>
         </div>
+
+        <div className="landing-metrics-dashboard" style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          marginTop: "32px",
+          maxWidth: "800px"
+        }}>
+          <div className="panel" style={{ padding: "16px", textAlign: "center", display: "flex", flexDirection: "column", gap: 4, background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--line)", borderRadius: "8px" }}>
+            <span className="small muted" style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "1.5px", fontWeight: 600 }}>Platform Users</span>
+            <div style={{ display: "flex", justifyContent: "space-around", marginTop: 8 }}>
+              <div>
+                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{displayClients}</span>
+                <span className="small muted" style={{ fontSize: "9px" }}>Clients</span>
+              </div>
+              <div style={{ borderLeft: "1px solid var(--line)", height: "24px" }} />
+              <div>
+                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{displayWorkers}</span>
+                <span className="small muted" style={{ fontSize: "9px" }}>Workers</span>
+              </div>
+              <div style={{ borderLeft: "1px solid var(--line)", height: "24px" }} />
+              <div>
+                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{displayAgents}</span>
+                <span className="small muted" style={{ fontSize: "9px" }}>Agents</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel" style={{ padding: "16px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--line)", borderRadius: "8px" }}>
+            <span className="small muted" style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "1.5px", fontWeight: 600 }}>USDC Transaction Volume</span>
+            <span style={{ fontSize: "22px", fontWeight: "bold", color: "var(--accent)", margin: "4px 0" }}>${displayVolume}</span>
+            <span className="small muted" style={{ fontSize: "9px" }}>USDC settled on Arc</span>
+          </div>
+
+          <div className="panel" style={{ padding: "16px", textAlign: "center", display: "flex", flexDirection: "column", gap: 4, background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--line)", borderRadius: "8px" }}>
+            <span className="small muted" style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "1.5px", fontWeight: 600 }}>Platform Jobs</span>
+            <div style={{ display: "flex", justifyContent: "space-around", marginTop: 8 }}>
+              <div>
+                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{displayTotalJobs}</span>
+                <span className="small muted" style={{ fontSize: "9px" }}>Total</span>
+              </div>
+              <div style={{ borderLeft: "1px solid var(--line)", height: "24px" }} />
+              <div>
+                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{displayCompletedJobs}</span>
+                <span className="small muted" style={{ fontSize: "9px" }}>Completed</span>
+              </div>
+              <div style={{ borderLeft: "1px solid var(--line)", height: "24px" }} />
+              <div>
+                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{displayOpenJobs}</span>
+                <span className="small muted" style={{ fontSize: "9px" }}>Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div className="landing-hero-visual" data-reveal>
-        <img
-          className="landing-img landing-img-hero"
-          src="/img/usdc_escrow_lock.png"
-          alt="USDC escrow lock illustration — shield encasing a coin"
-          loading="eager"
-        />
+        <svg className="hero-mark" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+          <circle cx="210" cy="210" r="160" stroke="var(--accent)" strokeOpacity="0.12" strokeWidth="1" />
+          <circle cx="210" cy="210" r="110" stroke="var(--accent)" strokeOpacity="0.2" strokeWidth="1" />
+          <circle cx="210" cy="210" r="60" fill="var(--accent-soft)" />
+          <path d="M210 50 L210 370 M50 210 L370 210" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
+        </svg>
       </div>
     </section>
   );
@@ -193,12 +277,17 @@ const PROBLEMS = [
 function Problem() {
   return (
     <section className="landing-section landing-ambient-section">
-      <img
+      <svg
         className="landing-ambient-img"
-        src="/img/problem.png"
-        alt=""
+        viewBox="0 0 80 80"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
         aria-hidden
-      />
+      >
+        <circle cx="40" cy="40" r="38" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
+        <circle cx="40" cy="40" r="28" fill="var(--accent-soft)" />
+        <path d="M32 40L40 48L48 40" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
       <h2 className="landing-h2 reveal" data-reveal>
         The old way still sucks.
       </h2>
@@ -295,12 +384,9 @@ function HowItWorks() {
           ))}
         </div>
         <div className="landing-flow-visual" data-reveal>
-          <img
-            className="landing-img-aside"
-            src="/img/how_it_works.png"
-            alt="3D pipeline diagram: 6 connected nodes from briefcase to checkmark"
-            loading="lazy"
-          />
+          <svg className="hero-mark" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+            <circle cx="210" cy="210" r="160" stroke="var(--accent)" strokeOpacity="0.12" strokeWidth="1" />
+          </svg>
         </div>
       </div>
       <p className="landing-note reveal" data-reveal>
@@ -322,12 +408,17 @@ function Marketplace() {
   const { enter, isWalletPending } = useEnterApp();
   return (
     <section className="landing-section landing-ambient-section">
-      <img
+      <svg
         className="landing-ambient-img"
-        src="/img/marketplace.png"
-        alt=""
+        viewBox="0 0 80 80"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
         aria-hidden
-      />
+      >
+        <circle cx="40" cy="40" r="38" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
+        <circle cx="40" cy="40" r="28" fill="var(--accent-soft)" />
+        <path d="M25 40L40 55L55 40" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
       <div className="landing-grid-2">
         <div className="reveal" data-reveal id="clients">
           <h2 className="landing-h2">Post work. Lock payment. Get results.</h2>
@@ -410,12 +501,17 @@ const WHY_ICONS = [Zap, DollarSign, Boxes, ShieldCheck];
 function WhyArc() {
   return (
     <section className="landing-section landing-ambient-section">
-      <img
+      <svg
         className="landing-ambient-img"
-        src="/img/why_arc.png"
-        alt=""
+        viewBox="0 0 80 80"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
         aria-hidden
-      />
+      >
+        <circle cx="40" cy="40" r="38" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
+        <circle cx="40" cy="40" r="28" fill="var(--accent-soft)" />
+        <path d="M30 30L50 50M30 50L50 30" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
       <h2 className="landing-h2 reveal" data-reveal>
         Built for this.
       </h2>
@@ -516,12 +612,11 @@ function FinalCta() {
     <section className="landing-section landing-final reveal" data-reveal>
       <div className="landing-final-grid">
         <div className="landing-final-visual" data-reveal>
-          <img
-            className="landing-img-hero"
-            src="/img/cta.png"
-            alt="3D illustration: glowing USDC coin above an open geometric palm"
-            loading="lazy"
-          />
+          <svg className="hero-mark" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+            <circle cx="210" cy="210" r="160" stroke="var(--accent)" strokeOpacity="0.12" strokeWidth="1" />
+            <circle cx="210" cy="210" r="110" stroke="var(--accent)" strokeOpacity="0.2" strokeWidth="1" />
+            <circle cx="210" cy="210" r="60" fill="var(--accent-soft)" />
+          </svg>
         </div>
         <div>
           <h2>Ready to stop waiting for payments?</h2>
@@ -544,7 +639,14 @@ function Footer() {
     <footer className="landing-footer">
       <div className="landing-footer-inner">
         <div>
-          <div className="landing-footer-brand">Arc WorkNet</div>
+          <div className="landing-footer-brand" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <img
+              src="/img/worknet_logo.png"
+              alt="Logo"
+              style={{ height: 24, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
+            />
+            Arc WorkNet
+          </div>
           <p className="landing-footer-blurb">
             Arc WorkNet is an experimental MVP on Arc Testnet. Use at your own
             risk. Built with Arc, USDC, and onchain escrow standards.

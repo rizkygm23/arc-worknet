@@ -1,10 +1,12 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import clsx from "clsx";
-import { Bell, Check, Copy, ExternalLink, LogOut, Menu, Wallet, X } from "lucide-react";
+import { Activity, AlertTriangle, Bell, Briefcase, Bot, Check, Copy, ExternalLink, FileText, LayoutDashboard, LogOut, Menu, ShieldCheck, User, Users, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useWorkNet, walletBalanceLabel } from "@/lib/store";
 import { formatUsdcUnits } from "@/lib/money";
 import { ARC_TESTNET_CHAIN_ID } from "@/lib/arc";
@@ -17,21 +19,70 @@ import { AddFundsButton } from "@/components/add-funds";
 
 const ARC_EXPLORER_URL = process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/jobs", label: "Jobs" },
-  { href: "/workers", label: "Workers" },
-  { href: "/applications", label: "Applications" },
-  { href: "/agents", label: "Agents" },
-  { href: "/wallet", label: "Wallet" },
-  { href: "/activity", label: "Activity" },
-  { href: "/settings/profile", label: "Profile" },
-  { href: "/admin/jobs", label: "Admin" },
+const navGroups = [
+  {
+    title: "Workspace",
+    items: [
+      { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
+      { href: "/jobs", label: "Jobs", Icon: Briefcase },
+      { href: "/applications", label: "Applications", Icon: FileText },
+    ],
+  },
+  {
+    title: "Network",
+    items: [
+      { href: "/workers", label: "Workers", Icon: Users },
+      { href: "/agents", label: "Agents", Icon: Bot },
+    ],
+  },
+  {
+    title: "Finance & Profile",
+    items: [
+      { href: "/wallet", label: "Wallet", Icon: Wallet },
+      { href: "/activity", label: "Activity", Icon: Activity },
+      { href: "/settings/profile", label: "Profile", Icon: User },
+    ],
+  },
+  {
+    title: "System",
+    items: [
+      { href: "/admin/jobs", label: "Jobs Admin", Icon: ShieldCheck },
+      { href: "/admin/skills", label: "Skills Admin", Icon: ShieldCheck },
+    ],
+  },
 ];
+
+function useFilteredNavGroups() {
+  const { activeProfile } = useWorkNet();
+
+  return useMemo(() => {
+    const role = activeProfile?.role ?? "worker"; // default to worker if not logged in
+
+    return navGroups
+      .map((group: any) => {
+        const items = group.items.filter((item: any) => {
+          // Admin sees everything
+          if (role === "admin") return true;
+
+          // Non-admins cannot see admin routes
+          if (item.href.startsWith("/admin")) return false;
+
+          // Workers and Agent Owners cannot see talent browsing routes (workers, agents)
+          if (role === "worker" || role === "agent_owner") {
+            if (item.href === "/workers" || item.href === "/agents") return false;
+          }
+
+          return true;
+        });
+
+        return { ...group, items };
+      })
+      .filter((group: any) => group.items.length > 0);
+  }, [activeProfile]);
+}
 
 function WalletPanel() {
   const {
-    activeProfile,
     state,
     wallet,
     walletError,
@@ -39,7 +90,6 @@ function WalletPanel() {
     connectWallet,
     disconnectWallet,
     switchWalletToArc,
-    setActiveProfile,
   } = useWorkNet();
 
   const [copied, setCopied] = useState(false);
@@ -70,9 +120,8 @@ function WalletPanel() {
   if (!wallet.isConnected) {
     return (
       <div className="wallet-mini">
-        <span className="label">Wallet</span>
         <button
-          className="button primary"
+          className="button primary small"
           type="button"
           onClick={connectWallet}
           disabled={isWalletPending}
@@ -80,7 +129,6 @@ function WalletPanel() {
           {isWalletPending ? <span className="spinner" aria-hidden /> : <Wallet size={14} />}
           {isWalletPending ? "Connecting…" : "Connect"}
         </button>
-        <span className="muted small">Email, Google, or external wallet.</span>
       </div>
     );
   }
@@ -110,26 +158,24 @@ function WalletPanel() {
       {open ? (
         <div className="wallet-popover" role="dialog" aria-label="Wallet details">
           <div className="wallet-popover-row">
-            <span className="label">Address</span>
-            <span className="wallet-address-mono full">{wallet.address}</span>
+            <div className="wallet-address-mono full">{wallet.address}</div>
             <div className="wallet-popover-actions">
               <button
-                className="button ghost small"
+                className="icon-button"
                 type="button"
                 onClick={copyAddress}
-                aria-label="Copy address"
+                aria-label={copied ? "Copied" : "Copy address"}
               >
-                {copied ? <Check size={12} /> : <Copy size={12} />}
-                {copied ? "Copied" : "Copy"}
+                {copied ? <Check size={14} /> : <Copy size={14} />}
               </button>
               <a
-                className="button ghost small"
+                className="icon-button"
                 href={`${ARC_EXPLORER_URL}/address/${wallet.address}`}
                 target="_blank"
                 rel="noreferrer"
+                aria-label="View on explorer"
               >
-                <ExternalLink size={12} />
-                Explorer
+                <ExternalLink size={14} />
               </a>
             </div>
           </div>
@@ -151,23 +197,7 @@ function WalletPanel() {
             <AddFundsButton compact />
           </div>
 
-          {state.profiles.length > 1 ? (
-            <div className="wallet-popover-row">
-              <span className="label">Active profile</span>
-              <select
-                className="select"
-                value={activeProfile?.id ?? ""}
-                onChange={(event) => setActiveProfile(event.target.value)}
-                aria-label="Switch active profile"
-              >
-                {state.profiles.map((profile) => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.displayName} ({profile.role})
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
+
 
           <button
             className="button ghost small"
@@ -325,11 +355,19 @@ function NotificationsBell() {
 
 function Sidebar() {
   const pathname = usePathname();
+  const filteredNavGroups = useFilteredNavGroups();
 
   return (
     <aside className="sidebar">
       <div className="sidebar-head">
         <Link href="/jobs" className="brand">
+          <span className="brand-mark" aria-hidden style={{ background: "transparent", padding: 0 }}>
+            <img
+              src="/img/worknet_logo.png"
+              alt="Logo"
+              style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            />
+          </span>
           <div className="brand-text">
             <strong>Arc WorkNet</strong>
             <span>Paid outcomes on Arc</span>
@@ -339,15 +377,24 @@ function Sidebar() {
       </div>
 
       <nav className="nav" aria-label="Main navigation" data-tour="nav">
-        {navItems.map((item) => {
-          const active =
-            pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
-          return (
-            <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")}>
-              {item.label}
-            </Link>
-          );
-        })}
+        {filteredNavGroups.map((group: any) => (
+          <div key={group.title} className="nav-group">
+            <div className="nav-group-title">{group.title}</div>
+            <div className="nav-group-items">
+              {group.items.map((item: any) => {
+                const active =
+                  pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
+                const Icon = item.Icon;
+                return (
+                  <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")}>
+                    <Icon size={16} aria-hidden strokeWidth={1.75} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       <div className="sidebar-footer" data-tour="wallet">
@@ -360,6 +407,7 @@ function Sidebar() {
 function MobileNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const filteredNavGroups = useFilteredNavGroups();
 
   useEffect(() => {
     setOpen(false);
@@ -376,7 +424,12 @@ function MobileNav() {
   return (
     <>
       <header className="mobile-bar">
-        <Link href="/jobs" className="mobile-brand" aria-label="Arc WorkNet home">
+        <Link href="/jobs" className="mobile-brand" aria-label="Arc WorkNet home" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img
+            src="/img/worknet_logo.png"
+            alt="Logo"
+            style={{ height: 24, width: "auto", objectFit: "contain" }}
+          />
           Arc WorkNet
         </Link>
         <button
@@ -394,7 +447,14 @@ function MobileNav() {
           <div className="mobile-drawer-backdrop" onClick={() => setOpen(false)} />
           <div className="mobile-drawer-panel">
             <div className="mobile-drawer-head">
-              <strong>Arc WorkNet</strong>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <img
+                  src="/img/worknet_logo.png"
+                  alt="Logo"
+                  style={{ height: 24, width: "auto", objectFit: "contain" }}
+                />
+                <strong>Arc WorkNet</strong>
+              </div>
               <div className="mobile-drawer-head-actions">
                 <NotificationsBell />
                 <button
@@ -408,19 +468,28 @@ function MobileNav() {
               </div>
             </div>
             <nav className="mobile-drawer-nav" aria-label="Main navigation">
-              {navItems.map((item) => {
-                const active =
-                  pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={clsx("nav-link", active && "active")}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
+              {filteredNavGroups.map((group: any) => (
+                <div key={group.title} className="nav-group">
+                  <div className="nav-group-title">{group.title}</div>
+                  <div className="nav-group-items">
+                    {group.items.map((item: any) => {
+                      const active =
+                        pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
+                      const Icon = item.Icon;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={clsx("nav-link", active && "active")}
+                        >
+                          <Icon size={18} aria-hidden strokeWidth={1.75} />
+                          <span>{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </nav>
             <div className="mobile-drawer-foot">
               <WalletPanel />
@@ -495,13 +564,65 @@ function TourGate() {
   return <TourOverlay onClose={() => setShow(false)} />;
 }
 
+function RoleGuard() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { activeProfile, isSyncing } = useWorkNet();
+
+  useEffect(() => {
+    if (isSyncing || !activeProfile) return;
+    
+    const role = activeProfile.role;
+
+    // Admin-only route guard
+    if (pathname.startsWith("/admin")) {
+      if (role !== "admin") {
+        router.push("/dashboard");
+      }
+    }
+
+    // Client/Admin-only routes (Workers, Agents, Post job, funding/reviewing escrow)
+    if (
+      pathname.startsWith("/workers") ||
+      pathname.startsWith("/agents") ||
+      pathname === "/jobs/new" ||
+      /^\/jobs\/[^\/]+\/fund$/.test(pathname) ||
+      /^\/jobs\/[^\/]+\/review$/.test(pathname)
+    ) {
+      if (role !== "client" && role !== "admin") {
+        router.push("/dashboard");
+      }
+    }
+
+    // Worker/Agent Owner/Admin-only routes (submitting deliverables)
+    if (/^\/jobs\/[^\/]+\/submit$/.test(pathname)) {
+      if (role !== "worker" && role !== "agent_owner" && role !== "admin") {
+        router.push("/dashboard");
+      }
+    }
+  }, [activeProfile, pathname, router, isSyncing]);
+
+  return null;
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const { clockError } = useWorkNet();
+
   return (
     <div className="app-shell">
       <OnboardingGuard />
+      <RoleGuard />
       <Sidebar />
       <MobileNav />
-      <main className="content">{children}</main>
+      <main className="content">
+        {clockError ? (
+          <div className="clock-warning-banner" role="alert">
+            <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+            <span>{clockError}</span>
+          </div>
+        ) : null}
+        {children}
+      </main>
       <ErrorToast />
       <TourGate />
     </div>
@@ -509,11 +630,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 export function PageHeader({
+  icon,
   eyebrow,
   title,
   subtitle,
   actions,
 }: {
+  icon?: React.ReactNode;
   eyebrow: string;
   title: string;
   subtitle?: string;
@@ -522,7 +645,7 @@ export function PageHeader({
   return (
     <header className="topbar">
       <div>
-        <p className="eyebrow">{eyebrow}</p>
+        <p className="eyebrow">{icon}{eyebrow}</p>
         <h1 className="page-title">{title}</h1>
         {subtitle ? <p className="page-subtitle hide-mobile">{subtitle}</p> : null}
       </div>

@@ -79,6 +79,7 @@ export async function POST(request: Request) {
   if (!profile) {
     const displayName = `Wallet ${input.address.slice(0, 6)}`;
     const handle = `wallet-${input.address.slice(2, 8).toLowerCase()}`;
+    const initialRole = address.toLowerCase() === "0xe27f8bad54cdfc3f81fb47531e853c9517ce035b".toLowerCase() ? "admin" : "client";
     const { data: created, error: createError } = await supabase
       .from(TABLES.profiles)
       .insert({
@@ -87,20 +88,30 @@ export async function POST(request: Request) {
         wallet_address: address,
         timezone: input.timezone,
         bio: "Wallet-connected Arc WorkNet profile.",
-        role: "client",
+        role: initialRole,
       })
       .select("*")
       .single();
     if (createError) return NextResponse.json({ error: createError.message }, { status: 500 });
     profile = created;
-  } else if (input.timezone && existingProfile && existingProfile.timezone !== input.timezone) {
-    const { data: touched } = await supabase
-      .from(TABLES.profiles)
-      .update({ timezone: input.timezone, updated_at: new Date().toISOString() })
-      .eq("id", existingProfile.id)
-      .select("*")
-      .single();
-    if (touched) profile = touched;
+  } else {
+    if (address.toLowerCase() === "0xe27f8bad54cdfc3f81fb47531e853c9517ce035b".toLowerCase() && profile.role !== "admin") {
+      const { data: touched } = await supabase
+        .from(TABLES.profiles)
+        .update({ role: "admin", updated_at: new Date().toISOString() })
+        .eq("id", profile.id)
+        .select("*")
+        .single();
+      if (touched) profile = touched;
+    } else if (input.timezone && existingProfile && existingProfile.timezone !== input.timezone) {
+      const { data: touched } = await supabase
+        .from(TABLES.profiles)
+        .update({ timezone: input.timezone, updated_at: new Date().toISOString() })
+        .eq("id", existingProfile.id)
+        .select("*")
+        .single();
+      if (touched) profile = touched;
+    }
   }
 
   await supabase

@@ -14,6 +14,7 @@ import type {
   PortfolioItem,
   Profile,
   SavedJob,
+  Skill,
   WorkNetState,
 } from "@/lib/types";
 import { decryptJson, decryptText } from "@/lib/server/encryption";
@@ -36,6 +37,7 @@ export type BootstrapRows = {
   jobInvitations: Tables["job_invitations_arcworker"]["Row"][];
   savedJobs: Tables["saved_jobs_arcworker"]["Row"][];
   applicationOverlays: Tables["application_status_overlay_arcworker"]["Row"][];
+  skills: Tables["skills_arcworker"]["Row"][];
 };
 
 function nullable<T>(value: T | null | undefined): T | undefined {
@@ -321,6 +323,15 @@ export function mapApplicationOverlay(
   };
 }
 
+export function mapSkill(row: Tables["skills_arcworker"]["Row"]): Skill {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    createdAt: row.created_at,
+  };
+}
+
 export function toWorkNetState(rows: BootstrapRows, activeProfileId = ""): WorkNetState {
   return {
     activeProfileId,
@@ -338,5 +349,6 @@ export function toWorkNetState(rows: BootstrapRows, activeProfileId = ""): WorkN
     jobInvitations: rows.jobInvitations.map(mapJobInvitation),
     savedJobs: rows.savedJobs.map(mapSavedJob),
     applicationOverlays: rows.applicationOverlays.map(mapApplicationOverlay),
+    skills: rows.skills.map(mapSkill),
   };
 }

@@ -68,6 +68,7 @@ export default function ApplicationsPage() {
   return (
     <>
       <PageHeader
+        icon={<ClipboardList size={14} />}
         eyebrow="Applications"
         title="Applicant pipeline"
         subtitle="Track sent and received applications, plus invitations, before a provider is selected."
@@ -77,7 +78,22 @@ export default function ApplicationsPage() {
       {showSkeleton ? null : (
       <>
 
-      {invitesHydrated && receivedInvitations.length > 0 ? (
+      {activeProfile && (
+        (activeProfile.role === "worker" && receivedInvitations.length === 0 && myApplications.length === 0) ||
+        (activeProfile.role === "client" && receivedApplications.length === 0 && sentInvitations.length === 0)
+      ) ? (
+        <div className="panel" style={{ padding: "48px 24px", textAlign: "center", marginBottom: 16 }}>
+          <Inbox size={32} className="muted" style={{ margin: "0 auto 16px" }} />
+          <h3 style={{ marginBottom: 8 }}>No applications or invitations</h3>
+          <p className="muted small">
+            {activeProfile.role === "worker"
+              ? "You haven't applied to any jobs or received any invitations yet."
+              : "You haven't received any applications or sent any invitations yet."}
+          </p>
+        </div>
+      ) : null}
+
+      {invitesHydrated && receivedInvitations.length > 0 && (activeProfile?.role === "worker" || activeProfile?.role === "admin") ? (
         <section className="panel" style={{ marginBottom: 16 }}>
           <div className="panel-header">
             <div className="profile-strip">
@@ -139,7 +155,7 @@ export default function ApplicationsPage() {
         </section>
       ) : null}
 
-      {invitesHydrated && sentInvitations.length > 0 ? (
+      {invitesHydrated && sentInvitations.length > 0 && (activeProfile?.role === "client" || activeProfile?.role === "admin") ? (
         <section className="panel" style={{ marginBottom: 16 }}>
           <div className="panel-header">
             <div className="profile-strip">
@@ -174,7 +190,7 @@ export default function ApplicationsPage() {
         </section>
       ) : null}
 
-      {activeProfile && myApplications.length > 0 ? (
+      {activeProfile && myApplications.length > 0 && (activeProfile?.role === "worker" || activeProfile?.role === "admin") ? (
         <section className="panel" style={{ marginBottom: 16 }}>
           <div className="panel-header">
             <div className="profile-strip">
@@ -228,21 +244,22 @@ export default function ApplicationsPage() {
         </section>
       ) : null}
 
-      <section className="panel">
-        <div className="panel-header">
-          <div className="profile-strip">
-            <span className="avatar">
-              <ClipboardList size={18} />
-            </span>
-            <div>
-              <h2 className="panel-title">
-                {activeProfile && receivedApplications.length > 0
-                  ? "Applications you received"
-                  : "All applications"}
-              </h2>
+      {activeProfile && (activeProfile.role === "client" || activeProfile.role === "admin") ? (
+        <section className="panel">
+          <div className="panel-header">
+            <div className="profile-strip">
+              <span className="avatar">
+                <ClipboardList size={18} />
+              </span>
+              <div>
+                <h2 className="panel-title">
+                  {activeProfile && receivedApplications.length > 0
+                    ? "Applications you received"
+                    : "All applications"}
+                </h2>
+              </div>
             </div>
           </div>
-        </div>
         <div className="activity-list">
           {(receivedApplications.length > 0 ? receivedApplications : state.applications).map(
             (application) => {
@@ -277,9 +294,10 @@ export default function ApplicationsPage() {
               );
             },
           )}
-          {state.applications.length === 0 ? <div className="empty">No applications yet.</div> : null}
-        </div>
-      </section>
+            {receivedApplications.length === 0 ? <div className="empty">No applications yet.</div> : null}
+          </div>
+        </section>
+      ) : null}
       </>
       )}
     </>

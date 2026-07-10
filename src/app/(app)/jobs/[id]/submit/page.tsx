@@ -55,6 +55,7 @@ export default function SubmitDeliverablePage() {
   return (
     <>
       <PageHeader
+        icon={<FileUp size={14} />}
         eyebrow="Submit"
         title={currentJob.title}
         subtitle="Share your deliverable with the client for review."

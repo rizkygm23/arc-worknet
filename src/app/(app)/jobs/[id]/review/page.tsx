@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CheckCircle2, RotateCcw, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Eye, RotateCcw, XCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -62,6 +62,7 @@ export default function ReviewJobPage() {
   return (
     <>
       <PageHeader
+        icon={<Eye size={14} />}
         eyebrow="Review"
         title={currentJob.title}
         subtitle="Approve to pay the worker, ask for changes, or reject. Rejecting still pays the worker a 5% fee and refunds you 95% — automatically, with no third party."

@@ -1,8 +1,9 @@
 "use client";
 
-import { Bookmark, BookmarkCheck, Filter, Plus, Search, X } from "lucide-react";
+import { Bookmark, BookmarkCheck, Briefcase, Filter, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import clsx from "clsx";
 import { EmptyState, PageHeader, SkeletonPanel, StatCard, WalletPill } from "@/components/app-shell";
 import { JobRow } from "@/components/job-components";
 import { useSavedJobs } from "@/lib/saved-jobs";
@@ -40,6 +41,7 @@ export default function JobsPage() {
   const [actorType, setActorType] = useState<"all" | ActorType>("all");
   const [budgetBucket, setBudgetBucket] = useState<BudgetBucketId>("all");
   const [showSavedOnly, setShowSavedOnly] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const categories = useMemo(
     () => ["all", ...Array.from(new Set(state.jobs.map((job) => job.category)))],
@@ -91,6 +93,7 @@ export default function JobsPage() {
   return (
     <>
       <PageHeader
+        icon={<Briefcase size={14} />}
         eyebrow="Marketplace"
         title="Funded work queue"
         subtitle="Browse paid work for human workers and AI agents. Escrow opens once a provider is selected."
@@ -116,21 +119,32 @@ export default function JobsPage() {
       </section>
 
       <section className="panel">
-        <div className="toolbar">
-          <label className="field">
-            <span className="small muted">Search</span>
-            <span style={{ position: "relative" }}>
-              <Search size={16} style={{ left: 12, position: "absolute", top: 13 }} />
-              <input
-                className="input"
-                style={{ paddingLeft: 36 }}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search by title, category, or tag"
-              />
-            </span>
-          </label>
-          <label className="field">
+        <div className={clsx("toolbar", showFilters && "show-expanded")}>
+          <div className="toolbar-search-row">
+            <label className="field search-field">
+              <span className="small muted">Search</span>
+              <span style={{ position: "relative" }}>
+                <Search size={16} style={{ left: 12, position: "absolute", top: 13 }} />
+                <input
+                  className="input"
+                  style={{ paddingLeft: 36 }}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search by title, category, or tag"
+                />
+              </span>
+            </label>
+            <button
+              type="button"
+              className="button secondary filter-toggle-btn"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter size={16} />
+              <span>Filters</span>
+            </button>
+          </div>
+          
+          <label className="field filter-field">
             <span className="small muted">Status</span>
             <select className="select" value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>
               {statuses.map((item) => (
@@ -140,7 +154,7 @@ export default function JobsPage() {
               ))}
             </select>
           </label>
-          <label className="field">
+          <label className="field filter-field">
             <span className="small muted">Category</span>
             <select className="select" value={category} onChange={(event) => setCategory(event.target.value)}>
               {categories.map((item) => (
@@ -150,7 +164,7 @@ export default function JobsPage() {
               ))}
             </select>
           </label>
-          <label className="field">
+          <label className="field filter-field">
             <span className="small muted">Worker type</span>
             <select
               className="select"
@@ -164,7 +178,7 @@ export default function JobsPage() {
               ))}
             </select>
           </label>
-          <label className="field">
+          <label className="field filter-field">
             <span className="small muted">Budget</span>
             <select
               className="select"

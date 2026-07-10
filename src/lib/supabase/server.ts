@@ -402,6 +402,20 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["application_status_overlay_arcworker"]["Row"]>;
         Relationships: [];
       };
+      skills_arcworker: {
+        Row: {
+          id: string;
+          name: string;
+          category: string;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["skills_arcworker"]["Row"]> & {
+          name: string;
+          category: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["skills_arcworker"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

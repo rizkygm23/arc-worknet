@@ -29,6 +29,7 @@ export default function FundJobPage() {
   return (
     <>
       <PageHeader
+        icon={<CircleDollarSign size={14} />}
         eyebrow="Fund escrow"
         title={job.title}
         subtitle="Lock USDC into escrow. It's released to the provider when you approve the deliverable."

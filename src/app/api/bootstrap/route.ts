@@ -63,7 +63,7 @@ export async function GET(request: Request) {
   if (response) return response;
 
   try {
-    const [profiles, agents, jobs, events] = await Promise.all([
+    const [profiles, agents, jobs, events, skills] = await Promise.all([
       selectTable(
         supabase
           .from(TABLES.profiles)
@@ -95,6 +95,12 @@ export async function GET(request: Request) {
           .order("block_number", { ascending: false })
           .limit(200),
       ),
+      selectTable(
+        supabase
+          .from(TABLES.skills)
+          .select("*")
+          .order("name", { ascending: true })
+      ),
     ]);
 
     const publicJobIds = jobs.map((job) => job.id);
@@ -114,6 +120,7 @@ export async function GET(request: Request) {
       jobs,
       transactions,
       events,
+      skills,
       applications: [],
       submissions: [],
       reviews: [],
