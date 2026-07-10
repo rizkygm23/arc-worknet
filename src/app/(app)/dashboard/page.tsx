@@ -11,9 +11,14 @@ import { useWorkNet } from "@/lib/store";
 
 export default function DashboardPage() {
   const { state, activeProfile, getProfile, getAgent, isSyncing } = useWorkNet();
-  const myJobs = state.jobs.filter(
-    (job) => job.clientProfileId === activeProfile?.id || job.providerProfileId === activeProfile?.id,
-  );
+  const myJobs = useMemo(() => {
+    if (!activeProfile) return [];
+    if (activeProfile.role === "admin") return state.jobs;
+    return state.jobs.filter(
+      (job) => job.clientProfileId === activeProfile.id || job.providerProfileId === activeProfile.id,
+    );
+  }, [state.jobs, activeProfile]);
+
   const pendingReviews = useMemo(() => {
     if (!activeProfile) return [];
     const role = activeProfile.role;
@@ -35,10 +40,44 @@ export default function DashboardPage() {
     }
     return [];
   }, [state.jobs, activeProfile]);
-  const openApplications = state.applications.filter((application) => application.status === "pending");
-  const escrowed = state.jobs
-    .filter((job) => ["funded", "submitted", "revision_requested"].includes(job.status))
-    .reduce((sum, job) => sum + job.budgetUsdcUnits, 0);
+
+  const openApplicationsCount = useMemo(() => {
+    if (!activeProfile) return 0;
+    const role = activeProfile.role;
+    if (role === "admin") {
+      return state.applications.filter((app) => app.status === "pending").length;
+    }
+    if (role === "worker") {
+      return state.applications.filter(
+        (app) => app.applicantProfileId === activeProfile.id && app.status === "pending"
+      ).length;
+    }
+    if (role === "client") {
+      return state.applications.filter((app) => {
+        const job = state.jobs.find((j) => j.id === app.jobId);
+        return job?.clientProfileId === activeProfile.id && app.status === "pending";
+      }).length;
+    }
+    return 0;
+  }, [state.applications, state.jobs, activeProfile]);
+
+  const escrowed = useMemo(() => {
+    const targetJobs = activeProfile?.role === "admin" ? state.jobs : myJobs;
+    return targetJobs
+      .filter((job) => ["funded", "submitted", "revision_requested"].includes(job.status))
+      .reduce((sum, job) => sum + job.budgetUsdcUnits, 0);
+  }, [state.jobs, myJobs, activeProfile]);
+
+  const myTransactions = useMemo(() => {
+    if (!activeProfile) return [];
+    if (activeProfile.role === "admin") return state.transactions;
+    
+    const myJobIds = new Set(myJobs.map((job) => job.id));
+    return state.transactions.filter(
+      (tx) => tx.profileId === activeProfile.id || (tx.jobId && myJobIds.has(tx.jobId))
+    );
+  }, [state.transactions, myJobs, activeProfile]);
+
   const profileLabel = activeProfile?.displayName ?? "Guest";
   const recommendations = activeProfile ? recommendJobs(state.jobs, activeProfile, 5) : [];
   const showSkeleton = isSyncing && state.jobs.length === 0;
@@ -70,7 +109,7 @@ export default function DashboardPage() {
         <StatCard label="My jobs" value={String(myJobs.length)} />
         <StatCard label="Pending review" value={String(pendingReviews.length)} />
         <StatCard label="Escrowed" value={formatUsdcUnits(escrowed, { compact: true })} />
-        <StatCard label="Applications" value={String(openApplications.length)} />
+        <StatCard label="Applications" value={String(openApplicationsCount)} />
       </section>
 
       <section className="layout-with-rail">
@@ -206,7 +245,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="activity-list" style={{ marginTop: 16 }}>
-              {state.transactions.slice(0, 4).map((tx) => (
+              {myTransactions.slice(0, 4).map((tx) => (
                 <div key={tx.id} className="activity-item">
                   <span className="activity-icon">
                     <WalletCards size={16} />
@@ -222,6 +261,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
               ))}
+              {myTransactions.length === 0 ? <p className="muted">No transactions recorded.</p> : null}
             </div>
           </div>
         </aside>
