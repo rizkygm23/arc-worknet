@@ -66,8 +66,8 @@ function useFilteredNavGroups() {
           // Non-admins cannot see admin routes
           if (item.href.startsWith("/admin")) return false;
 
-          // Workers cannot see talent browsing routes (workers, agents)
-          if (role === "worker") {
+          // Workers and Agent Owners cannot see talent browsing routes (workers, agents)
+          if (role === "worker" || role === "agent_owner") {
             if (item.href === "/workers" || item.href === "/agents") return false;
           }
 
@@ -82,7 +82,6 @@ function useFilteredNavGroups() {
 
 function WalletPanel() {
   const {
-    activeProfile,
     state,
     wallet,
     walletError,
@@ -90,7 +89,6 @@ function WalletPanel() {
     connectWallet,
     disconnectWallet,
     switchWalletToArc,
-    setActiveProfile,
   } = useWorkNet();
 
   const [copied, setCopied] = useState(false);
@@ -198,23 +196,7 @@ function WalletPanel() {
             <AddFundsButton compact />
           </div>
 
-          {state.profiles.length > 1 ? (
-            <div className="wallet-popover-row">
-              <span className="label">Active profile</span>
-              <select
-                className="select"
-                value={activeProfile?.id ?? ""}
-                onChange={(event) => setActiveProfile(event.target.value)}
-                aria-label="Switch active profile"
-              >
-                {state.profiles.map((profile) => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.displayName} ({profile.role})
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
+
 
           <button
             className="button ghost small"
@@ -598,9 +580,9 @@ function RoleGuard() {
       }
     }
 
-    // Worker/Admin-only routes (submitting deliverables)
+    // Worker/Agent Owner/Admin-only routes (submitting deliverables)
     if (/^\/jobs\/[^\/]+\/submit$/.test(pathname)) {
-      if (role !== "worker" && role !== "admin") {
+      if (role !== "worker" && role !== "agent_owner" && role !== "admin") {
         router.push("/dashboard");
       }
     }
