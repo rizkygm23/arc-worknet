@@ -276,14 +276,14 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     const walletAddress = user?.wallet?.address;
     if (walletAddress) {
       const matchingWallet = wallets.find(
-        (w) => w.address.toLowerCase() === walletAddress.toLowerCase()
+        (w: any) => w.address.toLowerCase() === walletAddress.toLowerCase()
       );
       if (matchingWallet) return matchingWallet;
     }
     
     // If the user authenticated via email/socials and is waiting for an embedded wallet,
     // do not let external wallets (like MetaMask) act as the primary wallet.
-    const isEmailOrSocialUser = user?.linkedAccounts?.some((acc) => {
+    const isEmailOrSocialUser = user?.linkedAccounts?.some((acc: any) => {
       const typeStr = acc.type as string;
       return (
         typeStr === "email" ||
@@ -294,7 +294,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
         typeStr.includes("twitter")
       );
     });
-    const hasEmbeddedWallet = wallets.some((w) => w.walletClientType === "privy");
+    const hasEmbeddedWallet = wallets.some((w: any) => w.walletClientType === "privy");
     if (isEmailOrSocialUser && !hasEmbeddedWallet) {
       return undefined;
     }
@@ -309,7 +309,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     if (!ready || !authenticated || !user) return;
     if (primaryWallet) return;
     const hasEmbedded = user.linkedAccounts?.some(
-      (acc) => acc.type === "wallet" && (acc as { chainType?: string }).chainType === "ethereum",
+      (acc: any) => acc.type === "wallet" && (acc as { chainType?: string }).chainType === "ethereum",
     );
     if (hasEmbedded) return;
     if (creatingWalletRef.current) return;
