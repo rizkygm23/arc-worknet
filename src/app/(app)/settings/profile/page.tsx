@@ -411,7 +411,7 @@ export default function ProfilePage() {
                           <button
                             key={s.id}
                             type="button"
-                            className={active ? "badge primary" : "badge outline"}
+                            className={active ? "skill-chip active" : "skill-chip"}
                             onClick={() => {
                               if (active) {
                                 patch("skills", form.skills.filter((name) => name.toLowerCase() !== s.name.toLowerCase()));
@@ -421,7 +421,6 @@ export default function ProfilePage() {
                                 }
                               }
                             }}
-                            style={{ cursor: "pointer", transition: "all 0.15s ease-in-out" }}
                           >
                             {s.name}
                           </button>

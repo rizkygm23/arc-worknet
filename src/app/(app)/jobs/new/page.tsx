@@ -189,7 +189,7 @@ export default function NewJobPage() {
                           <button
                             key={s.id}
                             type="button"
-                            className={active ? "badge primary" : "badge outline"}
+                            className={active ? "skill-chip active" : "skill-chip"}
                             onClick={() => {
                               if (active) {
                                 const filtered = tagsArray.filter((t) => t.toLowerCase() !== s.name.toLowerCase());
@@ -199,7 +199,6 @@ export default function NewJobPage() {
                                 setTags(updated.join(", "));
                               }
                             }}
-                            style={{ cursor: "pointer", transition: "all 0.15s ease-in-out" }}
                           >
                             {s.name}
                           </button>

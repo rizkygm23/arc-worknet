@@ -2922,3 +2922,43 @@ pre {
     font-size: var(--text-xs);
   }
 }
+
+/* =========================================================================
+   Clickable Skill Chips Styles
+   ========================================================================= */
+
+.skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: var(--rule-thin) solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 6px var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-mono-sm);
+  font-weight: 500;
+  text-transform: uppercase;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.skill-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.skill-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.skill-chip.active:hover {
+  opacity: 0.9;
+  color: var(--on-accent);
+  transform: translateY(-1px);
+}
