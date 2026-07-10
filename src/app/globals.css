@@ -764,27 +764,42 @@ button:disabled {
 /* ─── Cards & panels ─── */
 .card {
   min-width: 0;
-  border: var(--rule-thin) solid var(--hairline);
+  border: var(--rule-thin) solid rgba(46, 87, 73, 0.08);
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background: linear-gradient(180deg, #ffffff 0%, #f6f8f5 100%);
   padding: var(--space-5);
   transition:
     box-shadow var(--dur-short) var(--ease-out),
-    border-color var(--dur-short) var(--ease-out);
+    border-color var(--dur-short) var(--ease-out),
+    transform var(--dur-short) var(--ease-out);
 }
 
 .card:hover {
   box-shadow: var(--shadow-sm);
-  border-color: var(--line-strong);
+  border-color: rgba(46, 87, 73, 0.16);
+  transform: translateY(-1px);
 }
 
 .panel {
   min-width: 0;
-  border: var(--rule-thin) solid var(--hairline);
+  border: var(--rule-thin) solid rgba(46, 87, 73, 0.08);
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: linear-gradient(180deg, #ffffff 0%, #f7f9f6 100%);
   box-shadow: var(--shadow-sm);
   padding: var(--space-5);
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: linear-gradient(90deg, var(--accent) 0%, rgba(15, 122, 62, 0.3) 100%);
+  opacity: 0.85;
 }
 
 .panel-header {
