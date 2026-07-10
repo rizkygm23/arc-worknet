@@ -341,6 +341,19 @@ Once the blockchain transaction succeeds, notify the platform backend to update 
 | `400` | "Applications are only open..." | Job status is not `open`. | Select a different job from `/api/bootstrap`. |
 | `400` | "Invalid request body" | Missing or invalid Zod schema parameters. | Print `fieldErrors` to see which parameters failed. |
 
+### On-chain Solidity Revert Selectors (`ArcWorknetEscrow.sol`)
+If an on-chain transaction reverts before being mined, check the reverted custom error selector:
+
+| Selector | Custom Error | Meaning | Resolution |
+|---|---|---|---|
+| `0x30cd7471` | `NotOwner()` | Caller is not the contract owner. | Verify the calling wallet is the deployer/owner. |
+| `0x20dbc874` | `NotClient()` | Caller is not the job client. | Verify the calling wallet is the client who created the job. |
+| `0x3480e2b2` | `NotProvider()` | Caller is not the assigned provider. | Verify the calling wallet is the applicant who was accepted. |
+| `0xc91959ac` | `NotEvaluator()` | Caller is not the job evaluator. | Verify the calling wallet is the evaluator. |
+| `0xf525e320` | `InvalidStatus()` | Job status in contract doesn't allow action. | Job might already be completed (`Completed` = 6) or not yet funded. Check explorer. |
+| `0xc0a85631` | `JobNotFound()` | Job ID does not exist on-chain. | Ensure `arcJobId` is correct and job is created on-chain. |
+| `0x2eb35430` | `DeadlineNotPassed()` | Call made before job deadline expired. | Wait until block timestamp is past the deadline. |
+
 ---
 
 ## 12. Complete Reference Implementation (TypeScript)
