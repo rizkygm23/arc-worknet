@@ -11,7 +11,7 @@ import type { ActorType } from "@/lib/types";
 
 export default function NewJobPage() {
   const router = useRouter();
-  const { activeProfile, createJob, connectWallet } = useWorkNet();
+  const { state, activeProfile, createJob, connectWallet } = useWorkNet();
   const [title, setTitle] = useState("");
   const [brief, setBrief] = useState("");
   const [acceptanceCriteria, setAcceptanceCriteria] = useState("");
@@ -157,10 +157,60 @@ export default function NewJobPage() {
             </select>
           </label>
 
-          <label className="field">
-            <span>Tags</span>
-            <input className="input" value={tags} onChange={(event) => setTags(event.target.value)} />
-          </label>
+          <div className="field span-2">
+            <span>Tags (Required Skills)</span>
+            <input
+              className="input"
+              value={tags}
+              onChange={(event) => setTags(event.target.value)}
+              placeholder="e.g. React, Next.js, Solidity"
+            />
+            {state.skills.length > 0 ? (
+              <div style={{ marginTop: 12 }}>
+                <span className="small muted" style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+                  Popular Skills (Click to add/remove as required tags):
+                </span>
+                {Object.entries(
+                  state.skills.reduce((acc, s) => {
+                    acc[s.category] = acc[s.category] || [];
+                    acc[s.category].push(s);
+                    return acc;
+                  }, {} as Record<string, typeof state.skills>)
+                ).map(([category, catSkills]) => (
+                  <div key={category} style={{ marginBottom: 12 }}>
+                    <span className="small muted" style={{ display: "block", marginBottom: 6, textTransform: "capitalize", fontSize: 11, fontWeight: 600 }}>
+                      {category}
+                    </span>
+                    <div className="tags" style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {catSkills.map((s) => {
+                        const tagsArray = tags.split(",").map((t) => t.trim()).filter(Boolean);
+                        const active = tagsArray.some((t) => t.toLowerCase() === s.name.toLowerCase());
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            className={active ? "badge primary" : "badge outline"}
+                            onClick={() => {
+                              if (active) {
+                                const filtered = tagsArray.filter((t) => t.toLowerCase() !== s.name.toLowerCase());
+                                setTags(filtered.join(", "));
+                              } else {
+                                const updated = [...tagsArray, s.name];
+                                setTags(updated.join(", "));
+                              }
+                            }}
+                            style={{ cursor: "pointer", transition: "all 0.15s ease-in-out" }}
+                          >
+                            {s.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="actions" style={{ marginTop: 18 }}>

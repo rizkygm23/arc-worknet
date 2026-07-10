@@ -116,6 +116,8 @@ type ActionsContextValue = {
   completeJob: (jobId: string, submissionId: string, input: { rating: number; reviewText: string }) => Promise<void>;
   registerAgent: (input: { name: string; description: string; capabilities: string[]; walletAddress: string }) => Promise<void>;
   updateProfile: (input: UpdateProfileInput) => Promise<void>;
+  addSkill: (name: string, category: string) => Promise<void>;
+  deleteSkill: (id: string) => Promise<void>;
 };
 
 type StoreContextValue = DataContextValue & WalletContextValue & ActionsContextValue;
@@ -1173,6 +1175,26 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     await refreshStateRef.current();
   }, []);
 
+  const addSkill = useCallback(async (name: string, category: string) => {
+    const profile = activeProfileRef.current;
+    if (!profile) throw new Error("Connect a wallet first.");
+    await apiJson("/api/skills", {
+      method: "POST",
+      body: JSON.stringify({ name, category }),
+    });
+    await refreshStateRef.current();
+  }, []);
+
+  const deleteSkill = useCallback(async (id: string) => {
+    const profile = activeProfileRef.current;
+    if (!profile) throw new Error("Connect a wallet first.");
+    await apiJson("/api/skills", {
+      method: "DELETE",
+      body: JSON.stringify({ id }),
+    });
+    await refreshStateRef.current();
+  }, []);
+
   const registerAgent = useCallback(
     async (input: { name: string; description: string; capabilities: string[]; walletAddress: string }) => {
       const profile = activeProfileRef.current;
@@ -1260,6 +1282,8 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       completeJob,
       registerAgent,
       updateProfile,
+      addSkill,
+      deleteSkill,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],

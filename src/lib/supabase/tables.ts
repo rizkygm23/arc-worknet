@@ -16,4 +16,5 @@ export const TABLES = {
   jobMessages: "job_messages_arcworker",
   jobInvitations: "job_invitations_arcworker",
   savedJobs: "saved_jobs_arcworker",
+  skills: "skills_arcworker",
 } as const;

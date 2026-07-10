@@ -16,4 +16,5 @@ export const emptyState: WorkNetState = {
   jobInvitations: [],
   savedJobs: [],
   applicationOverlays: [],
+  skills: [],
 };

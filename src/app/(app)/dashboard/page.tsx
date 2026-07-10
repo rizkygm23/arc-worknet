@@ -30,7 +30,7 @@ export default function DashboardPage() {
         (job) => job.clientProfileId === activeProfile.id && job.status === "submitted"
       );
     }
-    if (role === "worker") {
+    if (role === "worker" || role === "agent_owner") {
       // Workers need to submit work for assigned, funded, or revision requested jobs
       return state.jobs.filter(
         (job) =>
@@ -47,7 +47,7 @@ export default function DashboardPage() {
     if (role === "admin") {
       return state.applications.filter((app) => app.status === "pending").length;
     }
-    if (role === "worker") {
+    if (role === "worker" || role === "agent_owner") {
       return state.applications.filter(
         (app) => app.applicantProfileId === activeProfile.id && app.status === "pending"
       ).length;

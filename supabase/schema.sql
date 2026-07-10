@@ -651,3 +651,50 @@ drop trigger if exists trg_application_overlay_touch
 create trigger trg_application_overlay_touch
   before update on public.application_status_overlay_arcworker
   for each row execute function public.touch_updated_at_arcworker();
+
+-- =========================================================================
+-- Skills Master Table
+-- =========================================================================
+
+create table if not exists public.skills_arcworker (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  category text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.skills_arcworker enable row level security;
+
+create policy "Allow public read access to skills"
+  on public.skills_arcworker for select
+  using (true);
+
+create policy "Allow admin insert access to skills"
+  on public.skills_arcworker for insert
+  with check (
+    exists (
+      select 1 from public.profiles_arcworker
+      where auth_user_id = auth.uid() and role = 'admin'
+    )
+  );
+
+create policy "Allow admin update access to skills"
+  on public.skills_arcworker for update
+  using (
+    exists (
+      select 1 from public.profiles_arcworker
+      where auth_user_id = auth.uid() and role = 'admin'
+    )
+  );
+
+create policy "Allow admin delete access to skills"
+  on public.skills_arcworker for delete
+  using (
+    exists (
+      select 1 from public.profiles_arcworker
+      where auth_user_id = auth.uid() and role = 'admin'
+    )
+  );
+
+grant select on public.skills_arcworker to authenticated;
+grant select on public.skills_arcworker to anon;

@@ -35,7 +35,7 @@ const STEPS = ["You", "Your craft", "Availability"] as const;
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { activeProfile, updateProfile } = useWorkNet();
+  const { state, activeProfile, updateProfile } = useWorkNet();
 
   const [step, setStep] = useState(0);
   const [skillInput, setSkillInput] = useState("");
@@ -252,7 +252,7 @@ export default function OnboardingPage() {
                         addSkill();
                       }
                     }}
-                    placeholder="Add a skill and press Enter"
+                    placeholder="Add a skill manually and press Enter"
                     maxLength={48}
                   />
                   <button className="button ghost" type="button" onClick={addSkill}>
@@ -266,7 +266,7 @@ export default function OnboardingPage() {
                       <button
                         key={skill}
                         type="button"
-                        className="badge"
+                        className="badge primary"
                         onClick={() => removeSkill(skill)}
                         title="Remove"
                         style={{ cursor: "pointer" }}
@@ -278,9 +278,54 @@ export default function OnboardingPage() {
                   </div>
                 ) : (
                   <p className="small muted" style={{ margin: "6px 0 0" }}>
-                    Add a few to improve discovery.
+                    No skills selected. Click popular skills below or add custom skills.
                   </p>
                 )}
+
+                {state.skills.length > 0 ? (
+                  <div style={{ marginTop: 16 }}>
+                    <span className="small muted" style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+                      Popular Skills (Click to select/deselect):
+                    </span>
+                    {Object.entries(
+                      state.skills.reduce((acc, s) => {
+                        acc[s.category] = acc[s.category] || [];
+                        acc[s.category].push(s);
+                        return acc;
+                      }, {} as Record<string, typeof state.skills>)
+                    ).map(([category, catSkills]) => (
+                      <div key={category} style={{ marginBottom: 12 }}>
+                        <span className="small muted" style={{ display: "block", marginBottom: 6, textTransform: "capitalize", fontSize: 11, fontWeight: 600 }}>
+                          {category}
+                        </span>
+                        <div className="tags" style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {catSkills.map((s) => {
+                            const active = form.skills.some((name) => name.toLowerCase() === s.name.toLowerCase());
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                className={active ? "badge primary" : "badge outline"}
+                                onClick={() => {
+                                  if (active) {
+                                    update("skills", form.skills.filter((name) => name.toLowerCase() !== s.name.toLowerCase()));
+                                  } else {
+                                    if (!form.skills.some((name) => name.toLowerCase() === s.name.toLowerCase())) {
+                                      update("skills", [...form.skills, s.name]);
+                                    }
+                                  }
+                                }}
+                                style={{ cursor: "pointer", transition: "all 0.15s ease-in-out" }}
+                              >
+                                {s.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </>
           ) : null}

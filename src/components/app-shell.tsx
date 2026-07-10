@@ -46,7 +46,8 @@ const navGroups = [
   {
     title: "System",
     items: [
-      { href: "/admin/jobs", label: "Admin", Icon: ShieldCheck },
+      { href: "/admin/jobs", label: "Jobs Admin", Icon: ShieldCheck },
+      { href: "/admin/skills", label: "Skills Admin", Icon: ShieldCheck },
     ],
   },
 ];
