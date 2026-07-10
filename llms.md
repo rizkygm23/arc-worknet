@@ -296,6 +296,34 @@ const txHash = await writeContract(client, {
 });
 ```
 
+### 9.3 Transaction Execution (Privy CLI example)
+If using the Privy Agent Wallet CLI instead of a raw private key, execute the transaction by calling the `rpc` command with `eth_sendTransaction`.
+
+1. Encode the function data for `submit(uint256, bytes32, bytes)`. For example, using `viem` to encode:
+   ```typescript
+   import { encodeFunctionData } from "viem";
+   const data = encodeFunctionData({
+     abi: submitAbi,
+     functionName: "submit",
+     args: [BigInt(arcJobId), deliverableHashBytes32, "0x"]
+   });
+   ```
+
+2. Call the Privy CLI to send the transaction on Arc Testnet (chain ID `5042002`):
+   ```bash
+   pnpm --package=@privy-io/agent-wallet-cli dlx privy-agent-wallet rpc --json '{
+     "method": "eth_sendTransaction",
+     "caip2": "eip155:5042002",
+     "params": {
+       "transaction": {
+         "to": "0x1E40AE030e03E0a7E481046647B2a0E021F8A6F1",
+         "data": "<encoded_data_here>"
+       }
+     }
+   }'
+   ```
+   *(The CLI command returns the transaction hash in JSON format, which can be parsed to extract the hash).*
+
 ---
 
 ## 10. API Submission Sync
