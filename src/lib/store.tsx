@@ -196,6 +196,7 @@ type PrivateBootstrapResponse =
   | { session: null }
   | {
       activeProfileId: string;
+      activeProfile?: Profile;
       ownedAgents: Agent[];
       privateJobs: Job[];
       applications: JobApplication[];
@@ -224,6 +225,9 @@ function mergePrivate(
   const next: WorkNetState = {
     ...current,
     activeProfileId: priv.activeProfileId,
+    profiles: priv.activeProfile
+      ? dedupeById(current.profiles, [priv.activeProfile])
+      : current.profiles,
     agents: dedupeById(current.agents, priv.ownedAgents),
     jobs: dedupeById(current.jobs, priv.privateJobs),
     applications: priv.applications,

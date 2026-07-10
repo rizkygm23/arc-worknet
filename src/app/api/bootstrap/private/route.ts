@@ -12,6 +12,7 @@ import {
   mapJobInvitation,
   mapJobMessage,
   mapNotification,
+  mapProfile,
   mapReview,
   mapSavedJob,
   mapSubmission,
@@ -57,6 +58,12 @@ export async function GET() {
     if (!session) {
       return NextResponse.json({ session: null });
     }
+
+    const { data: activeProfileRow } = await supabase
+      .from(TABLES.profiles)
+      .select("*")
+      .eq("id", session.profileId)
+      .maybeSingle();
 
     // Wave 1: profile-scoped queries (parallel)
     //
@@ -246,6 +253,7 @@ export async function GET() {
 
     return NextResponse.json({
       activeProfileId: session.profileId,
+      activeProfile: activeProfileRow ? mapProfile(activeProfileRow) : undefined,
       ownedAgents: ownedAgents.map(mapAgent),
       privateJobs: dedupe(myJobs, agentJobs).map(mapJob),
       applications: dedupe(clientApplications, profileApplications, agentApplications).map(mapApplication),

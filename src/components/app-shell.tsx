@@ -87,6 +87,7 @@ function WalletPanel() {
     wallet,
     walletError,
     isWalletPending,
+    isSyncing,
     connectWallet,
     disconnectWallet,
     switchWalletToArc,
@@ -118,6 +119,14 @@ function WalletPanel() {
   };
 
   if (!wallet.isConnected) {
+    if (isSyncing) {
+      return (
+        <div className="wallet-mini">
+          <div className="skeleton" style={{ width: 88, height: 32, borderRadius: 6, opacity: 0.25 }} />
+        </div>
+      );
+    }
+
     return (
       <div className="wallet-mini">
         <button
