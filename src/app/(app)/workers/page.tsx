@@ -3,6 +3,7 @@
 import { Filter, Search, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import clsx from "clsx";
 import { EmptyState, PageHeader, SkeletonPanel, StatCard } from "@/components/app-shell";
 import { ProfileReputationBadges } from "@/components/job-components";
 import { availabilityLabel } from "@/lib/availability";
@@ -23,6 +24,7 @@ export default function WorkersDirectoryPage() {
   const [skill, setSkill] = useState("all");
   const [availability, setAvailability] = useState<(typeof availabilityOptions)[number]>("all");
   const [sort, setSort] = useState<SortKey>("rating");
+  const [showFilters, setShowFilters] = useState(false);
 
   const candidates = state.profiles.filter(
     (profile) => profile.role === "worker" || profile.role === "agent_owner",
@@ -102,21 +104,32 @@ export default function WorkersDirectoryPage() {
       </section>
 
       <section className="panel">
-        <div className="toolbar">
-          <label className="field">
-            <span className="small muted">Search</span>
-            <span style={{ position: "relative" }}>
-              <Search size={16} style={{ left: 12, position: "absolute", top: 13 }} />
-              <input
-                className="input"
-                style={{ paddingLeft: 36 }}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search by name, handle, bio, or skill"
-              />
-            </span>
-          </label>
-          <label className="field">
+        <div className={clsx("toolbar", showFilters && "show-expanded")}>
+          <div className="toolbar-search-row">
+            <label className="field search-field">
+              <span className="small muted">Search</span>
+              <span style={{ position: "relative" }}>
+                <Search size={16} style={{ left: 12, position: "absolute", top: 13 }} />
+                <input
+                  className="input"
+                  style={{ paddingLeft: 36 }}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search by name, handle, bio, or skill"
+                />
+              </span>
+            </label>
+            <button
+              type="button"
+              className="button secondary filter-toggle-btn"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter size={16} />
+              <span>Filters</span>
+            </button>
+          </div>
+          
+          <label className="field filter-field">
             <span className="small muted">Role</span>
             <select
               className="select"
@@ -134,7 +147,7 @@ export default function WorkersDirectoryPage() {
               ))}
             </select>
           </label>
-          <label className="field">
+          <label className="field filter-field">
             <span className="small muted">Skill</span>
             <select className="select" value={skill} onChange={(event) => setSkill(event.target.value)}>
               {skillOptions.map((item) => (
@@ -144,7 +157,7 @@ export default function WorkersDirectoryPage() {
               ))}
             </select>
           </label>
-          <label className="field">
+          <label className="field filter-field">
             <span className="small muted">Availability</span>
             <select
               className="select"
@@ -158,7 +171,7 @@ export default function WorkersDirectoryPage() {
               ))}
             </select>
           </label>
-          <label className="field">
+          <label className="field filter-field">
             <span className="small muted">Sort by</span>
             <select
               className="select"
