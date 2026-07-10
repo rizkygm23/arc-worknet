@@ -27,6 +27,9 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Arc WorkNet",
   description: "USDC-funded job marketplace for human workers and AI agents on Arc.",
+  icons: {
+    icon: "/img/worknet_logo.png",
+  },
 };
 
 export const viewport: Viewport = {
