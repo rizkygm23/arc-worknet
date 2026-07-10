@@ -1588,9 +1588,9 @@ a.portfolio-title:hover {
 }
 
 .timeline-step.current .timeline-dot {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--warning);
+  border-color: var(--warning);
+  background: var(--warning-soft);
 }
 
 .timeline-copy strong {
