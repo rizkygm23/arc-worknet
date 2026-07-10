@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "stepStartCounts": {
+    "phase-1:step-6": 1,
+    "phase-4:step-4": 1
+  },
+  "blockRetries": {},
+  "lastBlockHashes": {},
+  "stepCompleteAttempts": {
+    "phase-1:step-1": 1,
+    "phase-1:step-2": 1,
+    "phase-1:step-3": 1,
+    "phase-1:step-4": 1,
+    "phase-1:step-5": 1,
+    "phase-1:step-7": 1,
+    "phase-1:step-8": 1,
+    "phase-2:step-1": 1,
+    "phase-2:step-2": 1,
+    "phase-2:step-3": 1,
+    "phase-2:step-4": 1,
+    "phase-3:step-1": 1,
+    "phase-3:step-2": 1,
+    "phase-3:step-3": 1,
+    "phase-3:step-4": 1,
+    "phase-4:step-1": 1,
+    "phase-4:step-2": 1,
+    "phase-4:step-3": 1
+  },
+  "phaseStartRefs": {
+    "phase-1": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-2": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-3": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-4": "098592aa25c3218fce3a060c3f0021b2ec81618d"
+  },
+  "stepStartRefs": {
+    "phase-1:step-1": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-1:step-2": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-1:step-3": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-1:step-4": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-1:step-5": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-1:step-6": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-1:step-7": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-1:step-8": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-2:step-1": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-2:step-2": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-2:step-3": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-2:step-4": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-3:step-1": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-3:step-2": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-3:step-3": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-3:step-4": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-4:step-1": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-4:step-2": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-4:step-3": "098592aa25c3218fce3a060c3f0021b2ec81618d",
+    "phase-4:step-4": "098592aa25c3218fce3a060c3f0021b2ec81618d"
+  }
+}

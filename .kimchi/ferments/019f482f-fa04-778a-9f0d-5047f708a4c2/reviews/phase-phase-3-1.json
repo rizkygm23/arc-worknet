@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "fermentId": "019f482f-fa04-778a-9f0d-5047f708a4c2",
+  "phaseId": "phase-3",
+  "phaseName": "App Shell Refactor",
+  "attempt": 1,
+  "timestamp": "2026-07-09T21:25:31.297Z",
+  "goal": "Update app-shell.tsx with brand mark, compact wallet, and icon-ready page header",
+  "summary": "Phase 3 complete: app-shell.tsx audited (SVG brand mark + compact wallet-mini + PageHeader icon prop + 0 emoji); nav items gained Lucide icons (LayoutDashboard, Briefcase, Users, FileText, Bot, Wallet, Activity, User, ShieldCheck); .nav-link CSS gains gap + svg flex-none; all 20 PageHeader usages verified Lucide SVG; typecheck + lint pass.",
+  "stepSummaries": "  1. Audit app-shell.tsx for Arc Signature compliance: brand mark SVG, compact wallet, icon-ready PageHeader, no emoji [verified]\n  2. Add Lucide icons to nav items (Dashboard, Jobs, Workers, Applications, Agents, Wallet, Activity, Profile, Admin) so each nav-link has a consistent icon prefix [verified]\n  3. Verify PageHeader icon prop renders in all consuming pages (dashboard, jobs, workers, etc.) and uses Lucide SVG only [verified]\n  4. Run final typecheck + lint after app-shell changes [verified]",
+  "diffAvailable": true,
+  "diffFilesChanged": "?? .kimchi/ferments/019f482f-fa04-778a-9f0d-5047f708a4c2.events.jsonl\n?? .kimchi/ferments/019f482f-fa04-778a-9f0d-5047f708a4c2.json\n?? .kimchi/ferments/019f482f-fa04-778a-9f0d-5047f708a4c2/reviews/phase-phase-1-1.json\n?? .kimchi/ferments/019f482f-fa04-778a-9f0d-5047f708a4c2/reviews/phase-phase-2-1.json\n?? .kimchi/ferments/019f482f-fa04-778a-9f0d-5047f708a4c2/runtime.json\n?? DESIGN.md\n?? docs/superpowers/plans/2026-07-09-arc-worknet-ui-redesign.md",
+  "flags": [],
+  "derivedGrade": "A",
+  "reviewerRationale": "All gates pass; project checks validate.",
+  "gateVerdicts": [
+    {
+      "id": "F1",
+      "verdict": "pass",
+      "rationale": "All steps verified: step 1 grep audit, step 2 grep import count, step 3 grep PageHeader count, step 4 real typecheck+lint",
+      "evidence": "Step 4: npm run typecheck exits 0; npm run lint exits 0"
+    },
+    {
+      "id": "F2",
+      "verdict": "pass",
+      "rationale": "Phase goal delivered: app-shell.tsx has brand mark (SVG), compact wallet (wallet-mini), icon-ready PageHeader; nav items now have Lucide icons",
+      "evidence": "app-shell.tsx: navItems with Icon field, brand-mark SVG line 329, wallet-mini lines 72/87, PageHeader with icon prop line 513+; globals.css .nav-link has gap+svg styles"
+    },
+    {
+      "id": "F3",
+      "verdict": "pass",
+      "rationale": "Nothing deferred — all 4 planned steps completed",
+      "evidence": "All 4 steps terminal: step-1 through step-4"
+    }
+  ],
+  "projectChecks": {
+    "discovered": true,
+    "anyFailed": false,
+    "commands": [
+      {
+        "kind": "lint",
+        "command": "npm run lint",
+        "exitCode": 0,
+        "durationMs": 4,
+        "timedOut": false
+      },
+      {
+        "kind": "typecheck",
+        "command": "npm run typecheck",
+        "exitCode": 0,
+        "durationMs": 5,
+        "timedOut": false
+      }
+    ]
+  }
+}
