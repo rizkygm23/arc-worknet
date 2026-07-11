@@ -78,7 +78,6 @@ function useEnterApp() {
 }
 
 function LandingNav() {
-  const { enter, isConnected, isWalletPending } = useEnterApp();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -175,7 +174,7 @@ function Hero() {
             Browse open jobs
           </Link>
         </div>
-        <div className="landing-stats" style={{ marginBottom: "24px" }}>
+        <div className="landing-stats">
           <span className="landing-stat">
             <Zap size={15} aria-hidden /> &lt;1s finality
           </span>
@@ -190,55 +189,49 @@ function Hero() {
           </span>
         </div>
 
-        <div className="landing-metrics-dashboard" style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "12px",
-          marginTop: "32px",
-          maxWidth: "800px"
-        }}>
-          <div className="panel" style={{ padding: "16px", textAlign: "center", display: "flex", flexDirection: "column", gap: 4, background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--line)", borderRadius: "8px" }}>
-            <span className="small muted" style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "1.5px", fontWeight: 600 }}>Platform Users</span>
-            <div style={{ display: "flex", justifyContent: "space-around", marginTop: 8 }}>
+        <div className="landing-metrics-dashboard">
+          <div className="metrics-panel">
+            <span className="metrics-panel-title">Platform Users</span>
+            <div className="metrics-panel-row">
               <div>
-                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{displayClients}</span>
-                <span className="small muted" style={{ fontSize: "9px" }}>Clients</span>
+                <span className="metrics-panel-subvalue">{displayClients}</span>
+                <span className="metrics-panel-label">Clients</span>
               </div>
-              <div style={{ borderLeft: "1px solid var(--line)", height: "24px" }} />
+              <div className="metrics-panel-divider" />
               <div>
-                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{displayWorkers}</span>
-                <span className="small muted" style={{ fontSize: "9px" }}>Workers</span>
+                <span className="metrics-panel-subvalue">{displayWorkers}</span>
+                <span className="metrics-panel-label">Workers</span>
               </div>
-              <div style={{ borderLeft: "1px solid var(--line)", height: "24px" }} />
+              <div className="metrics-panel-divider" />
               <div>
-                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{displayAgents}</span>
-                <span className="small muted" style={{ fontSize: "9px" }}>Agents</span>
+                <span className="metrics-panel-subvalue">{displayAgents}</span>
+                <span className="metrics-panel-label">Agents</span>
               </div>
             </div>
           </div>
 
-          <div className="panel" style={{ padding: "16px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--line)", borderRadius: "8px" }}>
-            <span className="small muted" style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "1.5px", fontWeight: 600 }}>USDC Transaction Volume</span>
-            <span style={{ fontSize: "22px", fontWeight: "bold", color: "var(--accent)", margin: "4px 0" }}>${displayVolume}</span>
-            <span className="small muted" style={{ fontSize: "9px" }}>USDC settled on Arc</span>
+          <div className="metrics-panel">
+            <span className="metrics-panel-title">USDC Transaction Volume</span>
+            <span className="metrics-panel-value">${displayVolume}</span>
+            <span className="metrics-panel-label">USDC settled on Arc</span>
           </div>
 
-          <div className="panel" style={{ padding: "16px", textAlign: "center", display: "flex", flexDirection: "column", gap: 4, background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--line)", borderRadius: "8px" }}>
-            <span className="small muted" style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "1.5px", fontWeight: 600 }}>Platform Jobs</span>
-            <div style={{ display: "flex", justifyContent: "space-around", marginTop: 8 }}>
+          <div className="metrics-panel">
+            <span className="metrics-panel-title">Platform Jobs</span>
+            <div className="metrics-panel-row">
               <div>
-                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{displayTotalJobs}</span>
-                <span className="small muted" style={{ fontSize: "9px" }}>Total</span>
+                <span className="metrics-panel-subvalue">{displayTotalJobs}</span>
+                <span className="metrics-panel-label">Total</span>
               </div>
-              <div style={{ borderLeft: "1px solid var(--line)", height: "24px" }} />
+              <div className="metrics-panel-divider" />
               <div>
-                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{displayCompletedJobs}</span>
-                <span className="small muted" style={{ fontSize: "9px" }}>Completed</span>
+                <span className="metrics-panel-subvalue">{displayCompletedJobs}</span>
+                <span className="metrics-panel-label">Completed</span>
               </div>
-              <div style={{ borderLeft: "1px solid var(--line)", height: "24px" }} />
+              <div className="metrics-panel-divider" />
               <div>
-                <span style={{ display: "block", fontSize: "16px", fontWeight: "bold", color: "var(--accent)" }}>{displayOpenJobs}</span>
-                <span className="small muted" style={{ fontSize: "9px" }}>Active</span>
+                <span className="metrics-panel-subvalue">{displayOpenJobs}</span>
+                <span className="metrics-panel-label">Active</span>
               </div>
             </div>
           </div>
@@ -607,7 +600,6 @@ function Teaser() {
 }
 
 function FinalCta() {
-  const { enter, isWalletPending } = useEnterApp();
   return (
     <section className="landing-section landing-final reveal" data-reveal>
       <div className="landing-final-grid">

@@ -3,7 +3,7 @@
  */
 .landing {
   min-height: 100dvh;
-  background: var(--bg);
+  background: radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--accent-soft) 25%, transparent), transparent 45%), var(--bg);
   color: var(--ink);
   overflow-x: clip;
 }
@@ -132,15 +132,18 @@
 .landing-hero-title {
   margin: 0 0 var(--space-6);
   font-family: var(--font-display);
-  font-size: var(--text-display-xl);
+  font-size: clamp(34px, 4.2vw, 52px);
   font-weight: 700;
-  line-height: 1.05;
+  line-height: 1.08;
   letter-spacing: var(--tracking-display-xl);
   color: var(--ink);
 }
 
-.landing-hero-title .accent {
+.landing-hero-title .accent-money {
   color: var(--accent);
+  background: linear-gradient(120deg, var(--accent) 0%, var(--success) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .landing-hero-sub {
@@ -158,11 +161,12 @@
   margin-bottom: var(--space-10);
 }
 
-/* ── Stats ── */
+/* ── Stats & Dashboard ── */
 .landing-stats {
   display: inline-flex;
   flex-wrap: wrap;
   gap: var(--space-6);
+  margin-bottom: var(--space-6);
 }
 
 .landing-stat {
@@ -179,12 +183,90 @@
   color: var(--accent);
 }
 
+.landing-metrics-dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+  max-width: 800px;
+}
+
+.metrics-panel {
+  padding: var(--space-5);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-1);
+  background: linear-gradient(135deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 95%, var(--accent-soft)) 100%);
+  border: var(--rule-thin) solid var(--hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-short) var(--ease-out), box-shadow var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out);
+}
+
+.metrics-panel:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--line-strong);
+}
+
+.metrics-panel-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.metrics-panel-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: var(--space-1) 0;
+}
+
+.metrics-panel-subvalue {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.metrics-panel-label {
+  display: block;
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.metrics-panel-divider {
+  border-left: var(--rule-thin) solid var(--hairline);
+  height: 24px;
+  align-self: center;
+}
+
+.metrics-panel-row {
+  display: flex;
+  justify-content: space-around;
+  margin-top: var(--space-2);
+}
+
 /* ── Hero mark (inline SVG) ── */
+@keyframes float {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(1deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
 .hero-mark {
   width: 100%;
   max-width: 420px;
   aspect-ratio: 1 / 1;
   margin-left: auto;
+  animation: float 6s ease-in-out infinite;
 }
 
 /* ── Cards ── */
@@ -269,12 +351,25 @@
 }
 
 /* ── How it works ── */
+.landing-flow-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: var(--space-10);
+  align-items: center;
+}
+
 .landing-flow {
   display: grid;
   gap: var(--space-6);
   max-width: 760px;
   padding-left: var(--space-6);
   border-left: var(--rule-thin) solid var(--hairline);
+}
+
+.landing-flow-visual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .landing-step {
@@ -528,11 +623,18 @@
   .landing-grid-3 {
     grid-template-columns: 1fr;
   }
+  .landing-flow-wrap {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+  .landing-flow-visual {
+    display: none;
+  }
 }
 
 @media (max-width: 760px) {
   .landing-nav-links { display: none; }
-  .landing-hero-title { font-size: var(--text-display-md); }
+  .landing-hero-title { font-size: 28px; line-height: 1.15; }
   .landing-h2 { font-size: var(--text-xl); }
   .landing-stats { gap: var(--space-4); }
   .landing-teaser-head {
@@ -554,6 +656,7 @@
 /* ── Ambient section: SVG geometric marks replace generic 3D images ── */
 .landing-ambient-section {
   position: relative;
+  background: radial-gradient(circle at 10% 80%, color-mix(in srgb, var(--accent-soft) 12%, transparent), transparent 35%);
 }
 
 .landing-ambient-img {
