@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  await invalidateBootstrapCache();
+  void invalidateBootstrapCache();
   return NextResponse.json({ savedJob: data }, { status: 201 });
 }
 
@@ -77,6 +77,6 @@ export async function DELETE(request: Request) {
     .eq("job_id", jobId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  await invalidateBootstrapCache();
+  void invalidateBootstrapCache();
   return NextResponse.json({ ok: true });
 }

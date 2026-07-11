@@ -20,6 +20,6 @@ export async function POST(request: Request) {
     .is("read_at", null);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  await invalidateBootstrapCache();
+  void invalidateBootstrapCache();
   return NextResponse.json({ ok: true });
 }

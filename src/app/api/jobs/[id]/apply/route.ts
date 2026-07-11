@@ -83,7 +83,7 @@ export async function POST(request: Request, context: RouteContext) {
         .single();
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      await invalidateBootstrapCache();
+      void invalidateBootstrapCache();
       return NextResponse.json({ application: data }, { status: 200 });
     }
   }
@@ -104,6 +104,6 @@ export async function POST(request: Request, context: RouteContext) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  await invalidateBootstrapCache();
+  void invalidateBootstrapCache();
   return NextResponse.json({ application: data }, { status: 201 });
 }

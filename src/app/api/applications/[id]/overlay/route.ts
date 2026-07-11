@@ -68,6 +68,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  await invalidateBootstrapCache();
+  void invalidateBootstrapCache();
   return NextResponse.json({ overlay: data });
 }

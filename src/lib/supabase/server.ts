@@ -458,9 +458,14 @@ export function createSupabaseBrowserClient() {
   );
 }
 
+// Singleton service client — reuses HTTP connections across requests within the
+// same serverless invocation, avoiding repeated TLS handshake overhead.
+let _serviceClient: ReturnType<typeof createClient<Database>> | undefined;
+
 export function createSupabaseServiceClient() {
+  if (_serviceClient) return _serviceClient;
   requireSupabaseServiceConfig();
-  return createClient<Database>(
+  _serviceClient = createClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL ?? "",
     env.SUPABASE_SERVICE_ROLE_KEY ?? "",
     {
@@ -470,4 +475,5 @@ export function createSupabaseServiceClient() {
       },
     },
   );
+  return _serviceClient;
 }

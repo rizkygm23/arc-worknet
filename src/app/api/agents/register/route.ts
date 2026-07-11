@@ -66,6 +66,6 @@ export async function POST(request: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  await invalidateBootstrapCache();
+  void invalidateBootstrapCache();
   return NextResponse.json({ agent: data }, { status: 201 });
 }

@@ -101,6 +101,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  await invalidateBootstrapCache();
+  void invalidateBootstrapCache();
   return NextResponse.json({ profile: data }, { status: 200 });
 }

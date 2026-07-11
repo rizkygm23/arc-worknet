@@ -100,6 +100,6 @@ export async function POST(request: Request, context: RouteContext) {
     .single();
 
   if (jobError) return NextResponse.json({ error: jobError.message }, { status: 500 });
-  await invalidateBootstrapCache();
+  void invalidateBootstrapCache();
   return NextResponse.json({ job });
 }

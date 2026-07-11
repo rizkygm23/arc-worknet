@@ -82,7 +82,7 @@ export async function GET(request: Request) {
       .from(TABLES.events)
       .upsert(rows, { onConflict: "chain_id,tx_hash,log_index" });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    await invalidateBootstrapCache();
+    void invalidateBootstrapCache();
   }
 
   return NextResponse.json({

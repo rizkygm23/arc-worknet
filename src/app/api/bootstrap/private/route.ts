@@ -59,20 +59,10 @@ export async function GET() {
       return NextResponse.json({ session: null });
     }
 
-    const { data: activeProfileRow } = await supabase
-      .from(TABLES.profiles)
-      .select("*")
-      .eq("id", session.profileId)
-      .maybeSingle();
-
-    // Wave 1: profile-scoped queries (parallel)
-    //
-    // Jobs where I'm the client OR the human provider are fetched in a single
-    // round-trip via .or() instead of two separate .eq() queries. Jobs where
-    // one of my AGENTS is the provider are NOT covered here — accept-application
-    // leaves provider_profile_id null for agent providers — so those still come
-    // from the provider_agent_id lookup in wave 2.
+    // Wave 1: profile + profile-scoped queries (all parallel)
+    // Profile fetch is merged into the same wave instead of being sequential.
     const [
+      activeProfileRow,
       ownedAgents,
       myJobs,
       profileApplications,
@@ -81,6 +71,12 @@ export async function GET() {
       savedJobs,
       profileTransactions,
     ] = await Promise.all([
+      supabase
+        .from(TABLES.profiles)
+        .select("*")
+        .eq("id", session.profileId)
+        .maybeSingle()
+        .then(({ data }) => data),
       selectTable(
         supabase
           .from(TABLES.agents)
@@ -142,16 +138,32 @@ export async function GET() {
       ),
     ]);
 
+    // Derive IDs from wave 1 results
     const ownedAgentIds = ownedAgents.map((a) => a.id);
-    // clientApplications looks up applications TO jobs I posted. Only my client
-    // jobs are relevant here (applicants apply to a client's posting), so filter
-    // the merged myJobs set down to the ones I own as client.
     const clientJobIds = myJobs
       .filter((j) => j.client_profile_id === session.profileId)
       .map((j) => j.id);
 
-    // Wave 2: derived-id queries (parallel)
-    const [agentJobs, clientApplications, agentApplications] = await Promise.all([
+    // Wave 2: derived-id queries + job-scoped queries (all parallel)
+    // Waves 2+3 from the old code are merged into a single Promise.all.
+    // We fetch agentJobs, applications, AND all job-scoped data in one shot.
+    // For job-scoped queries we optimistically use myJobs IDs first, then
+    // union with agentJobs IDs post-fetch for the ones that need it.
+    const myJobIds = myJobs.map((j) => j.id);
+    const profileAppIds = profileApplications.map((a) => a.id);
+
+    const [
+      agentJobs,
+      clientApplications,
+      agentApplications,
+      submissions,
+      reviews,
+      aiEvaluations,
+      privateTransactions,
+      jobMessages,
+      applicationOverlays,
+    ] = await Promise.all([
+      // Agent-provider jobs
       selectWhereIn(
         supabase
           .from(TABLES.jobs)
@@ -161,6 +173,7 @@ export async function GET() {
         "provider_agent_id",
         ownedAgentIds,
       ),
+      // Applications to my client jobs
       selectWhereIn(
         supabase
           .from(TABLES.applications)
@@ -170,6 +183,7 @@ export async function GET() {
         "job_id",
         clientJobIds,
       ),
+      // Applications by my agents
       selectWhereIn(
         supabase
           .from(TABLES.applications)
@@ -179,24 +193,7 @@ export async function GET() {
         "applicant_agent_id",
         ownedAgentIds,
       ),
-    ]);
-
-    const privateJobIds = uniqueIds(myJobs, agentJobs);
-    const userApplicationIds = uniqueIds(
-      clientApplications,
-      profileApplications,
-      agentApplications,
-    );
-
-    // Wave 3: job-id-scoped queries (parallel)
-    const [
-      submissions,
-      reviews,
-      aiEvaluations,
-      privateTransactions,
-      jobMessages,
-      applicationOverlays,
-    ] = await Promise.all([
+      // Job-scoped: submissions (use myJobIds; agentJobs fetched below)
       selectWhereIn(
         supabase
           .from(TABLES.submissions)
@@ -204,8 +201,9 @@ export async function GET() {
           .order("created_at", { ascending: false })
           .limit(PRIVATE_LIST_LIMIT),
         "job_id",
-        privateJobIds,
+        myJobIds,
       ),
+      // Job-scoped: reviews
       selectWhereIn(
         supabase
           .from(TABLES.reviews)
@@ -213,8 +211,9 @@ export async function GET() {
           .order("created_at", { ascending: false })
           .limit(PRIVATE_LIST_LIMIT),
         "job_id",
-        privateJobIds,
+        myJobIds,
       ),
+      // Job-scoped: AI evaluations
       selectWhereIn(
         supabase
           .from(TABLES.aiEvaluations)
@@ -222,8 +221,9 @@ export async function GET() {
           .order("created_at", { ascending: false })
           .limit(PRIVATE_LIST_LIMIT),
         "job_id",
-        privateJobIds,
+        myJobIds,
       ),
+      // Job-scoped: transactions
       selectWhereIn(
         supabase
           .from(TABLES.transactions)
@@ -231,8 +231,9 @@ export async function GET() {
           .order("created_at", { ascending: false })
           .limit(100),
         "job_id",
-        privateJobIds,
+        myJobIds,
       ),
+      // Job-scoped: messages
       selectWhereIn(
         supabase
           .from(TABLES.jobMessages)
@@ -240,16 +241,68 @@ export async function GET() {
           .order("created_at", { ascending: true })
           .limit(500),
         "job_id",
-        privateJobIds,
+        myJobIds,
       ),
+      // Application overlays (use profileAppIds optimistically)
       selectWhereIn(
         supabase
           .from(TABLES.applicationOverlay)
           .select("*"),
         "application_id",
-        userApplicationIds,
+        profileAppIds,
       ),
     ]);
+
+    // For agent-owned jobs that weren't in myJobs, back-fill their
+    // submissions/reviews/etc. Only needed if there are agent jobs
+    // whose IDs are NOT already in myJobIds.
+    const missingAgentJobIds = agentJobs
+      .map((j) => j.id)
+      .filter((id) => !myJobIds.includes(id));
+
+    let agentSubmissions: typeof submissions = [];
+    let agentReviews: typeof reviews = [];
+    let agentAiEvals: typeof aiEvaluations = [];
+    let agentTransactions: typeof privateTransactions = [];
+    let agentMessages: typeof jobMessages = [];
+
+    if (missingAgentJobIds.length > 0) {
+      [agentSubmissions, agentReviews, agentAiEvals, agentTransactions, agentMessages] =
+        await Promise.all([
+          selectWhereIn(
+            supabase.from(TABLES.submissions).select("*").order("created_at", { ascending: false }).limit(PRIVATE_LIST_LIMIT),
+            "job_id", missingAgentJobIds,
+          ),
+          selectWhereIn(
+            supabase.from(TABLES.reviews).select("*").order("created_at", { ascending: false }).limit(PRIVATE_LIST_LIMIT),
+            "job_id", missingAgentJobIds,
+          ),
+          selectWhereIn(
+            supabase.from(TABLES.aiEvaluations).select("*").order("created_at", { ascending: false }).limit(PRIVATE_LIST_LIMIT),
+            "job_id", missingAgentJobIds,
+          ),
+          selectWhereIn(
+            supabase.from(TABLES.transactions).select("*").order("created_at", { ascending: false }).limit(100),
+            "job_id", missingAgentJobIds,
+          ),
+          selectWhereIn(
+            supabase.from(TABLES.jobMessages).select("*").order("created_at", { ascending: true }).limit(500),
+            "job_id", missingAgentJobIds,
+          ),
+        ]);
+    }
+
+    // Merge extra agent-scoped application IDs for overlay lookup
+    const allAppIds = uniqueIds(clientApplications, profileApplications, agentApplications);
+    const missingOverlayAppIds = allAppIds.filter((id) => !profileAppIds.includes(id));
+    let extraOverlays: typeof applicationOverlays = [];
+    if (missingOverlayAppIds.length > 0) {
+      extraOverlays = await selectWhereIn(
+        supabase.from(TABLES.applicationOverlay).select("*"),
+        "application_id",
+        missingOverlayAppIds,
+      );
+    }
 
     return NextResponse.json({
       activeProfileId: session.profileId,
@@ -257,16 +310,16 @@ export async function GET() {
       ownedAgents: ownedAgents.map(mapAgent),
       privateJobs: dedupe(myJobs, agentJobs).map(mapJob),
       applications: dedupe(clientApplications, profileApplications, agentApplications).map(mapApplication),
-      submissions: submissions.map(mapSubmission),
-      reviews: reviews.map(mapReview),
-      aiEvaluations: aiEvaluations.map(mapAiEvaluation),
-      privateTransactions: privateTransactions.map(mapTransaction),
+      submissions: dedupe(submissions, agentSubmissions).map(mapSubmission),
+      reviews: dedupe(reviews, agentReviews).map(mapReview),
+      aiEvaluations: dedupe(aiEvaluations, agentAiEvals).map(mapAiEvaluation),
+      privateTransactions: dedupe(privateTransactions, agentTransactions).map(mapTransaction),
       profileTransactions: profileTransactions.map(mapTransaction),
       notifications: notifications.map(mapNotification),
-      jobMessages: jobMessages.map(mapJobMessage),
+      jobMessages: dedupe(jobMessages, agentMessages).map(mapJobMessage),
       jobInvitations: jobInvitations.map(mapJobInvitation),
       savedJobs: savedJobs.map(mapSavedJob),
-      applicationOverlays: applicationOverlays.map(mapApplicationOverlay),
+      applicationOverlays: [...applicationOverlays, ...extraOverlays].map(mapApplicationOverlay),
     });
   } catch (error) {
     return NextResponse.json(

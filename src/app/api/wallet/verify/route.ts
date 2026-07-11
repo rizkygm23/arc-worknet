@@ -129,7 +129,7 @@ export async function POST(request: Request) {
 
   if (sessionError) return NextResponse.json({ error: sessionError.message }, { status: 500 });
 
-  await invalidateBootstrapCache();
+  void invalidateBootstrapCache();
   const json = NextResponse.json({ profile: mapProfile(profile) });
   setWalletSessionCookie(json, token);
   return json;

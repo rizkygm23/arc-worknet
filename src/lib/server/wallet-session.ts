@@ -26,24 +26,44 @@ export function sessionExpiresAt() {
   return new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString();
 }
 
+// In-memory session cache. Keyed by token_hash, auto-expires after TTL.
+// Revoked sessions are picked up within CACHE_TTL_MS (acceptable staleness).
+const SESSION_CACHE_TTL_MS = 30_000;
+type CachedSession = { session: WalletSession; expiresAt: number };
+const sessionCache = new Map<string, CachedSession>();
+
 export async function getWalletSession(supabase: SupabaseServiceClient): Promise<WalletSession | undefined> {
   const cookieStore = await cookies();
   const token = cookieStore.get(WALLET_SESSION_COOKIE)?.value;
   if (!token) return undefined;
 
+  const tokenHash = sha256(token);
+
+  // Check in-memory cache first
+  const cached = sessionCache.get(tokenHash);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.session;
+  }
+
   const { data, error } = await supabase
     .from(TABLES.walletSessions)
     .select("profile_id,wallet_address")
-    .eq("token_hash", sha256(token))
+    .eq("token_hash", tokenHash)
     .is("revoked_at", null)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
 
-  if (error || !data) return undefined;
-  return {
+  if (error || !data) {
+    sessionCache.delete(tokenHash);
+    return undefined;
+  }
+
+  const session: WalletSession = {
     profileId: data.profile_id,
     walletAddress: data.wallet_address,
   };
+  sessionCache.set(tokenHash, { session, expiresAt: Date.now() + SESSION_CACHE_TTL_MS });
+  return session;
 }
 
 export async function requireWalletSession(supabase: SupabaseServiceClient) {

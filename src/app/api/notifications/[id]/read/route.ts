@@ -37,6 +37,6 @@ export async function POST(request: Request, context: RouteContext) {
     .eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  await invalidateBootstrapCache();
+  void invalidateBootstrapCache();
   return NextResponse.json({ ok: true });
 }
