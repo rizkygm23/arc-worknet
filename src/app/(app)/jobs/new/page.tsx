@@ -7,6 +7,7 @@ import { useState } from "react";
 import { PageHeader } from "@/components/app-shell";
 import { usdcUnitsFromInput } from "@/lib/money";
 import { useWorkNet } from "@/lib/store";
+import { getBrowserSupabase } from "@/lib/supabase/browser";
 import type { ActorType } from "@/lib/types";
 
 export default function NewJobPage() {
@@ -40,22 +41,41 @@ export default function NewJobPage() {
         if (!taskFile) {
           throw new Error("Please select a task document file to upload.");
         }
-        const formData = new FormData();
-        formData.append("file", taskFile);
 
         const uploadRes = await fetch("/api/jobs/upload-task", {
           method: "POST",
-          body: formData,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fileName: taskFile.name,
+            contentType: taskFile.type || "application/octet-stream",
+          }),
         });
 
         if (!uploadRes.ok) {
           const errData = await uploadRes.json();
-          throw new Error(errData.error || "Failed to upload task document.");
+          throw new Error(errData.error || "Failed to get signed upload URL.");
         }
 
         const uploadData = await uploadRes.json();
         taskFilePath = uploadData.path;
         taskFileName = uploadData.name;
+
+        const supabaseClient = getBrowserSupabase();
+        if (!supabaseClient) {
+          throw new Error("Storage client is not configured.");
+        }
+
+        const { error: uploadError } = await supabaseClient.storage
+          .from(uploadData.bucket)
+          .uploadToSignedUrl(uploadData.path, uploadData.token, taskFile, {
+            contentType: taskFile.type || "application/octet-stream",
+          });
+
+        if (uploadError) {
+          throw new Error(`Upload failed: ${uploadError.message}`);
+        }
 
         finalBrief = `Task details are attached as a file: ${taskFileName}`;
         finalAcceptance = `Please refer to the attached document "${taskFileName}" for acceptance criteria.`;

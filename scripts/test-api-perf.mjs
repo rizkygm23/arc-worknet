@@ -202,6 +202,7 @@ async function run() {
       name: "POST /api/jobs/upload-task (Upload task PDF)",
       path: "/api/jobs/upload-task",
       method: "POST",
+      body: { fileName: "test-task.pdf", contentType: "application/pdf" },
       auth: "client",
     },
     {

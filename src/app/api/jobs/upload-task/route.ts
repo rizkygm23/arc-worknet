@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServiceClientOrResponse } from "@/lib/api";
+import { getServiceClientOrResponse, parseJson, uploadUrlSchema, validationError } from "@/lib/api";
 import { requireWalletSession } from "@/lib/server/wallet-session";
 import { walletRateLimit } from "@/lib/server/rate-limit";
 
@@ -8,6 +8,9 @@ function sanitizeFileName(name: string) {
 }
 
 export async function POST(request: Request) {
+  const parsed = await parseJson(request, uploadUrlSchema);
+  if (!parsed.success) return validationError(parsed.error);
+
   const { supabase, response } = getServiceClientOrResponse();
   if (response) return response;
 
@@ -18,30 +21,28 @@ export async function POST(request: Request) {
   if (limited) return limited;
 
   try {
-    const formData = await request.formData();
-    const file = formData.get("file") as File;
-    if (!file) {
-      return NextResponse.json({ error: "No file was uploaded." }, { status: 400 });
-    }
-
     const uuid = crypto.randomUUID();
-    const sanitizedName = sanitizeFileName(file.name);
+    const sanitizedName = sanitizeFileName(parsed.data.fileName);
     const path = `tasks/${uuid}/${sanitizedName}`;
 
-    // Convert File to ArrayBuffer and upload
-    const buffer = await file.arrayBuffer();
-
-    const { error: uploadError } = await supabase.storage
+    const { data, error } = await supabase.storage
       .from("deliverables")
-      .upload(path, buffer, {
-        contentType: file.type || "application/octet-stream",
-      });
+      .createSignedUploadUrl(path);
 
-    if (uploadError) {
-      return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 502 });
+    if (error) {
+      return NextResponse.json(
+        { error: `Could not create upload URL: ${error.message}` },
+        { status: 502 },
+      );
     }
 
-    return NextResponse.json({ path, name: file.name });
+    return NextResponse.json({
+      path,
+      token: data.token,
+      signedUrl: data.signedUrl,
+      bucket: "deliverables",
+      name: parsed.data.fileName,
+    });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json({ error: msg }, { status: 500 });
