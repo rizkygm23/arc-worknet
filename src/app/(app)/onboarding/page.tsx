@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Check, Plus, Sparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { dismissOnboarding, needsOnboarding } from "@/lib/onboarding";
@@ -148,7 +148,7 @@ export default function OnboardingPage() {
       <div className="onboarding-card">
         <div className="onboarding-head">
           <p className="eyebrow">
-            <Sparkles size={12} /> Welcome to Arc WorkNet
+            Welcome to Arc WorkNet
           </p>
           {!isNewUser ? (
             <button type="button" className="button ghost small" onClick={handleSkip} disabled={saving}>

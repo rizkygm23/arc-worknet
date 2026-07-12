@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { EmptyState, PageHeader, SkeletonPanel, StatCard } from "@/components/app-shell";
+import CountUp from "@/components/CountUp";
 import { ProfileReputationBadges } from "@/components/job-components";
 import { availabilityLabel } from "@/lib/availability";
 import { formatUsdcUnits } from "@/lib/money";
@@ -248,11 +249,15 @@ export default function WorkersDirectoryPage() {
                   <dl className="worker-stats">
                     <div>
                       <dt>Rating</dt>
-                      <dd>{profile.ratingAvg.toFixed(2)}</dd>
+                      <dd>
+                        <CountUp from={0} to={profile.ratingAvg} duration={1} delay={0} decimals={2} />
+                      </dd>
                     </div>
                     <div>
                       <dt>Jobs</dt>
-                      <dd>{profile.completedJobsCount}</dd>
+                      <dd>
+                        <CountUp from={0} to={profile.completedJobsCount} duration={1} delay={0} />
+                      </dd>
                     </div>
                     <div>
                       <dt>Earned</dt>

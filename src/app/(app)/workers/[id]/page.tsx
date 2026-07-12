@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { PageHeader, SkeletonPanel } from "@/components/app-shell";
+import CountUp from "@/components/CountUp";
 import { JobRow, ProfileReputationBadges, ReviewsPanel } from "@/components/job-components";
 import { availabilityLabel } from "@/lib/availability";
 import { useJobInvitations } from "@/lib/job-invitations";
@@ -277,11 +278,15 @@ export default function WorkerProfilePage() {
             <h2 className="panel-title">Reputation</h2>
             <div className="stat" style={{ marginTop: 12 }}>
               <span>Rating</span>
-              <strong>{profile.ratingAvg.toFixed(2)}</strong>
+              <strong>
+                <CountUp from={0} to={profile.ratingAvg} duration={1} delay={0} decimals={2} />
+              </strong>
             </div>
             <div className="stat">
               <span>Completed jobs</span>
-              <strong>{profile.completedJobsCount}</strong>
+              <strong>
+                <CountUp from={0} to={profile.completedJobsCount} duration={1} delay={0} />
+              </strong>
             </div>
             <div className="stat">
               <span>Earned</span>

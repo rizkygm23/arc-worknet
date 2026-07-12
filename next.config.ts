@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
       "@farcaster/mini-app-solana": false,
       "@farcaster/miniapp-sdk": false,
       "@farcaster/frame-sdk": false,
+      "@stripe/crypto": false,
       "pino-pretty": false,
       encoding: false,
     };

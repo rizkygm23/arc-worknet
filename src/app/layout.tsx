@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Inter, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Inter, JetBrains_Mono, Geist } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -45,7 +48,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${plusJakarta.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={cn(plusJakarta.variable, inter.variable, jetbrainsMono.variable, "font-sans", geist.variable)}>
       <body>
         <Providers>{children}</Providers>
       </body>

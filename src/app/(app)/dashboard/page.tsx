@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CheckCircle2, ClipboardList, LayoutDashboard, Plus, Sparkles, WalletCards } from "lucide-react";
+import { ArrowRight, CheckCircle2, ClipboardList, LayoutDashboard, Plus, Wand2, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 import { PageHeader, SkeletonPanel, StatCard, WalletPill } from "@/components/app-shell";
@@ -119,7 +119,7 @@ export default function DashboardPage() {
               <div className="panel-header">
                 <div className="profile-strip">
                   <span className="avatar">
-                    <Sparkles size={18} />
+                    <Wand2 size={18} />
                   </span>
                   <div>
                     <h2 className="panel-title">For you</h2>

@@ -18,6 +18,12 @@ import {
   User,
 } from "lucide-react";
 import { useWorkNet } from "@/lib/store";
+import DotField from "./DotField";
+import BorderGlow from "./BorderGlow";
+import type { Profile, Job } from "@/lib/types";
+import Stepper, { Step } from "./Stepper";
+import CountUp from "./CountUp";
+import { WobbleCard } from "./ui/wobble-card";
 
 const ARC_EXPLORER_URL =
   process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app";
@@ -110,8 +116,8 @@ function LandingNav() {
           </a>
         </div>
         <div className="landing-nav-actions">
-          <Link className="button primary small" href="/jobs">
-            Browse jobs
+          <Link className="button primary small" href="/llms">
+            Connect agent
           </Link>
         </div>
       </div>
@@ -123,14 +129,14 @@ function Hero() {
   const { enter, isWalletPending } = useEnterApp();
   const { state } = useWorkNet();
 
-  const clientCount = state.profiles?.filter((p) => p.role === "client").length ?? 0;
-  const workerCount = state.profiles?.filter((p) => p.role === "worker").length ?? 0;
+  const clientCount = state.profiles?.filter((p: Profile) => p.role === "client").length ?? 0;
+  const workerCount = state.profiles?.filter((p: Profile) => p.role === "worker").length ?? 0;
   const agentCount = state.agents?.length ?? 0;
   const totalJobs = state.jobs?.length ?? 0;
-  const completedJobs = state.jobs?.filter((j) => j.status === "completed").length ?? 0;
+  const completedJobs = state.jobs?.filter((j: Job) => j.status === "completed").length ?? 0;
 
-  const totalSpentUnits = state.profiles?.reduce((sum, p) => sum + (p.totalSpentUsdcUnits || 0), 0) ?? 0;
-  const jobsVolumeUnits = state.jobs?.reduce((sum, j) => {
+  const totalSpentUnits = state.profiles?.reduce((sum: number, p: Profile) => sum + (p.totalSpentUsdcUnits || 0), 0) ?? 0;
+  const jobsVolumeUnits = state.jobs?.reduce((sum: number, j: Job) => {
     if (j.status !== "draft" && j.status !== "open") {
       return sum + (j.budgetUsdcUnits || 0);
     }
@@ -148,104 +154,177 @@ function Hero() {
   const displayVolume = (baseVolumeUnits > 0 ? baseVolumeUnits / 1_000_000 : 2480).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
   return (
-    <section className="landing-section landing-hero">
-      <div>
-        <h1 className="landing-hero-title">
-          <span className="line">Onchain escrow for</span>
-          <span className="line"><span className="accent-money">USDC</span> jobs.</span>
-          <span className="line">Humans &amp; agents. Settled on Arc.</span>
-        </h1>
-        <p className="landing-hero-sub">
-          A job marketplace where payment is locked onchain before work starts.
-          Humans and AI agents compete on equal terms. Settlement in under a
-          second.
-        </p>
-        <div className="landing-cta-row">
-          <button
-            className="button primary"
-            type="button"
-            onClick={() => enter("/jobs/new")}
-            disabled={isWalletPending}
-          >
-            {isWalletPending ? <span className="spinner" aria-hidden /> : null}
-            Post a job
-          </button>
-          <Link className="button" href="/jobs">
-            Browse open jobs
-          </Link>
-        </div>
-        <div className="landing-stats">
-          <span className="landing-stat">
-            <Zap size={15} aria-hidden /> &lt;1s finality
-          </span>
-          <span className="landing-stat">
-            <DollarSign size={15} aria-hidden /> USDC native
-          </span>
-          <span className="landing-stat">
-            <Users size={15} aria-hidden /> Humans + Agents
-          </span>
-          <span className="landing-stat">
-            <Fingerprint size={15} aria-hidden /> ERC-8004 reputation
-          </span>
-        </div>
-
-        <div className="landing-metrics-dashboard">
-          <div className="metrics-panel">
-            <span className="metrics-panel-title">Platform Users</span>
-            <div className="metrics-panel-row">
-              <div>
-                <span className="metrics-panel-subvalue">{displayClients}</span>
-                <span className="metrics-panel-label">Clients</span>
-              </div>
-              <div className="metrics-panel-divider" />
-              <div>
-                <span className="metrics-panel-subvalue">{displayWorkers}</span>
-                <span className="metrics-panel-label">Workers</span>
-              </div>
-              <div className="metrics-panel-divider" />
-              <div>
-                <span className="metrics-panel-subvalue">{displayAgents}</span>
-                <span className="metrics-panel-label">Agents</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="metrics-panel">
-            <span className="metrics-panel-title">USDC Transaction Volume</span>
-            <span className="metrics-panel-value">${displayVolume}</span>
-            <span className="metrics-panel-label">USDC settled on Arc</span>
-          </div>
-
-          <div className="metrics-panel">
-            <span className="metrics-panel-title">Platform Jobs</span>
-            <div className="metrics-panel-row">
-              <div>
-                <span className="metrics-panel-subvalue">{displayTotalJobs}</span>
-                <span className="metrics-panel-label">Total</span>
-              </div>
-              <div className="metrics-panel-divider" />
-              <div>
-                <span className="metrics-panel-subvalue">{displayCompletedJobs}</span>
-                <span className="metrics-panel-label">Completed</span>
-              </div>
-              <div className="metrics-panel-divider" />
-              <div>
-                <span className="metrics-panel-subvalue">{displayOpenJobs}</span>
-                <span className="metrics-panel-label">Active</span>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div style={{ position: 'relative', overflow: 'hidden', width: '100%' }}>
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <DotField
+          dotRadius={1.5}
+          dotSpacing={14}
+          bulgeStrength={67}
+          glowRadius={160}
+          sparkle={false}
+          waveAmplitude={0}
+          cursorRadius={500}
+          cursorForce={0.1}
+          bulgeOnly
+          gradientFrom="#A855F7"
+          gradientTo="#B497CF"
+          glowColor="#120F17"
+        />
       </div>
-      <div className="landing-hero-visual" data-reveal>
-        <svg className="hero-mark" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-          <circle cx="210" cy="210" r="160" stroke="var(--accent)" strokeOpacity="0.12" strokeWidth="1" />
-          <circle cx="210" cy="210" r="110" stroke="var(--accent)" strokeOpacity="0.2" strokeWidth="1" />
-          <circle cx="210" cy="210" r="60" fill="var(--accent-soft)" />
-          <path d="M210 50 L210 370 M50 210 L370 210" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
-        </svg>
-      </div>
-    </section>
+
+      <section className="landing-section landing-hero" style={{ position: 'relative', zIndex: 1, background: 'transparent' }}>
+        <div>
+          <h1 className="landing-hero-title">
+            <span className="line">Onchain escrow </span>
+            <span className="line"><span className="accent-money">Freelancer</span> jobs. for Humans &amp; agents. Settled on Arc</span>
+            
+          </h1>
+          <p className="landing-hero-sub">
+            A job marketplace where payment is locked onchain before work starts.
+            Humans and AI agents compete on equal terms. Settlement in under a
+            second.
+          </p>
+          <div className="landing-cta-row">
+            <button
+              className="button primary"
+              type="button"
+              onClick={() => enter("/jobs/new")}
+              disabled={isWalletPending}
+            >
+              {isWalletPending ? <span className="spinner" aria-hidden /> : null}
+              Post a job
+            </button>
+            <Link className="button" href="/jobs">
+              Browse open jobs
+            </Link>
+          </div>
+          <div className="landing-stats">
+            <span className="landing-stat">
+              <Zap size={15} aria-hidden /> &lt;1s finality
+            </span>
+            <span className="landing-stat">
+              <DollarSign size={15} aria-hidden /> USDC native
+            </span>
+            <span className="landing-stat">
+              <Users size={15} aria-hidden /> Humans + Agents
+            </span>
+            <span className="landing-stat">
+              <Fingerprint size={15} aria-hidden /> ERC-8004 reputation
+            </span>
+          </div>
+
+          <div className="landing-metrics-dashboard">
+            <BorderGlow
+              className="metrics-panel"
+              edgeSensitivity={30}
+              glowColor="20 80 80"
+              backgroundColor="var(--surface)"
+              borderRadius={28}
+              glowRadius={40}
+              glowIntensity={1}
+              coneSpread={25}
+              animated={true}
+              colors={['#c084fc', '#f472b6', '#38bdf8']}
+            >
+              <span className="metrics-panel-title">Platform Users</span>
+              <div className="metrics-panel-row">
+                <div>
+                  <span className="metrics-panel-subvalue">
+                    <CountUp from={0} to={displayClients} duration={1} delay={0} />
+                  </span>
+                  <span className="metrics-panel-label">Clients</span>
+                </div>
+                <div className="metrics-panel-divider" />
+                <div>
+                  <span className="metrics-panel-subvalue">
+                    <CountUp from={0} to={displayWorkers} duration={1} delay={0} />
+                  </span>
+                  <span className="metrics-panel-label">Workers</span>
+                </div>
+                <div className="metrics-panel-divider" />
+                <div>
+                  <span className="metrics-panel-subvalue">
+                    <CountUp from={0} to={displayAgents} duration={1} delay={0} />
+                  </span>
+                  <span className="metrics-panel-label">Agents</span>
+                </div>
+              </div>
+            </BorderGlow>
+
+            <BorderGlow
+              className="metrics-panel"
+              edgeSensitivity={30}
+              glowColor="20 80 80"
+              backgroundColor="var(--surface)"
+              borderRadius={28}
+              glowRadius={40}
+              glowIntensity={1}
+              coneSpread={25}
+              animated={true}
+              colors={['#c084fc', '#f472b6', '#38bdf8']}
+            >
+              <span className="metrics-panel-title">USDC Transaction Volume</span>
+              <span className="metrics-panel-value">
+                $
+                <CountUp
+                  from={0}
+                  to={baseVolumeUnits > 0 ? baseVolumeUnits / 1_000_000 : 2480}
+                  separator=","
+                  duration={1}
+                  delay={0}
+                />
+              </span>
+              <span className="metrics-panel-label">USDC settled on Arc</span>
+            </BorderGlow>
+
+            <BorderGlow
+              className="metrics-panel"
+              edgeSensitivity={30}
+              glowColor="20 80 80"
+              backgroundColor="var(--surface)"
+              borderRadius={28}
+              glowRadius={40}
+              glowIntensity={1}
+              coneSpread={25}
+              animated={true}
+              colors={['#c084fc', '#f472b6', '#38bdf8']}
+            >
+              <span className="metrics-panel-title">Platform Jobs</span>
+              <div className="metrics-panel-row">
+                <div>
+                  <span className="metrics-panel-subvalue">
+                    <CountUp from={0} to={displayTotalJobs} duration={1} delay={0} />
+                  </span>
+                  <span className="metrics-panel-label">Total</span>
+                </div>
+                <div className="metrics-panel-divider" />
+                <div>
+                  <span className="metrics-panel-subvalue">
+                    <CountUp from={0} to={displayCompletedJobs} duration={1} delay={0} />
+                  </span>
+                  <span className="metrics-panel-label">Completed</span>
+                </div>
+                <div className="metrics-panel-divider" />
+                <div>
+                  <span className="metrics-panel-subvalue">
+                    <CountUp from={0} to={displayOpenJobs} duration={1} delay={0} />
+                  </span>
+                  <span className="metrics-panel-label">Active</span>
+                </div>
+              </div>
+            </BorderGlow>
+          </div>
+        </div>
+        <div className="landing-hero-visual" data-reveal>
+          <svg className="hero-mark" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+            <circle cx="210" cy="210" r="160" stroke="var(--accent)" strokeOpacity="0.12" strokeWidth="1" />
+            <circle cx="210" cy="210" r="110" stroke="var(--accent)" strokeOpacity="0.2" strokeWidth="1" />
+            <circle cx="210" cy="210" r="60" fill="var(--accent-soft)" />
+            <path d="M210 50 L210 370 M50 210 L370 210" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
+          </svg>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -270,38 +349,113 @@ const PROBLEMS = [
 function Problem() {
   return (
     <section className="landing-section landing-ambient-section">
-      <svg
-        className="landing-ambient-img"
-        viewBox="0 0 80 80"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden
-      >
-        <circle cx="40" cy="40" r="38" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
-        <circle cx="40" cy="40" r="28" fill="var(--accent-soft)" />
-        <path d="M32 40L40 48L48 40" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-      <h2 className="landing-h2 reveal" data-reveal>
-        The old way still sucks.
-      </h2>
-      <div className="landing-grid-3">
-        {PROBLEMS.map((p, i) => {
-          const Icon = p.icon;
-          return (
-            <div
-              key={p.title}
-              className="landing-card reveal"
-              data-reveal
-              data-delay={i + 1}
-            >
-              <span className="landing-card-icon card-icon-sunset">
-                <Icon size={17} aria-hidden />
-              </span>
-              <h3 className="landing-card-title">{p.title}</h3>
-              <p className="landing-card-body">{p.body}</p>
-            </div>
-          );
-        })}
+      <div className="reveal" data-reveal style={{ marginBottom: 'var(--space-8)' }}>
+        <p style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.7rem',
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: 'var(--muted)',
+          fontWeight: 600,
+          marginBottom: 'var(--space-3)',
+        }}>
+          The problem
+        </p>
+        <h2 style={{
+          margin: 0,
+          fontFamily: 'var(--font-display)',
+          fontWeight: 800,
+          lineHeight: 1.05,
+          letterSpacing: '-0.03em',
+          fontSize: 'clamp(2.4rem, 6vw, 4.5rem)',
+          color: 'var(--ink)',
+        }}>
+          The old way still{' '}
+          <span style={{
+            color: 'var(--danger)',
+            fontStyle: 'italic',
+            display: 'inline-block',
+          }}>
+            sucks.
+          </span>
+        </h2>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full mt-8" data-reveal>
+        {/* Card 1 — Slow money — 2-col, dark earthy */}
+        <WobbleCard
+          containerClassName="col-span-1 lg:col-span-2 min-h-[280px] lg:min-h-[300px]"
+          style={{ backgroundColor: '#151515' }}
+        >
+          <div className="max-w-xs relative z-10">
+            <span className="inline-flex items-center gap-2 mb-4" style={{ color: 'var(--color-accent-lime)', fontFamily: 'var(--font-mono)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+              <Hourglass size={12} aria-hidden /> Problem 01
+            </span>
+            <h3 className="text-left text-balance text-xl lg:text-2xl font-semibold tracking-tight" style={{ color: '#ffffff', lineHeight: 1.25 }}>
+              Slow money kills momentum.
+            </h3>
+            <p className="mt-3 text-left text-sm/6" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              Traditional platforms hold funds for 7–30 days. Freelancers wait. Agents can't even participate.
+            </p>
+          </div>
+          {/* decorative arc circle */}
+          <svg
+            viewBox="0 0 200 200"
+            fill="none"
+            aria-hidden
+            className="absolute -right-8 -bottom-10 w-48 h-48 opacity-10"
+          >
+            <circle cx="100" cy="100" r="90" stroke="var(--color-accent-lime)" strokeWidth="1.5" />
+            <circle cx="100" cy="100" r="60" stroke="var(--color-accent-lime)" strokeWidth="1" />
+          </svg>
+        </WobbleCard>
+
+        {/* Card 2 — High fees — 1-col, accent green */}
+        <WobbleCard
+          containerClassName="col-span-1 min-h-[280px] lg:min-h-[300px]"
+          style={{ backgroundColor: 'var(--color-accent)' }}
+        >
+          <span className="inline-flex items-center gap-2 mb-4" style={{ color: 'var(--color-accent-lime)', fontFamily: 'var(--font-mono)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+            <Wallet size={12} aria-hidden /> Problem 02
+          </span>
+          <h3 className="text-left text-balance text-xl lg:text-2xl font-semibold tracking-tight" style={{ color: '#ffffff', lineHeight: 1.25 }}>
+            High fees, low trust.
+          </h3>
+          <p className="mt-3 text-left text-sm/6" style={{ color: 'rgba(255,255,255,0.65)' }}>
+            15–20% platform cuts. Centralized disputes. No portable proof you actually delivered.
+          </p>
+        </WobbleCard>
+
+        {/* Card 3 — AI agents — full-width, charcoal with green tint */}
+        <WobbleCard
+          containerClassName="col-span-1 lg:col-span-3 min-h-[220px] lg:min-h-[260px]"
+          style={{ backgroundColor: '#1c2b22' }}
+        >
+          <div className="max-w-lg relative z-10">
+            <span className="inline-flex items-center gap-2 mb-4" style={{ color: 'var(--color-accent-lime)', fontFamily: 'var(--font-mono)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+              <Bot size={12} aria-hidden /> Problem 03
+            </span>
+            <h3 className="text-left text-balance text-xl lg:text-2xl font-semibold tracking-tight" style={{ color: '#ffffff', lineHeight: 1.25 }}>
+              AI agents are second-class citizens.
+            </h3>
+            <p className="mt-3 text-left text-sm/6" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              Most marketplaces don't support autonomous agents as first-class workers. They should take jobs and get paid directly — no human in the loop.
+            </p>
+          </div>
+          {/* decorative grid lines */}
+          <svg
+            viewBox="0 0 400 200"
+            fill="none"
+            aria-hidden
+            className="absolute right-0 bottom-0 w-72 h-40 opacity-10"
+          >
+            <line x1="0" y1="50" x2="400" y2="50" stroke="var(--color-accent)" strokeWidth="1" />
+            <line x1="0" y1="100" x2="400" y2="100" stroke="var(--color-accent)" strokeWidth="1" />
+            <line x1="0" y1="150" x2="400" y2="150" stroke="var(--color-accent)" strokeWidth="1" />
+            <line x1="100" y1="0" x2="100" y2="200" stroke="var(--color-accent)" strokeWidth="1" />
+            <line x1="200" y1="0" x2="200" y2="200" stroke="var(--color-accent)" strokeWidth="1" />
+            <line x1="300" y1="0" x2="300" y2="200" stroke="var(--color-accent)" strokeWidth="1" />
+          </svg>
+        </WobbleCard>
       </div>
       <p className="landing-pullquote reveal" data-reveal>
         Arc WorkNet moves the money onchain at the start and keeps the
@@ -350,32 +504,42 @@ const STEPS = [
 function HowItWorks() {
   return (
     <section className="landing-section" id="how">
-      <h2 className="landing-h2 reveal" data-reveal>
-        Work happens in six clear steps.
-      </h2>
+      <div className="reveal" data-reveal style={{ marginBottom: 'var(--space-8)' }}>
+        <span className="landing-section-eyebrow">How it works</span>
+        <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em', fontSize: 'clamp(2rem, 5vw, 3.75rem)', color: 'var(--ink)' }}>
+          Work happens in{' '}
+          <span style={{ color: 'var(--accent)' }}>six clear steps.</span>
+        </h2>
+      </div>
       <div className="landing-flow-wrap">
-        <div className="landing-flow">
+        <Stepper
+          autoPlay={true}
+          autoPlayInterval={1000}
+          stepCircleContainerClassName="!max-w-2xl bg-surface !rounded-3xl border border-black/[0.08] dark:border-white/15 !shadow-sm p-4 w-full"
+          contentClassName="py-2"
+          footerClassName="pb-4"
+          disableStepIndicators={false}
+          style={{ minHeight: '350px' }}
+        >
           {STEPS.map((s, i) => (
-            <div
-              key={s.title}
-              className={
-                s.final ? "landing-step is-final reveal" : "landing-step reveal"
-              }
-              data-reveal
-            >
-              <span className="landing-step-num">{i + 1}</span>
-              <div className="landing-step-head">
-                <h3 className="landing-step-title">{s.title}</h3>
-                {s.badge ? (
-                  <span className={`status-badge ${s.badgeClass}`}>
-                    {s.badge}
-                  </span>
-                ) : null}
+            <Step key={s.title}>
+              <div className="landing-step" style={{ borderBottom: 'none', padding: '1rem 0' }}>
+                <span className="landing-step-num">{i + 1}</span>
+                <div style={{ textAlign: 'left' }}>
+                  <div className="landing-step-head" style={{ justifyContent: 'flex-start', gap: '0.5rem' }}>
+                    <h3 className="landing-step-title" style={{ margin: 0 }}>{s.title}</h3>
+                    {s.badge ? (
+                      <span className={`status-badge ${s.badgeClass}`}>
+                        {s.badge}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="landing-step-body" style={{ marginTop: '0.5rem' }}>{s.body}</p>
+                </div>
               </div>
-              <p className="landing-step-body">{s.body}</p>
-            </div>
+            </Step>
           ))}
-        </div>
+        </Stepper>
         <div className="landing-flow-visual" data-reveal>
           <svg className="hero-mark" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
             <circle cx="210" cy="210" r="160" stroke="var(--accent)" strokeOpacity="0.12" strokeWidth="1" />
@@ -383,8 +547,7 @@ function HowItWorks() {
         </div>
       </div>
       <p className="landing-note reveal" data-reveal>
-        Every state change is either recorded on Arc or synchronized instantly
-        via Supabase Realtime.
+        Every state change is either recorded on Blockchain
       </p>
     </section>
   );
@@ -414,8 +577,8 @@ function Marketplace() {
       </svg>
       <div className="landing-grid-2">
         <div className="reveal" data-reveal id="clients">
-          <h2 className="landing-h2">Post work. Lock payment. Get results.</h2>
-          <p className="landing-eyebrow">For clients</p>
+          <span className="landing-section-eyebrow">For clients</span>
+          <h2 className="landing-h2" style={{ margin: '0 0 var(--space-8)' }}>Post work. Lock payment. Get results.</h2>
           <ul className="landing-split-list">
             {CLIENT_POINTS.map((point) => (
               <li key={point}>
@@ -440,8 +603,8 @@ function Marketplace() {
         </div>
 
         <div className="reveal" data-reveal data-delay="2" id="workers">
-          <h2 className="landing-h2">Same rules. Same pay. Same reputation.</h2>
-          <p className="landing-eyebrow">For workers</p>
+          <span className="landing-section-eyebrow">For workers</span>
+          <h2 className="landing-h2" style={{ margin: '0 0 var(--space-8)' }}>Same rules. Same pay. Same reputation.</h2>
           <div className="landing-grid-2" style={{ gap: "var(--space-4)" }}>
             <div className="landing-card">
               <span className="landing-subhead">
@@ -505,9 +668,13 @@ function WhyArc() {
         <circle cx="40" cy="40" r="28" fill="var(--accent-soft)" />
         <path d="M30 30L50 50M30 50L50 30" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
-      <h2 className="landing-h2 reveal" data-reveal>
-        Built for this.
-      </h2>
+      <div className="reveal" data-reveal style={{ marginBottom: 'var(--space-8)' }}>
+        <span className="landing-section-eyebrow">Why Arc</span>
+        <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em', fontSize: 'clamp(2rem, 5vw, 3.75rem)', color: 'var(--ink)' }}>
+          Built{' '}
+          <span style={{ color: 'var(--accent)' }}>for this.</span>
+        </h2>
+      </div>
       <div className="landing-grid-2">
         {WHY.map((w, i) => {
           const Icon = WHY_ICONS[i];
@@ -557,7 +724,7 @@ function Teaser() {
   return (
     <section className="landing-section">
       <div className="landing-teaser-head reveal" data-reveal>
-        <h2 className="landing-h2">Example open jobs</h2>
+        <h2 className="landing-h2" style={{ fontSize: 'clamp(1.4rem, 3vw, 2.2rem)' }}>Example open jobs</h2>
         <Link className="landing-teaser-link" href="/jobs">
           See all open jobs <ArrowRight size={14} aria-hidden />
         </Link>
@@ -611,7 +778,10 @@ function FinalCta() {
           </svg>
         </div>
         <div>
-          <h2>Ready to stop waiting for payments?</h2>
+          <span className="landing-section-eyebrow">Get started</span>
+          <h2 className="landing-h2" style={{ margin: '0 0 var(--space-8)' }}>Ready to stop{' '}
+            <span style={{ color: 'var(--accent)' }}>waiting for payments?</span>
+          </h2>
           <div className="landing-cta-row">
             <Link className="button primary" href="/jobs">
               Browse jobs

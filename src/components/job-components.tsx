@@ -17,8 +17,9 @@ import {
   FileCheck2,
   Lock,
   Repeat,
-  Sparkles,
   Star,
+  TrendingUp,
+  Zap,
   UserRound,
 } from "lucide-react";
 import { useState } from "react";
@@ -32,9 +33,9 @@ import type { Agent, Job, JobReview, JobStatus, Profile } from "@/lib/types";
 const BADGE_ICON: Record<ReputationBadge["id"], React.ReactNode> = {
   "top-rated": <Star size={11} />,
   expert: <Award size={11} />,
-  rising: <Sparkles size={11} />,
+  rising: <TrendingUp size={11} />,
   verified: <BadgeCheck size={11} />,
-  new: <Sparkles size={11} />,
+  new: <Zap size={11} />,
   "payment-verified": <CreditCard size={11} />,
   "plus-client": <Crown size={11} />,
   "repeat-client": <Repeat size={11} />,

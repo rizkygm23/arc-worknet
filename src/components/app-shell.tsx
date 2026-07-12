@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import clsx from "clsx";
-import { Activity, AlertTriangle, Bell, Briefcase, Bot, Check, Copy, ExternalLink, FileText, LayoutDashboard, LogOut, Menu, ShieldCheck, User, Users, Wallet, X } from "lucide-react";
+import { Activity, AlertTriangle, Bell, Briefcase, Bot, Check, Copy, ExternalLink, FileText, LayoutDashboard, LogOut, ShieldCheck, User, Users, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -16,6 +16,9 @@ import { needsOnboarding, readOnboardingDismissed } from "@/lib/onboarding";
 import { readTourDone } from "@/lib/tour";
 import { TourOverlay } from "@/components/tour";
 import { AddFundsButton } from "@/components/add-funds";
+import CountUp from "./CountUp";
+import { Sidebar as AceternitySidebar, SidebarBody, SidebarLink, SidebarGroupTitle, useSidebar } from "@/components/ui/sidebar";
+import { motion } from "motion/react";
 
 const ARC_EXPLORER_URL = process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app";
 
@@ -362,151 +365,102 @@ function NotificationsBell() {
   );
 }
 
-function Sidebar() {
-  const pathname = usePathname();
-  const filteredNavGroups = useFilteredNavGroups();
-
+function SidebarLogo() {
+  const { open, animate } = useSidebar();
   return (
-    <aside className="sidebar">
-      <div className="sidebar-head">
-        <Link href="/jobs" className="brand">
-          <span className="brand-mark" aria-hidden style={{ background: "transparent", padding: 0 }}>
-            <img
-              src="/img/worknet_logo.png"
-              alt="Logo"
-              style={{ width: "100%", height: "100%", objectFit: "contain" }}
-            />
-          </span>
-          <div className="brand-text">
-            <strong>Arc WorkNet</strong>
-            <span>Paid outcomes on Arc</span>
-          </div>
-        </Link>
-        <NotificationsBell />
-      </div>
-
-      <nav className="nav" aria-label="Main navigation" data-tour="nav">
-        {filteredNavGroups.map((group: any) => (
-          <div key={group.title} className="nav-group">
-            <div className="nav-group-title">{group.title}</div>
-            <div className="nav-group-items">
-              {group.items.map((item: any) => {
-                const active =
-                  pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
-                const Icon = item.Icon;
-                return (
-                  <Link key={item.href} href={item.href} className={clsx("nav-link", active && "active")}>
-                    <Icon size={16} aria-hidden strokeWidth={1.75} />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </nav>
-
-      <div className="sidebar-footer" data-tour="wallet">
-        <WalletPanel />
-      </div>
-    </aside>
+    <Link href="/jobs" className="flex items-center gap-2 py-1 no-underline" style={{ color: 'var(--ink)' }}>
+      <img
+        src="/img/worknet_logo.png"
+        alt="Logo"
+        className="shrink-0"
+        style={{ width: 28, height: 28, objectFit: 'contain' }}
+      />
+      <motion.div
+        animate={{
+          display: animate ? (open ? 'flex' : 'none') : 'flex',
+          opacity: animate ? (open ? 1 : 0) : 1,
+        }}
+        className="flex flex-col min-w-0"
+      >
+        <strong style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-md)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--ink)', whiteSpace: 'nowrap' }}>Arc WorkNet</strong>
+        <span style={{ marginTop: 2, color: 'var(--muted)', fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Paid outcomes on Arc</span>
+      </motion.div>
+    </Link>
   );
 }
 
-function MobileNav() {
+function SidebarLogoIcon() {
+  return (
+    <Link href="/jobs" className="flex items-center gap-2 py-1 no-underline">
+      <img
+        src="/img/worknet_logo.png"
+        alt="Logo"
+        className="shrink-0"
+        style={{ width: 28, height: 28, objectFit: 'contain' }}
+      />
+    </Link>
+  );
+}
+
+function SidebarWalletCompact() {
+  const { open, animate } = useSidebar();
+  return (
+    <motion.div
+      animate={{
+        opacity: animate ? (open ? 1 : 0) : 1,
+        display: animate ? (open ? 'block' : 'none') : 'block',
+      }}
+      style={{ borderTop: 'var(--rule-thin) solid var(--hairline)', paddingTop: 'var(--space-4)' }}
+    >
+      <WalletPanel />
+    </motion.div>
+  );
+}
+
+function AppSidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const filteredNavGroups = useFilteredNavGroups();
 
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    if (!open) return;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
-
   return (
-    <>
-      <header className="mobile-bar">
-        <Link href="/jobs" className="mobile-brand" aria-label="Arc WorkNet home" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <img
-            src="/img/worknet_logo.png"
-            alt="Logo"
-            style={{ height: 24, width: "auto", objectFit: "contain" }}
-          />
-          Arc WorkNet
-        </Link>
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => setOpen(true)}
-          aria-label="Open menu"
-        >
-          <Menu size={18} />
-        </button>
-      </header>
-
-      {open ? (
-        <div className="mobile-drawer" role="dialog" aria-modal="true" aria-label="Navigation">
-          <div className="mobile-drawer-backdrop" onClick={() => setOpen(false)} />
-          <div className="mobile-drawer-panel">
-            <div className="mobile-drawer-head">
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <img
-                  src="/img/worknet_logo.png"
-                  alt="Logo"
-                  style={{ height: 24, width: "auto", objectFit: "contain" }}
-                />
-                <strong>Arc WorkNet</strong>
-              </div>
-              <div className="mobile-drawer-head-actions">
-                <NotificationsBell />
-                <button
-                  type="button"
-                  className="icon-button"
-                  onClick={() => setOpen(false)}
-                  aria-label="Close menu"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-            <nav className="mobile-drawer-nav" aria-label="Main navigation">
-              {filteredNavGroups.map((group: any) => (
-                <div key={group.title} className="nav-group">
-                  <div className="nav-group-title">{group.title}</div>
-                  <div className="nav-group-items">
-                    {group.items.map((item: any) => {
-                      const active =
-                        pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
-                      const Icon = item.Icon;
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className={clsx("nav-link", active && "active")}
-                        >
-                          <Icon size={18} aria-hidden strokeWidth={1.75} />
-                          <span>{item.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </nav>
-            <div className="mobile-drawer-foot">
-              <WalletPanel />
-            </div>
+    <AceternitySidebar open={open} setOpen={setOpen}>
+      <SidebarBody className="justify-between gap-6" style={{ position: 'sticky', top: 0, height: '100dvh' }}>
+        <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
+          <div className="flex items-center justify-between" style={{ paddingBottom: 'var(--space-4)', borderBottom: 'var(--rule-thin) solid var(--hairline)' }}>
+            {open ? <SidebarLogo /> : <SidebarLogoIcon />}
+            {open ? <NotificationsBell /> : null}
           </div>
+
+          <nav className="mt-4 flex flex-col gap-1" aria-label="Main navigation" data-tour="nav">
+            {filteredNavGroups.map((group: any) => (
+              <div key={group.title}>
+                <SidebarGroupTitle>{group.title}</SidebarGroupTitle>
+                {group.items.map((item: any) => {
+                  const active =
+                    pathname === item.href || (item.href !== "/jobs" && pathname.startsWith(item.href));
+                  const Icon = item.Icon;
+                  return (
+                    <SidebarLink
+                      key={item.href}
+                      active={active}
+                      link={{
+                        label: item.label,
+                        href: item.href,
+                        icon: <Icon size={18} aria-hidden strokeWidth={1.75} style={{ flexShrink: 0, color: active ? 'var(--accent)' : 'var(--muted)' }} />,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
         </div>
-      ) : null}
-    </>
+
+        <div data-tour="wallet">
+          <SidebarWalletCompact />
+        </div>
+      </SidebarBody>
+    </AceternitySidebar>
   );
 }
 
@@ -621,8 +575,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <OnboardingGuard />
       <RoleGuard />
-      <Sidebar />
-      <MobileNav />
+      <AppSidebar />
       <main className="content">
         {clockError ? (
           <div className="clock-warning-banner" role="alert">
@@ -663,6 +616,37 @@ export function PageHeader({
   );
 }
 
+function renderCountUpValue(value: string) {
+  const match = value.match(/^([^0-9.]*)([0-9,.]+)(.*)$/);
+  if (!match) return <span>{value}</span>;
+
+  const prefix = match[1];
+  const numStr = match[2].replace(/,/g, '');
+  const suffix = match[3];
+
+  const num = parseFloat(numStr);
+  if (isNaN(num)) return <span>{value}</span>;
+
+  const decimalsMatch = numStr.match(/\.([0-9]+)$/);
+  const decimals = decimalsMatch ? decimalsMatch[1].length : 0;
+
+  return (
+    <>
+      {prefix}
+      <CountUp
+        from={0}
+        to={num}
+        separator=","
+        direction="up"
+        duration={1}
+        delay={0}
+        decimals={decimals}
+      />
+      {suffix}
+    </>
+  );
+}
+
 export function StatCard({
   label,
   value,
@@ -675,7 +659,7 @@ export function StatCard({
   return (
     <div className="stat">
       <span>{label}</span>
-      <strong>{value}</strong>
+      <strong>{renderCountUpValue(value)}</strong>
       {icon ? <div className="muted small" style={{ marginTop: 10 }}>{icon}</div> : null}
     </div>
   );
