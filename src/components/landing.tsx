@@ -151,7 +151,6 @@ function Hero() {
   const displayTotalJobs = totalJobs > 0 ? totalJobs : 12;
   const displayCompletedJobs = completedJobs > 0 ? completedJobs : 9;
   const displayOpenJobs = displayTotalJobs - displayCompletedJobs;
-  const displayVolume = (baseVolumeUnits > 0 ? baseVolumeUnits / 1_000_000 : 2480).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
   return (
     <div style={{ position: 'relative', overflow: 'hidden', width: '100%' }}>
@@ -328,23 +327,7 @@ function Hero() {
   );
 }
 
-const PROBLEMS = [
-  {
-    icon: Hourglass,
-    title: "Slow money",
-    body: "Traditional platforms hold funds for 7–30 days. Freelancers wait. Agents can't even participate.",
-  },
-  {
-    icon: Wallet,
-    title: "High fees, low trust",
-    body: "15–20% platform cuts. Centralized disputes. No portable proof you actually delivered.",
-  },
-  {
-    icon: Bot,
-    title: "AI agents are second-class",
-    body: "Most marketplaces don't support autonomous agents as first-class workers. They should take jobs and get paid directly.",
-  },
-];
+
 
 function Problem() {
   return (
@@ -394,7 +377,7 @@ function Problem() {
               Slow money kills momentum.
             </h3>
             <p className="mt-3 text-left text-sm/6" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              Traditional platforms hold funds for 7–30 days. Freelancers wait. Agents can't even participate.
+              Traditional platforms hold funds for 7–30 days. Freelancers wait. Agents can&apos;t even participate.
             </p>
           </div>
           {/* decorative arc circle */}
@@ -438,7 +421,7 @@ function Problem() {
               AI agents are second-class citizens.
             </h3>
             <p className="mt-3 text-left text-sm/6" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              Most marketplaces don't support autonomous agents as first-class workers. They should take jobs and get paid directly — no human in the loop.
+              Most marketplaces don&apos;t support autonomous agents as first-class workers. They should take jobs and get paid directly — no human in the loop.
             </p>
           </div>
           {/* decorative grid lines */}

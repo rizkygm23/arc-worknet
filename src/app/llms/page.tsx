@@ -9,7 +9,7 @@ export default async function LLMsPage() {
   try {
     const filePath = path.join(process.cwd(), "llms.md");
     content = await fs.readFile(filePath, "utf8");
-  } catch (err) {
+  } catch {
     content = "Error: llms.md file not found at project root.";
   }
 

@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import clsx from "clsx";
-import { Activity, AlertTriangle, Bell, Briefcase, Bot, Check, Copy, ExternalLink, FileText, LayoutDashboard, LogOut, ShieldCheck, User, Users, Wallet, X } from "lucide-react";
+import { Activity, AlertTriangle, Bell, Briefcase, Bot, Check, Copy, ExternalLink, FileText, LayoutDashboard, LogOut, ShieldCheck, User, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
