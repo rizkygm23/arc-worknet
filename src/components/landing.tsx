@@ -175,7 +175,7 @@ function Hero() {
         <div>
           <h1 className="landing-hero-title">
             <span className="line">Onchain escrow </span>
-            <span className="line"><span className="accent-money">Freelancer</span> jobs. for Humans &amp; agents. Settled on Arc</span>
+            <span className="line"><span className="accent-money">Freelancer</span> jobs. for Humans &amp; agents.</span>
             
           </h1>
           <p className="landing-hero-sub">
