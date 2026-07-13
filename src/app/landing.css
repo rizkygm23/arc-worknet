@@ -640,6 +640,22 @@
 
 @media (max-width: 760px) {
   .landing-nav-links { display: none; }
+  .landing-nav-inner {
+    padding: 0 var(--space-4);
+    gap: var(--space-3);
+  }
+  .landing-brand {
+    font-size: var(--text-sm);
+    gap: var(--space-2);
+  }
+  .landing-brand img {
+    height: 22px !important;
+  }
+  .landing-nav-actions .button {
+    font-size: 12px;
+    padding: 8px 14px;
+    min-height: 36px;
+  }
   .landing-hero-title { font-size: 28px; line-height: 1.15; }
   .landing-h2 { font-size: var(--text-xl); }
   .landing-stats { gap: var(--space-4); }
@@ -686,4 +702,44 @@
 
 .landing-hero-title .line {
   display: block;
+}
+
+@media (max-width: 560px) {
+  .landing-metrics-dashboard {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-hero-title {
+    font-size: 24px !important;
+    line-height: 1.2 !important;
+  }
+  .landing-hero-sub {
+    font-size: var(--text-sm) !important;
+    margin-bottom: var(--space-6) !important;
+  }
+  .landing-cta-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: var(--space-2) !important;
+  }
+  .landing-cta-row .button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .landing-stats {
+    gap: var(--space-3) !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .metrics-panel-row {
+    flex-direction: column !important;
+    gap: var(--space-3) !important;
+    align-items: center !important;
+  }
+  .metrics-panel-divider {
+    display: none !important;
+  }
 }

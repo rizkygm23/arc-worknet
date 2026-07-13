@@ -70,11 +70,23 @@ export const Sidebar = ({
   );
 };
 
-export const SidebarBody = (props: React.ComponentProps<typeof motion.div>) => {
+export const SidebarBody = ({
+  children,
+  brand,
+  actions,
+  className,
+  style,
+  ...props
+}: React.ComponentProps<typeof motion.div> & {
+  brand?: React.ReactNode;
+  actions?: React.ReactNode;
+}) => {
   return (
     <>
-      <DesktopSidebar {...props} />
-      <MobileSidebar {...(props as React.ComponentProps<"div">)} />
+      <DesktopSidebar className={className} style={style} {...props}>{children as React.ReactNode}</DesktopSidebar>
+      <MobileSidebar brand={brand} actions={actions} {...(props as React.ComponentProps<"div">)}>
+        {children as React.ReactNode}
+      </MobileSidebar>
     </>
   );
 };
@@ -82,6 +94,7 @@ export const SidebarBody = (props: React.ComponentProps<typeof motion.div>) => {
 export const DesktopSidebar = ({
   className,
   children,
+  style,
   ...props
 }: React.ComponentProps<typeof motion.div>) => {
   const { open, setOpen, animate } = useSidebar();
@@ -95,6 +108,11 @@ export const DesktopSidebar = ({
         style={{
           background: "var(--bg)",
           borderRight: "var(--rule-thin) solid var(--hairline)",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          zIndex: 40,
+          ...style,
         }}
         animate={{
           width: animate ? (open ? "300px" : "60px") : "300px",
@@ -112,53 +130,70 @@ export const DesktopSidebar = ({
 export const MobileSidebar = ({
   className,
   children,
+  brand,
+  actions,
   ...props
-}: React.ComponentProps<"div">) => {
+}: React.ComponentProps<"div"> & {
+  brand?: React.ReactNode;
+  actions?: React.ReactNode;
+}) => {
   const { open, setOpen } = useSidebar();
   return (
     <>
       <div
         className={cn(
-          "h-10 px-4 py-4 flex flex-row md:hidden items-center justify-between w-full"
+          "mobile-bar flex flex-row md:hidden items-center justify-between w-full",
+          className
         )}
-        style={{ background: "var(--bg)" }}
         {...props}
       >
-        <div className="flex justify-end z-20 w-full">
-          <IconMenu2
-            className="cursor-pointer"
-            style={{ color: "var(--ink)" }}
-            onClick={() => setOpen(!open)}
-          />
+        <div className="flex items-center gap-2">
+          {brand}
         </div>
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              initial={{ x: "-100%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "-100%", opacity: 0 }}
-              transition={{
-                duration: 0.3,
-                ease: "easeInOut",
-              }}
-              className={cn(
-                "fixed h-full w-full inset-0 p-10 z-[100] flex flex-col justify-between",
-                className
-              )}
-              style={{ background: "var(--bg)", color: "var(--ink)" }}
-            >
-              <div
-                className="absolute right-10 top-10 z-50 cursor-pointer"
-                style={{ color: "var(--ink)" }}
-                onClick={() => setOpen(!open)}
-              >
-                <IconX />
-              </div>
-              {children}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <div className="flex items-center gap-4 z-20">
+          {actions}
+          <button
+            type="button"
+            className="cursor-pointer p-1"
+            style={{ background: "transparent", border: "none", color: "var(--ink)", display: "flex", alignItems: "center" }}
+            onClick={() => setOpen(!open)}
+            aria-label="Open menu"
+            id="mobile-menu-trigger"
+          >
+            <IconMenu2 />
+          </button>
+        </div>
       </div>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ x: "-100%", opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: "-100%", opacity: 0 }}
+            transition={{
+              duration: 0.3,
+              ease: "easeInOut",
+            }}
+            className={cn(
+              "fixed h-full w-full inset-0 p-10 z-[100] flex flex-col justify-between md:hidden",
+              className
+            )}
+            style={{ background: "var(--bg)", color: "var(--ink)" }}
+          >
+            <button
+              type="button"
+              className="absolute right-10 top-10 z-50 cursor-pointer p-1"
+              style={{ background: "transparent", border: "none", color: "var(--ink)", display: "flex", alignItems: "center" }}
+              onClick={() => setOpen(!open)}
+              aria-label="Close menu"
+              id="mobile-menu-close"
+            >
+              <IconX />
+            </button>
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

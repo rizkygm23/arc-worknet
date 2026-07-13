@@ -402,6 +402,20 @@ function SidebarLogoIcon() {
   );
 }
 
+function MobileSidebarLogo() {
+  return (
+    <Link href="/jobs" className="flex items-center gap-2 py-1 no-underline" style={{ color: 'var(--ink)' }}>
+      <img
+        src="/img/worknet_logo.png"
+        alt="Logo"
+        className="shrink-0"
+        style={{ width: 24, height: 24, objectFit: 'contain' }}
+      />
+      <strong style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-sm)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--ink)', whiteSpace: 'nowrap' }}>Arc WorkNet</strong>
+    </Link>
+  );
+}
+
 function SidebarWalletCompact() {
   const { open, animate } = useSidebar();
   return (
@@ -424,7 +438,11 @@ function AppSidebar() {
 
   return (
     <AceternitySidebar open={open} setOpen={setOpen}>
-      <SidebarBody className="justify-between gap-6" style={{ position: 'sticky', top: 0, height: '100dvh' }}>
+      <SidebarBody
+        className="justify-between gap-6"
+        brand={<MobileSidebarLogo />}
+        actions={<NotificationsBell />}
+      >
         <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
           <div className="flex items-center justify-between" style={{ paddingBottom: 'var(--space-4)', borderBottom: 'var(--rule-thin) solid var(--hairline)' }}>
             {open ? <SidebarLogo /> : <SidebarLogoIcon />}
