@@ -138,17 +138,19 @@ export async function signCircleEvmTransaction(input: {
     },
     body: JSON.stringify({
       walletId: input.walletId,
-      blockchain: env.CIRCLE_WALLET_BLOCKCHAIN,
       entitySecretCiphertext: input.entitySecretCiphertext,
       transaction: JSON.stringify(input.transaction),
     }),
     cache: "no-store",
   });
 
-  const payload = (await response.json().catch(() => ({}))) as CircleSignTransactionResponse;
+  const payload = (await response.json().catch(() => ({}))) as CircleSignTransactionResponse & {
+    code?: number;
+  };
   const signedTransaction = payload.data?.signedTransaction;
   if (!response.ok || !signedTransaction) {
-    throw new Error(payload.message || "Circle transaction signing failed.");
+    const suffix = payload.code ? ` (code ${payload.code})` : "";
+    throw new Error(`${payload.message || "Circle transaction signing failed."}${suffix}`);
   }
 
   return {
