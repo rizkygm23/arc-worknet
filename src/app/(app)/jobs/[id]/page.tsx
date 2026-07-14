@@ -626,6 +626,7 @@ export default function JobDetailPage() {
               externalUrl={latestSubmission?.deliverableUrl}
               notes={latestSubmission?.notes}
               hash={latestSubmission?.deliverableHashBytes32}
+              hasUploadedFile={latestSubmission?.hasUploadedFile}
             />
             {evaluation ? (
               <div className="panel" style={{ marginTop: 14, boxShadow: "none" }}>

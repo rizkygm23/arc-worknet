@@ -139,6 +139,7 @@ export type JobSubmission = {
   deliverableUrl?: string;
   deliverableSha256?: string;
   deliverableStoragePath?: string;
+  hasUploadedFile?: boolean;
   deliverableMimeType?: string;
   deliverableFileName?: string;
   deliverableSizeBytes?: number;

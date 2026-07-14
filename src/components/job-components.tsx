@@ -217,6 +217,7 @@ export function DeliverableViewer({
   externalUrl,
   notes,
   hash,
+  hasUploadedFile,
 }: {
   jobId?: string;
   submissionId?: string;
@@ -229,8 +230,9 @@ export function DeliverableViewer({
   externalUrl?: string;
   notes?: string;
   hash?: string;
+  hasUploadedFile?: boolean;
 }) {
-  const hasFile = Boolean(jobId && submissionId && (mime || fileName));
+  const hasFile = Boolean(jobId && submissionId && hasUploadedFile && (mime || fileName));
   const isImage = (mime ?? "").startsWith("image/");
   const canSeeFull = Boolean(isApproved || isProvider);
   const [downloading, setDownloading] = useState(false);

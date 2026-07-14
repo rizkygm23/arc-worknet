@@ -98,6 +98,7 @@ export default function ReviewJobPage() {
               externalUrl={submission?.deliverableUrl}
               notes={submission?.notes}
               hash={submission?.deliverableHashBytes32}
+              hasUploadedFile={submission?.hasUploadedFile}
             />
           </div>
 

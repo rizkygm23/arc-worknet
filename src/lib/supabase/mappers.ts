@@ -190,6 +190,7 @@ export function mapSubmission(row: Tables["job_submissions_arcworker"]["Row"]): 
     notes: decryptText(row.notes),
     deliverableUrl: decryptText(row.deliverable_url) || undefined,
     deliverableSha256: nullable(row.deliverable_sha256),
+    hasUploadedFile: Boolean(row.deliverable_storage_path),
     // NOTE: deliverable_storage_path is intentionally NOT mapped to the client.
     // File access is always brokered through the gated /deliverable endpoint so
     // a locked deliverable can never be reached directly from client state.
