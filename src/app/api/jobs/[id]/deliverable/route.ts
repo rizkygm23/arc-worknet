@@ -97,6 +97,9 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "No uploaded file for this submission." }, { status: 404 });
   }
 
+  const rawPath = submission.deliverable_storage_path;
+  const storagePath = rawPath.startsWith("deliverables/") ? rawPath.slice("deliverables/".length) : rawPath;
+
   const payload = decryptJson(jsonRecord(submission.deliverable_payload));
   const meta = (payload?.fileMeta ?? {}) as FileMeta;
   const mimeType = meta.mimeType ?? "application/octet-stream";
@@ -114,7 +117,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
     const { data: signed, error: signError } = await supabase.storage
       .from(DELIVERABLES_BUCKET)
-      .createSignedUrl(submission.deliverable_storage_path, SIGNED_URL_TTL_SECONDS, {
+      .createSignedUrl(storagePath, SIGNED_URL_TTL_SECONDS, {
         download: meta.fileName ?? true,
       });
     if (signError || !signed) {
@@ -132,7 +135,7 @@ export async function GET(request: Request, context: RouteContext) {
   if (isProvider || isApproved) {
     const { data: signed } = await supabase.storage
       .from(DELIVERABLES_BUCKET)
-      .createSignedUrl(submission.deliverable_storage_path, SIGNED_URL_TTL_SECONDS);
+      .createSignedUrl(storagePath, SIGNED_URL_TTL_SECONDS);
     if (signed) {
       return NextResponse.json({ url: signed.signedUrl, mimeType, locked: false });
     }
@@ -152,7 +155,7 @@ export async function GET(request: Request, context: RouteContext) {
   // Image, not approved: stream a watermarked, downscaled JPEG.
   const { data: fileBlob, error: dlError } = await supabase.storage
     .from(DELIVERABLES_BUCKET)
-    .download(submission.deliverable_storage_path);
+    .download(storagePath);
   if (dlError || !fileBlob) {
     return NextResponse.json(
       { error: `Could not read file: ${dlError?.message ?? "unknown"}` },
