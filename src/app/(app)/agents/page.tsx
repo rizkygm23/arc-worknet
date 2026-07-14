@@ -35,6 +35,8 @@ export default function AgentsPage() {
     }
   }
 
+  const myAgents = state.agents.filter((agent) => agent.ownerProfileId === activeProfile?.id);
+
   return (
     <>
       <PageHeader
@@ -50,56 +52,74 @@ export default function AgentsPage() {
         }
       />
 
-      <section className="grid two">
-        {state.agents.map((agent) => {
-          const owner = getProfile(agent.ownerProfileId);
-          return (
-            <div className="panel" key={agent.id}>
-              <div className="panel-header">
-                <div className="profile-strip">
-                  <span className="avatar">
-                    <Bot size={18} />
-                  </span>
-                  <div>
-                    <h2 className="panel-title">{agent.name}</h2>
-                    <p className="small muted" style={{ margin: "4px 0 0" }}>
-                      {owner?.displayName}
-                    </p>
-                    <AgentReputationBadges agent={agent} />
+      {myAgents.length === 0 ? (
+        <div className="panel" style={{ textAlign: "center", padding: "48px 24px", display: "grid", gap: 16, placeItems: "center" }}>
+          <div className="avatar" style={{ width: 48, height: 48, background: "var(--accent-alpha)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%" }}>
+            <Bot size={24} />
+          </div>
+          <div>
+            <h3 className="panel-title" style={{ fontSize: "1.1rem", marginBottom: 6 }}>No agents registered</h3>
+            <p className="muted small" style={{ maxWidth: 360, margin: "0 auto" }}>
+              You haven&apos;t registered any AI agents yet. Register an agent to enable autonomous job application and execution on your behalf.
+            </p>
+          </div>
+          <Link className="button primary small" href="/settings/agents/new">
+            <Plus size={14} />
+            Register your first agent
+          </Link>
+        </div>
+      ) : (
+        <section className="grid two">
+          {myAgents.map((agent) => {
+            const owner = getProfile(agent.ownerProfileId);
+            return (
+              <div className="panel" key={agent.id}>
+                <div className="panel-header">
+                  <div className="profile-strip">
+                    <span className="avatar">
+                      <Bot size={18} />
+                    </span>
+                    <div>
+                      <h2 className="panel-title">{agent.name}</h2>
+                      <p className="small muted" style={{ margin: "4px 0 0" }}>
+                        {owner?.displayName}
+                      </p>
+                      <AgentReputationBadges agent={agent} />
+                    </div>
                   </div>
+                  <span className="badge">{agent.reputationScore} rep</span>
                 </div>
-                <span className="badge">{agent.reputationScore} rep</span>
+                <p className="muted">{agent.description}</p>
+                <div className="tags">
+                  {agent.capabilities.map((capability) => (
+                    <span className="tag" key={capability}>
+                      {capability}
+                    </span>
+                  ))}
+                </div>
+                
+                <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <JobStatusBadge status={agent.jobsCompleted > 0 ? "completed" : "open"} />
+                  {agent.ownerProfileId === activeProfile?.id && (
+                    <button 
+                      className="button ghost small" 
+                      style={{ gap: 6, display: "flex", alignItems: "center" }}
+                      onClick={() => {
+                        setActiveModalAgent(agent);
+                        setToken(null);
+                        setError(null);
+                      }}
+                    >
+                      <Sliders size={13} />
+                      Connect
+                    </button>
+                  )}
+                </div>
               </div>
-              <p className="muted">{agent.description}</p>
-              <div className="tags">
-                {agent.capabilities.map((capability) => (
-                  <span className="tag" key={capability}>
-                    {capability}
-                  </span>
-                ))}
-              </div>
-              
-              <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <JobStatusBadge status={agent.jobsCompleted > 0 ? "completed" : "open"} />
-                {agent.ownerProfileId === activeProfile?.id && (
-                  <button 
-                    className="button ghost small" 
-                    style={{ gap: 6, display: "flex", alignItems: "center" }}
-                    onClick={() => {
-                      setActiveModalAgent(agent);
-                      setToken(null);
-                      setError(null);
-                    }}
-                  >
-                    <Sliders size={13} />
-                    Connect
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </section>
+            );
+          })}
+        </section>
+      )}
 
       {/* Connection Modal */}
       {activeModalAgent && (
