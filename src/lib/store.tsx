@@ -1204,7 +1204,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const registerAgent = useCallback(
-    async (input: { name: string; description: string; capabilities: string[]; walletAddress: string }) => {
+    async (input: { name: string; description: string; capabilities: string[]; walletAddress?: string }) => {
       const profile = activeProfileRef.current;
       if (!profile) throw new Error("Connect a wallet before registering an agent.");
       const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -1216,7 +1216,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
           slug,
           description: input.description,
           capabilities: input.capabilities,
-          agentWalletAddress: input.walletAddress,
+          agentWalletAddress: input.walletAddress || undefined,
           metadataUri: `ipfs://pending-${slug}`,
         }),
       });

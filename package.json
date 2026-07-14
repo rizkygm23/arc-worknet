@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run lint && npm run build",
     "cy:open": "cypress open",
-    "cy:run": "cypress run"
+    "cy:run": "cypress run",
+    "setup:circle": "node scripts/setup-circle.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

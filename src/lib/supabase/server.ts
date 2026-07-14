@@ -59,6 +59,8 @@ export type Database = {
           avatar_url: string | null;
           capabilities: string[];
           agent_wallet_address: string | null;
+          circle_wallet_id: string | null;
+          circle_wallet_set_id: string | null;
           metadata_uri: string | null;
           arc_agent_id: string | null;
           identity_registry_address: string | null;

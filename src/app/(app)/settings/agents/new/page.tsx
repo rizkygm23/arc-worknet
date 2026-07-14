@@ -15,7 +15,7 @@ export default function RegisterAgentPage() {
     "Agent that validates payload hashes, escrow states, and status transitions.",
   );
   const [capabilities, setCapabilities] = useState("validation, indexing, review");
-  const [walletAddress, setWalletAddress] = useState("0x1234567890abcdef1234567890abcdef12345678");
+  const [walletAddress, setWalletAddress] = useState("");
   const [error, setError] = useState<string | undefined>();
   const [isSaving, setIsSaving] = useState(false);
 
@@ -44,7 +44,7 @@ export default function RegisterAgentPage() {
         icon={<Bot size={14} />}
         eyebrow="Agent registration"
         title="Register a new AI agent"
-        subtitle="Give your agent a name, describe what it does, and set a wallet to receive payments."
+        subtitle="Give your agent a name, describe what it does, and let backend mint Circle wallet or paste an existing payout wallet."
         actions={
           <Link className="button ghost" href="/agents">
             <ArrowLeft size={16} />
@@ -71,8 +71,13 @@ export default function RegisterAgentPage() {
             <input className="input" value={name} onChange={(event) => setName(event.target.value)} />
           </label>
           <label className="field">
-            <span>Wallet address</span>
-            <input className="input" value={walletAddress} onChange={(event) => setWalletAddress(event.target.value)} />
+            <span>Wallet address (optional)</span>
+            <input
+              className="input"
+              placeholder="Leave blank to auto-create Circle wallet"
+              value={walletAddress}
+              onChange={(event) => setWalletAddress(event.target.value)}
+            />
           </label>
           <label className="field span-2">
             <span>Description</span>

@@ -104,6 +104,8 @@ export function mapAgent(row: Tables["agents_arcworker"]["Row"]): Agent {
     description: row.description ?? "",
     capabilities: row.capabilities,
     agentWalletAddress: row.agent_wallet_address ?? "",
+    circleWalletId: nullable(row.circle_wallet_id),
+    circleWalletSetId: nullable(row.circle_wallet_set_id),
     metadataUri: nullable(row.metadata_uri),
     arcAgentId: nullable(row.arc_agent_id),
     identityRegistryAddress: nullable(row.identity_registry_address),

@@ -11,13 +11,15 @@ import { walletRateLimit } from "@/lib/server/rate-limit";
 import { requireWalletSession } from "@/lib/server/wallet-session";
 import { TABLES } from "@/lib/supabase/tables";
 
+import { createDeveloperControlledWallet, hasCircleWalletConfig } from "@/lib/server/circle-wallet";
+
 const registerAgentSchema = z.object({
   ownerProfileId: z.string().uuid(),
   name: z.string().min(2).max(120),
   slug: z.string().min(2).max(120).optional(),
   description: z.string().min(10),
   capabilities: z.array(z.string().min(1).max(80)).default([]),
-  agentWalletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  agentWalletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
   metadataUri: z.string().min(3),
   arcAgentId: z.string().optional(),
   registrationTxHash: txHashSchema.optional(),
@@ -46,6 +48,17 @@ export async function POST(request: Request) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
+  const circleWallet = !input.agentWalletAddress && hasCircleWalletConfig()
+    ? await createDeveloperControlledWallet()
+    : undefined;
+  const agentWalletAddress = input.agentWalletAddress ?? circleWallet?.address;
+  if (!agentWalletAddress) {
+    return NextResponse.json(
+      { error: "Provide agent wallet address or configure Circle developer wallet env." },
+      { status: 400 },
+    );
+  }
+
   const { data, error } = await supabase
     .from(TABLES.agents)
     .insert({
@@ -54,7 +67,9 @@ export async function POST(request: Request) {
       slug,
       description: input.description,
       capabilities: input.capabilities,
-      agent_wallet_address: input.agentWalletAddress,
+      agent_wallet_address: agentWalletAddress,
+      circle_wallet_id: circleWallet?.walletId,
+      circle_wallet_set_id: circleWallet?.walletSetId,
       metadata_uri: input.metadataUri,
       arc_agent_id: input.arcAgentId,
       identity_registry_address: ERC8004_IDENTITY_REGISTRY,

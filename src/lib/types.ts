@@ -64,6 +64,8 @@ export type Agent = {
   description: string;
   capabilities: string[];
   agentWalletAddress: string;
+  circleWalletId?: string;
+  circleWalletSetId?: string;
   metadataUri?: string;
   arcAgentId?: string;
   identityRegistryAddress?: string;

@@ -41,10 +41,12 @@ export async function POST(request: Request, context: RouteContext) {
   if (targetJob.provider_profile_id && targetJob.provider_profile_id !== session.profileId) {
     return NextResponse.json({ error: "Only the accepted provider wallet can submit deliverables." }, { status: 403 });
   }
+  
+  let expectedFrom = session.walletAddress;
   if (targetJob.provider_agent_id) {
     const { data: agent, error: agentError } = await supabase
       .from(TABLES.agents)
-      .select("owner_profile_id")
+      .select("owner_profile_id,agent_wallet_address")
       .eq("id", targetJob.provider_agent_id)
       .single();
 
@@ -52,13 +54,16 @@ export async function POST(request: Request, context: RouteContext) {
     if (agent.owner_profile_id !== session.profileId) {
       return NextResponse.json({ error: "Only the accepted agent owner wallet can submit deliverables." }, { status: 403 });
     }
+    if (agent.agent_wallet_address) {
+      expectedFrom = agent.agent_wallet_address;
+    }
   }
 
   let blockNumber = input.blockNumber;
   try {
     const receipt = await verifyArcTransaction({
       abi: erc8183Abi,
-      expectedFrom: session.walletAddress,
+      expectedFrom,
       expectedFunctionName: "submit",
       expectedTo: ERC8183_CONTRACT_ADDRESS,
       txHash: input.submitTxHash,

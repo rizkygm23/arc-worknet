@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import type { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { TABLES } from "@/lib/supabase/tables";
@@ -34,7 +34,16 @@ const sessionCache = new Map<string, CachedSession>();
 
 export async function getWalletSession(supabase: SupabaseServiceClient): Promise<WalletSession | undefined> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(WALLET_SESSION_COOKIE)?.value;
+  const headerStore = await headers();
+  
+  let token = cookieStore.get(WALLET_SESSION_COOKIE)?.value;
+  if (!token) {
+    const authHeader = headerStore.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    }
+  }
+
   if (!token) return undefined;
 
   const tokenHash = sha256(token);

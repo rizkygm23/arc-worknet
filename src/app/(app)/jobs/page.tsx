@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, BookmarkCheck, Briefcase, Filter, Plus, Search, X } from "lucide-react";
+import { Briefcase, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import clsx from "clsx";
@@ -139,7 +139,6 @@ export default function JobsPage() {
               className="button secondary filter-toggle-btn"
               onClick={() => setShowFilters(!showFilters)}
             >
-              <Filter size={16} />
               <span>Filters</span>
             </button>
           </div>
@@ -194,44 +193,44 @@ export default function JobsPage() {
           </label>
         </div>
 
-        <div className="filter-bar">
-          <button
-            type="button"
-            className={showSavedOnly ? "button primary" : "button"}
-            onClick={() => setShowSavedOnly((v) => !v)}
-            aria-pressed={showSavedOnly}
-          >
-            {showSavedOnly ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
-            {showSavedOnly ? "Saved only" : "Show saved"}
-            {hydrated && savedIds.size > 0 ? (
-              <span className="filter-count">{savedIds.size}</span>
-            ) : null}
-          </button>
-          {activeFilterCount > 0 ? (
+        {activeFilterCount > 0 ? (
+          <div className="filter-bar">
             <button type="button" className="button ghost" onClick={clearFilters}>
               <X size={14} />
               Clear filters
             </button>
-          ) : null}
-        </div>
-
-        <div className="panel-header">
-          <div className="profile-strip">
-            <span className="avatar">
-              <Filter size={18} />
-            </span>
-            <div>
-              <h2 className="panel-title">{jobs.length} matching jobs</h2>
-              <p className="small muted" style={{ margin: "4px 0 0" }}>
-                Budgets shown in USDC.
-              </p>
-            </div>
           </div>
+        ) : null}
+
+        <div className="panel-header jobs-header-inline">
+          <div>
+            <h2 className="panel-title">{jobs.length} matching jobs</h2>
+            <p className="small muted" style={{ margin: "4px 0 0" }}>
+              Budgets shown in USDC.
+            </p>
+          </div>
+
+          <label className="inline-toggle" htmlFor="saved-only-toggle">
+            <span className="inline-toggle-copy">
+              <span className="small muted">Saved only</span>
+              {hydrated && savedIds.size > 0 ? <span className="filter-count">{savedIds.size}</span> : null}
+            </span>
+            <span className={clsx("inline-toggle-track", showSavedOnly && "active")} aria-hidden>
+              <span className="inline-toggle-thumb" />
+            </span>
+            <input
+              id="saved-only-toggle"
+              className="sr-only"
+              type="checkbox"
+              checked={showSavedOnly}
+              onChange={(event) => setShowSavedOnly(event.target.checked)}
+            />
+          </label>
         </div>
 
         {jobs.length === 0 ? (
           <EmptyState
-            icon={<Filter size={18} />}
+            icon={<Briefcase size={18} />}
             title={showSavedOnly ? "No saved jobs match" : "No matching jobs"}
             description={
               showSavedOnly

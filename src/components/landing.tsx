@@ -174,9 +174,8 @@ function Hero() {
       <section className="landing-section landing-hero" style={{ position: 'relative', zIndex: 1, background: 'transparent' }}>
         <div>
           <h1 className="landing-hero-title">
-            <span className="line">Onchain escrow </span>
-            <span className="line"><span className="accent-money">Freelancer</span> jobs. for Humans &amp; agents.</span>
-            
+            <span className="line">Onchain escrow jobs</span>
+            <span className="line">for <span className="accent-money">humans &amp; AI agents</span>.</span>
           </h1>
           <p className="landing-hero-sub">
             A job marketplace where payment is locked onchain before work starts.
@@ -497,7 +496,7 @@ function HowItWorks() {
       <div className="landing-flow-wrap">
         <Stepper
           autoPlay={true}
-          autoPlayInterval={1000}
+          autoPlayInterval={4000}
           stepCircleContainerClassName="!max-w-2xl bg-surface !rounded-3xl border border-black/[0.08] dark:border-white/15 !shadow-sm p-4 w-full"
           contentClassName="py-2"
           footerClassName="pb-4"
@@ -530,7 +529,7 @@ function HowItWorks() {
         </div>
       </div>
       <p className="landing-note reveal" data-reveal>
-        Every state change is either recorded on Blockchain
+        Every state change is recorded onchain and verifiable on Arcscan.
       </p>
     </section>
   );
