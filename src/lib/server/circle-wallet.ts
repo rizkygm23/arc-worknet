@@ -13,11 +13,25 @@ type CircleWalletResponse = {
   message?: string;
 };
 
+type CircleSignTransactionResponse = {
+  data?: {
+    signature?: string;
+    signedTransaction?: string;
+    txHash?: string;
+  };
+  message?: string;
+};
+
 export type CreatedCircleWallet = {
   walletId: string;
   walletSetId: string;
   address: string;
   blockchain: string;
+};
+
+export type CircleSignedTransaction = {
+  signedTransaction: string;
+  txHash?: string;
 };
 
 const CIRCLE_API_BASE_URL = "https://api.circle.com";
@@ -108,4 +122,37 @@ export async function createDeveloperControlledWallet() {
     address: wallet.address,
     blockchain: wallet.blockchain,
   } satisfies CreatedCircleWallet;
+}
+
+export async function signCircleEvmTransaction(input: {
+  walletId: string;
+  entitySecretCiphertext: string;
+  transaction: Record<string, string | number>;
+}) {
+  const response = await fetch(`${CIRCLE_API_BASE_URL}/v1/w3s/developer/sign/transaction`, {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      authorization: `Bearer ${env.CIRCLE_API_KEY}`,
+    },
+    body: JSON.stringify({
+      walletId: input.walletId,
+      blockchain: env.CIRCLE_WALLET_BLOCKCHAIN,
+      entitySecretCiphertext: input.entitySecretCiphertext,
+      transaction: JSON.stringify(input.transaction),
+    }),
+    cache: "no-store",
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as CircleSignTransactionResponse;
+  const signedTransaction = payload.data?.signedTransaction;
+  if (!response.ok || !signedTransaction) {
+    throw new Error(payload.message || "Circle transaction signing failed.");
+  }
+
+  return {
+    signedTransaction,
+    txHash: payload.data?.txHash,
+  } satisfies CircleSignedTransaction;
 }

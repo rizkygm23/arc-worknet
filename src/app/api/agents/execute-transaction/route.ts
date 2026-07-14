@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { createPublicClient, encodeFunctionData, http, parseAbiItem } from "viem";
 import { getServiceClientOrResponse, parseJson, validationError } from "@/lib/api";
 import { requireWalletSession } from "@/lib/server/wallet-session";
-import { getFreshEntitySecretCiphertext } from "@/lib/server/circle-wallet";
+import { getFreshEntitySecretCiphertext, signCircleEvmTransaction } from "@/lib/server/circle-wallet";
 import { TABLES } from "@/lib/supabase/tables";
-import crypto from "crypto";
-import { env } from "@/lib/env";
+import { ARC_TESTNET_CHAIN_ID, arcTestnet } from "@/lib/arc";
 
 const executeTransactionSchema = z.object({
   agentId: z.string().uuid(),
@@ -26,10 +26,9 @@ export async function POST(request: Request) {
 
   const { agentId, contractAddress, abiFunctionSignature, abiParameters } = parsed.data;
 
-  // 1. Fetch Agent and verify ownership
   const { data: agent, error: agentError } = await supabase
     .from(TABLES.agents)
-    .select("circle_wallet_id, owner_profile_id")
+    .select("circle_wallet_id, agent_wallet_address, owner_profile_id")
     .eq("id", agentId)
     .single();
 
@@ -45,89 +44,81 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Agent does not have a managed Circle wallet configured." }, { status: 400 });
   }
 
-  // 2. Generate fresh entitySecretCiphertext
-  let ciphertext = "";
+  if (!agent.agent_wallet_address) {
+    return NextResponse.json({ error: "Agent does not have a wallet address configured." }, { status: 400 });
+  }
+
+  let entitySecretCiphertext = "";
   try {
-    ciphertext = await getFreshEntitySecretCiphertext();
+    entitySecretCiphertext = await getFreshEntitySecretCiphertext();
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Encryption failed." }, { status: 500 });
   }
 
-  // 3. Request Circle to execute the contract transaction
-  console.log(`Executing contract transaction on Circle for wallet: ${agent.circle_wallet_id}`);
-  const executeUrl = "https://api.circle.com/v1/w3s/developer/transactions/contractExecution";
-  
-  let transactionId = "";
+  const publicClient = createPublicClient({
+    chain: arcTestnet,
+    transport: http(),
+  });
+
+  const account = agent.agent_wallet_address as `0x${string}`;
+  const to = contractAddress as `0x${string}`;
+
   try {
-    const res = await fetch(executeUrl, {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "content-type": "application/json",
-        authorization: `Bearer ${env.CIRCLE_API_KEY}`,
-      },
-      body: JSON.stringify({
-        idempotencyKey: crypto.randomUUID(),
-        walletId: agent.circle_wallet_id,
-        feeLevel: "HIGH",
-        contractAddress,
-        abiFunctionSignature,
-        abiParameters,
-        entitySecretCiphertext: ciphertext,
-      }),
-      cache: "no-store",
+    const data = encodeFunctionData({
+      abi: [parseAbiItem(`function ${abiFunctionSignature}`)],
+      args: abiParameters,
+      functionName: abiFunctionSignature.slice(0, abiFunctionSignature.indexOf("(")),
     });
 
-    const payload = await res.json();
-    if (!res.ok) {
-      return NextResponse.json({ error: payload.message || "Circle transaction execution failed." }, { status: res.status });
+    const [nonce, gas, fees] = await Promise.all([
+      publicClient.getTransactionCount({ address: account }),
+      publicClient.estimateGas({
+        account,
+        to,
+        data,
+        value: BigInt(0),
+      }),
+      publicClient.estimateFeesPerGas(),
+    ]);
+
+    const maxFeePerGas = fees.maxFeePerGas ?? fees.gasPrice;
+    const maxPriorityFeePerGas = fees.maxPriorityFeePerGas ?? fees.gasPrice;
+
+    if (!maxFeePerGas || !maxPriorityFeePerGas) {
+      return NextResponse.json({ error: "Arc RPC did not return usable fee data." }, { status: 502 });
     }
 
-    transactionId = payload.data?.id;
-    if (!transactionId) {
-      return NextResponse.json({ error: "Transaction ID not returned by Circle." }, { status: 500 });
-    }
+    const { signedTransaction, txHash: circleTxHash } = await signCircleEvmTransaction({
+      walletId: agent.circle_wallet_id,
+      entitySecretCiphertext,
+      transaction: {
+        chainId: ARC_TESTNET_CHAIN_ID,
+        nonce: String(nonce),
+        to,
+        value: "0",
+        gas: String(gas),
+        maxFeePerGas: String(maxFeePerGas),
+        maxPriorityFeePerGas: String(maxPriorityFeePerGas),
+        type: "2",
+        data,
+      },
+    });
+
+    const txHash = await publicClient.sendRawTransaction({
+      serializedTransaction: signedTransaction as `0x${string}`,
+    });
+
+    return NextResponse.json(
+      {
+        txHash,
+        circleTxHash: circleTxHash && circleTxHash !== txHash ? circleTxHash : undefined,
+      },
+      { status: 200 },
+    );
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "Circle API request failed." }, { status: 500 });
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Circle signing or Arc broadcast failed." },
+      { status: 500 },
+    );
   }
-
-  // 4. Poll Circle until txHash is generated (typically within 1-5 seconds)
-  console.log(`Polling transaction status for Circle ID: ${transactionId}`);
-  const statusUrl = `https://api.circle.com/v1/w3s/transactions/${transactionId}`;
-  let txHash = "";
-  
-  for (let attempt = 1; attempt <= 15; attempt++) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    try {
-      const res = await fetch(statusUrl, {
-        method: "GET",
-        headers: {
-          accept: "application/json",
-          authorization: `Bearer ${env.CIRCLE_API_KEY}`,
-        },
-        cache: "no-store",
-      });
-
-      if (res.ok) {
-        const payload = await res.json();
-        const transaction = payload.data?.transaction;
-        if (transaction?.txHash) {
-          txHash = transaction.txHash;
-          console.log(`Found transaction hash: ${txHash}`);
-          break;
-        }
-      }
-    } catch {
-      // Ignore polling errors and retry
-    }
-  }
-
-  if (!txHash) {
-    return NextResponse.json({
-      error: "Transaction was initiated, but block transmission timed out. Check Circle Console.",
-      transactionId
-    }, { status: 202 });
-  }
-
-  return NextResponse.json({ txHash, transactionId }, { status: 200 });
 }
