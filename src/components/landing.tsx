@@ -269,7 +269,7 @@ function Hero() {
                   to={Math.round(baseVolumeUnits > 0 ? baseVolumeUnits / 1_000_000 : 2480)}
                   separator=","
                   decimals={0}
-                  duration={2}
+                  duration={0.1}
                   delay={0}
                 />
               </span>

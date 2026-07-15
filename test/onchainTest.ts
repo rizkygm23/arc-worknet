@@ -79,6 +79,7 @@ if (!FIRST_WALLET_PRIVATE_KEY || !SECOND_WALLET_PRIVATE_KEY) {
 const publicClient = createPublicClient({
   chain: arcTestnet,
   transport: http(ARC_RPC_URL),
+  pollingInterval: 100, // Query blocks every 100ms for fast sub-second finality
 });
 
 const account1 = privateKeyToAccount(FIRST_WALLET_PRIVATE_KEY as `0x${string}`);
@@ -97,6 +98,7 @@ const client2 = createWalletClient({
 });
 
 // Helper for waiting/sleeping
+const STAGE_DELAY = 100; // Delay in ms between transaction steps
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function syncJobToDatabase({
@@ -277,7 +279,7 @@ async function recoverStuckJobs() {
             });
             await publicClient.waitForTransactionReceipt({ hash: submitHash });
             console.log("Deliverable submitted!");
-            await sleep(600);
+            await sleep(STAGE_DELAY);
           }
 
           console.log(`[Recovery] Releasing funds (completing) Job #${id}...`);
@@ -291,7 +293,7 @@ async function recoverStuckJobs() {
           await publicClient.waitForTransactionReceipt({ hash: completeHash });
           console.log(`Job #${id} successfully recovered and funds released to provider!`);
 
-          await sleep(600);
+          await sleep(STAGE_DELAY);
         }
       }
     }
@@ -438,7 +440,7 @@ async function main() {
       }
       console.log(`Job ID: ${jobId}`);
 
-      await sleep(600);
+      await sleep(STAGE_DELAY);
 
       // Step 2: Set Budget
       console.log("\n[Step 2] Setting Budget...");
@@ -452,7 +454,7 @@ async function main() {
       await publicClient.waitForTransactionReceipt({ hash: budgetHash });
       console.log("Budget Set!");
 
-      await sleep(600);
+      await sleep(STAGE_DELAY);
 
       // Step 3: Approve Escrow contract to spend client USDC
       console.log("\n[Step 3] Approving USDC for Escrow Contract...");
@@ -466,7 +468,26 @@ async function main() {
       await publicClient.waitForTransactionReceipt({ hash: approveHash });
       console.log("USDC Approved!");
 
-      await sleep(600);
+      // Poll allowance to ensure RPC node has synced the state before calling fund
+      let allowanceSynced = false;
+      for (let attempt = 0; attempt < 20; attempt++) {
+        const currentAllowance = await publicClient.readContract({
+          address: ARC_USDC_ADDRESS,
+          abi: erc20UsdcAbi,
+          functionName: "allowance",
+          args: [clientAccount.address, ERC8183_CONTRACT_ADDRESS],
+        });
+        if (currentAllowance >= budget) {
+          allowanceSynced = true;
+          break;
+        }
+        await sleep(50);
+      }
+      if (!allowanceSynced) {
+        console.warn("⚠️ Warning: Allowance might not be synced yet on the RPC node.");
+      }
+
+      await sleep(STAGE_DELAY);
 
       // Step 4: Fund the Job
       console.log("\n[Step 4] Funding Escrow...");
@@ -480,7 +501,7 @@ async function main() {
       await publicClient.waitForTransactionReceipt({ hash: fundHash });
       console.log("Escrow Funded!");
 
-      await sleep(600);
+      await sleep(STAGE_DELAY);
 
       // Step 5: Submit Job
       console.log("\n[Step 5] Submitting Deliverable...");
@@ -495,7 +516,7 @@ async function main() {
       await publicClient.waitForTransactionReceipt({ hash: submitHash });
       console.log("Deliverable Submitted!");
 
-      await sleep(600);
+      await sleep(STAGE_DELAY);
 
       // Step 6: Complete Job (Release Funds)
       console.log("\n[Step 6] Completing Job (Releasing Funds)...");
@@ -511,7 +532,7 @@ async function main() {
       console.log("Job Completed!");
 
       console.log("\nWaiting for block finality...");
-      await sleep(600);
+      await sleep(STAGE_DELAY);
 
       // Read final balances
       const clientBalFinal = await publicClient.readContract({
