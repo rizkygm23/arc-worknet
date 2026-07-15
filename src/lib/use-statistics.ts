@@ -11,6 +11,9 @@ export type WorkNetStatistics = {
     openWorkers: number;
     workerSkills: number;
     averageWorkerRating: number;
+    clients: number;
+    completedJobs: number;
+    totalVolumeUsdcUnits: number;
   };
   private: null | {
     myApplications: number;

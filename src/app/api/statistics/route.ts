@@ -10,9 +10,27 @@ const getCachedPublicStatistics = unstable_cache(
     const { supabase, response } = getServiceClientOrResponse();
     if (response || !supabase) throw new Error("Statistics service is unavailable.");
 
-    const { data, error } = await supabase.rpc("get_public_statistics_arcworker");
-    if (error) throw new Error(error.message);
-    return data;
+    const [rpcRes, spentRes, jobsRes, clientsRes, completedRes] = await Promise.all([
+      supabase.rpc("get_public_statistics_arcworker"),
+      supabase.from("profiles_arcworker").select("total_spent_usdc_units"),
+      supabase.from("jobs_arcworker").select("budget_usdc_units").not("status", "in", '("draft","open")'),
+      supabase.from("profiles_arcworker").select("id", { count: "exact", head: true }).eq("role", "client").not("is_blocked", "is", true),
+      supabase.from("jobs_arcworker").select("id", { count: "exact", head: true }).eq("status", "completed"),
+    ]);
+
+    if (rpcRes.error) throw new Error(rpcRes.error.message);
+
+    const publicStats = rpcRes.data as Record<string, unknown>;
+    const totalSpent = spentRes.data?.reduce((sum, p) => sum + (p.total_spent_usdc_units || 0), 0) ?? 0;
+    const jobsVolume = jobsRes.data?.reduce((sum, j) => sum + (j.budget_usdc_units || 0), 0) ?? 0;
+    const totalVolumeUsdcUnits = Math.max(totalSpent, jobsVolume);
+
+    return {
+      ...publicStats,
+      clients: clientsRes.count ?? 0,
+      completedJobs: completedRes.count ?? 0,
+      totalVolumeUsdcUnits,
+    };
   },
   ["public-statistics-arcworker"],
   { revalidate: 15 },

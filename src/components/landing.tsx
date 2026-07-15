@@ -18,6 +18,7 @@ import {
   User,
 } from "lucide-react";
 import { useWorkNet } from "@/lib/store";
+import { useStatistics } from "@/lib/use-statistics";
 import DotField from "./DotField";
 import BorderGlow from "./BorderGlow";
 import type { Profile, Job } from "@/lib/types";
@@ -128,12 +129,14 @@ function LandingNav() {
 function Hero() {
   const { enter, isWalletPending } = useEnterApp();
   const { state } = useWorkNet();
+  const stats = useStatistics();
+  const publicStats = stats?.public;
 
-  const clientCount = state.profiles?.filter((p: Profile) => p.role === "client").length ?? 0;
-  const workerCount = state.profiles?.filter((p: Profile) => p.role === "worker").length ?? 0;
-  const agentCount = state.agents?.length ?? 0;
-  const totalJobs = state.jobs?.length ?? 0;
-  const completedJobs = state.jobs?.filter((j: Job) => j.status === "completed").length ?? 0;
+  const clientCount = publicStats?.clients ?? state.profiles?.filter((p: Profile) => p.role === "client").length ?? 0;
+  const workerCount = publicStats?.workers ?? state.profiles?.filter((p: Profile) => p.role === "worker").length ?? 0;
+  const agentCount = publicStats?.knownAgents ?? state.agents?.length ?? 0;
+  const totalJobs = publicStats?.totalJobs ?? state.jobs?.length ?? 0;
+  const completedJobs = publicStats?.completedJobs ?? state.jobs?.filter((j: Job) => j.status === "completed").length ?? 0;
 
   const totalSpentUnits = state.profiles?.reduce((sum: number, p: Profile) => sum + (p.totalSpentUsdcUnits || 0), 0) ?? 0;
   const jobsVolumeUnits = state.jobs?.reduce((sum: number, j: Job) => {
@@ -142,7 +145,8 @@ function Hero() {
     }
     return sum;
   }, 0) ?? 0;
-  const baseVolumeUnits = Math.max(totalSpentUnits, jobsVolumeUnits);
+  
+  const baseVolumeUnits = publicStats?.totalVolumeUsdcUnits ?? Math.max(totalSpentUnits, jobsVolumeUnits);
 
   // If the local database is brand new and completely empty, fall back to seed data numbers so it looks populated
   const displayClients = clientCount > 0 ? clientCount : 3;
