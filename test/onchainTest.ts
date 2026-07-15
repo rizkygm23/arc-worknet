@@ -101,6 +101,118 @@ const client2 = createWalletClient({
 const STAGE_DELAY = 100; // Delay in ms between transaction steps
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// ─────────────────────────────────────────────────────────────
+//  Pretty output helpers (ANSI colors + formatting)
+// ─────────────────────────────────────────────────────────────
+const C = {
+  reset: "\x1b[0m",
+  bold: "\x1b[1m",
+  dim: "\x1b[2m",
+  red: "\x1b[31m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  cyan: "\x1b[36m",
+  gray: "\x1b[90m",
+};
+
+const fmtUsdc = (v: bigint) =>
+  `${Number(formatUnits(v, 6)).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  })} USDC`;
+
+const shortHash = (h: string) => `${h.slice(0, 10)}…${h.slice(-8)}`;
+const shortAddr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+
+function fmtDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${(ms / 1000).toFixed(1)}s`;
+  const m = Math.floor(s / 60);
+  const rs = s % 60;
+  if (m < 60) return `${m}m ${rs}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m ${rs}s`;
+}
+
+function fmtUptime(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const h = String(Math.floor(s / 3600)).padStart(2, "0");
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const sec = String(s % 60).padStart(2, "0");
+  return `${h}:${m}:${sec}`;
+}
+
+// Session statistics tracker
+const stats = {
+  startedAt: Date.now(),
+  jobsCompleted: 0,
+  totalVolume: BigInt(0),
+  totalTx: 0,
+  gasSeeds: 0,
+  seededVolume: BigInt(0),
+  recoveredJobs: 0,
+  recoveredVolume: BigInt(0),
+  failures: 0,
+  cycleTimesMs: [] as number[],
+  lastJobId: null as bigint | null,
+};
+
+function trackTx() {
+  stats.totalTx++;
+}
+
+function logStep(step: number, total: number, emoji: string, title: string) {
+  console.log(
+    `\n${C.bold}${C.cyan}  [${step}/${total}]${C.reset} ${emoji} ${C.bold}${title}${C.reset}`
+  );
+}
+
+function logTx(hash: string, ms: number, extra = "") {
+  console.log(
+    `        ${C.green}✔${C.reset} confirmed in ${C.yellow}${fmtDuration(ms)}${C.reset}  ${C.gray}tx ${shortHash(hash)}${C.reset}${extra ? `  ${extra}` : ""}`
+  );
+}
+
+function printSessionDashboard() {
+  const uptimeMs = Date.now() - stats.startedAt;
+  const avg =
+    stats.cycleTimesMs.length > 0
+      ? stats.cycleTimesMs.reduce((a, b) => a + b, 0) / stats.cycleTimesMs.length
+      : 0;
+  const best = stats.cycleTimesMs.length > 0 ? Math.min(...stats.cycleTimesMs) : 0;
+  const worst = stats.cycleTimesMs.length > 0 ? Math.max(...stats.cycleTimesMs) : 0;
+  const jobsPerHour = avg > 0 ? Math.round(3600000 / avg) : 0;
+  const txPerMin = uptimeMs > 0 ? ((stats.totalTx / uptimeMs) * 60000).toFixed(1) : "0";
+
+  const b = `${C.magenta}║${C.reset}`;
+  console.log("");
+  console.log(`  ${C.magenta}${C.bold}╔══════════════ 📊 SESSION DASHBOARD ══════════════╗${C.reset}`);
+  console.log(`  ${b} ⏱  Uptime          : ${C.bold}${fmtUptime(uptimeMs)}${C.reset}`);
+  console.log(`  ${b} ✅ Jobs Completed  : ${C.bold}${C.green}${stats.jobsCompleted}${C.reset}`);
+  console.log(`  ${b} 💰 Total Volume    : ${C.bold}${C.green}${fmtUsdc(stats.totalVolume)}${C.reset}`);
+  console.log(`  ${b} 🧾 Total TXs Sent  : ${C.bold}${stats.totalTx}${C.reset} ${C.gray}(~${txPerMin} tx/min)${C.reset}`);
+  if (stats.cycleTimesMs.length > 0) {
+    console.log(`  ${b} ⚡ Cycle Time      : avg ${C.bold}${fmtDuration(Math.round(avg))}${C.reset} ${C.gray}(best ${fmtDuration(best)} / worst ${fmtDuration(worst)})${C.reset}`);
+    console.log(`  ${b} 🚀 Throughput      : ${C.bold}~${jobsPerHour} jobs/hour${C.reset}`);
+  }
+  if (stats.gasSeeds > 0) {
+    console.log(`  ${b} ⛽ Gas Seeds       : ${stats.gasSeeds} (${fmtUsdc(stats.seededVolume)})`);
+  }
+  if (stats.recoveredJobs > 0) {
+    console.log(`  ${b} 🛠  Recovered Jobs  : ${stats.recoveredJobs} (${fmtUsdc(stats.recoveredVolume)} unlocked)`);
+  }
+  if (stats.failures > 0) {
+    console.log(`  ${b} ❌ Failures        : ${C.red}${stats.failures}${C.reset}`);
+  }
+  if (stats.lastJobId !== null) {
+    console.log(`  ${b} 🆔 Last Job ID     : #${stats.lastJobId}`);
+  }
+  console.log(`  ${C.magenta}${C.bold}╚═══════════════════════════════════════════════════╝${C.reset}`);
+}
+
 async function syncJobToDatabase({
   clientAddress,
   providerAddress,
@@ -119,7 +231,7 @@ async function syncJobToDatabase({
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !supabaseKey) {
-    console.log("Supabase credentials not found in env, skipping DB sync.");
+    console.log(`${C.gray}   Supabase credentials not found in env, skipping DB sync.${C.reset}`);
     return;
   }
 
@@ -128,7 +240,7 @@ async function syncJobToDatabase({
   // 1. Get or create profiles for both addresses
   const getOrCreateProfile = async (address: string, role: "client" | "worker") => {
     const formattedAddr = address.toLowerCase();
-    
+
     // Check if profile exists
     const { data: profile } = await supabase
       .from("profiles_arcworker")
@@ -188,8 +300,8 @@ async function syncJobToDatabase({
     if (insertErr) {
       console.error("Error inserting completed job to DB:", insertErr.message);
     } else {
-      console.log(`Successfully synced Job #${jobIdOnchain} to Supabase Database.`);
-      
+      console.log(`        ${C.green}✔${C.reset} Job #${jobIdOnchain} synced to Supabase`);
+
       // 3. Update profiles statistics (spent / earned / completed count)
       const { data: clientProf } = await supabase
         .from("profiles_arcworker")
@@ -216,8 +328,8 @@ async function syncJobToDatabase({
           completed_jobs_count: currentCompleted + 1,
         })
         .eq("id", providerProfileId);
-        
-      console.log("Updated database profile statistics for Client and Worker.");
+
+      console.log(`        ${C.green}✔${C.reset} Profile stats updated (client spent / provider earned)`);
     }
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
@@ -226,7 +338,7 @@ async function syncJobToDatabase({
 }
 
 async function recoverStuckJobs() {
-  console.log("\nChecking for any stuck escrow jobs on-chain...");
+  console.log(`\n${C.blue}${C.bold}🔍 Scanning for stuck escrow jobs on-chain...${C.reset}`);
   try {
     const nextJobIdRaw = await publicClient.readContract({
       address: ERC8183_CONTRACT_ADDRESS,
@@ -234,12 +346,12 @@ async function recoverStuckJobs() {
       functionName: "nextJobId",
     });
     const nextJobId = BigInt(nextJobIdRaw);
-    
+
     // Scan last 50 jobs
     const startScan = nextJobId - BigInt(1);
     const endScan = startScan - BigInt(50) > BigInt(0) ? startScan - BigInt(50) : BigInt(1);
 
-    console.log(`Scanning Job ID ${endScan} to ${startScan} on-chain...`);
+    console.log(`${C.gray}   Range: Job #${endScan} → #${startScan}${C.reset}`);
     for (let id = startScan; id >= endScan; id--) {
       const job = await publicClient.readContract({
         address: ERC8183_CONTRACT_ADDRESS,
@@ -261,15 +373,15 @@ async function recoverStuckJobs() {
       if (isUserWallet(client) && isUserWallet(provider) && fundedAmount > BigInt(0)) {
         // Status: 3 = Funded, 4 = Submitted, 5 = RevisionRequested
         if (status === 3 || status === 4 || status === 5) {
-          console.log(`\nFound stuck Job #${id} with ${formatUnits(fundedAmount, 6)} USDC locked!`);
-          
+          console.log(`\n${C.yellow}⚠️  Found stuck Job #${id} with ${C.bold}${fmtUsdc(fundedAmount)}${C.reset}${C.yellow} locked!${C.reset}`);
+
           // Determine which wallet is Client/Provider
           const isWallet1Client = client.toLowerCase() === account1.address.toLowerCase();
           const clientWallet = isWallet1Client ? client1 : client2;
           const providerWallet = isWallet1Client ? client2 : client1;
 
           if (status === 3 || status === 5) {
-            console.log(`[Recovery] Submitting deliverable for Job #${id}...`);
+            console.log(`   🛠  [Recovery] Submitting deliverable for Job #${id}...`);
             const mockDeliverable = "0x1234567890123456789012345678901234567890123456789012345678901234" as `0x${string}`;
             const submitHash = await providerWallet.writeContract({
               address: ERC8183_CONTRACT_ADDRESS,
@@ -278,11 +390,12 @@ async function recoverStuckJobs() {
               args: [id, mockDeliverable, "0x"],
             });
             await publicClient.waitForTransactionReceipt({ hash: submitHash });
-            console.log("Deliverable submitted!");
+            trackTx();
+            console.log(`   ${C.green}✔${C.reset} Deliverable submitted ${C.gray}tx ${shortHash(submitHash)}${C.reset}`);
             await sleep(STAGE_DELAY);
           }
 
-          console.log(`[Recovery] Releasing funds (completing) Job #${id}...`);
+          console.log(`   🛠  [Recovery] Releasing funds (completing) Job #${id}...`);
           const mockReason = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd" as `0x${string}`;
           const completeHash = await clientWallet.writeContract({
             address: ERC8183_CONTRACT_ADDRESS,
@@ -291,13 +404,16 @@ async function recoverStuckJobs() {
             args: [id, mockReason, "0x"],
           });
           await publicClient.waitForTransactionReceipt({ hash: completeHash });
-          console.log(`Job #${id} successfully recovered and funds released to provider!`);
+          trackTx();
+          stats.recoveredJobs++;
+          stats.recoveredVolume += fundedAmount;
+          console.log(`   ${C.green}✔ Job #${id} recovered — ${fmtUsdc(fundedAmount)} released to provider!${C.reset} ${C.gray}tx ${shortHash(completeHash)}${C.reset}`);
 
           await sleep(STAGE_DELAY);
         }
       }
     }
-    console.log("Stuck job scan complete.\n");
+    console.log(`${C.green}   Scan complete — ${stats.recoveredJobs} stuck job(s) recovered.${C.reset}\n`);
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error("Error during stuck jobs recovery scan:", errorMsg);
@@ -305,14 +421,17 @@ async function recoverStuckJobs() {
 }
 
 async function main() {
-  console.log("====================================================");
-  console.log("             Arc WorkNet Onchain Simulation         ");
-  console.log("====================================================");
-  console.log(`Wallet 1: ${account1.address}`);
-  console.log(`Wallet 2: ${account2.address}`);
-  console.log(`Escrow Contract: ${ERC8183_CONTRACT_ADDRESS}`);
-  console.log(`USDC Contract: ${ARC_USDC_ADDRESS}`);
-  console.log("====================================================\n");
+  console.log(`${C.magenta}${C.bold}`);
+  console.log("  ╔══════════════════════════════════════════════════╗");
+  console.log("  ║      🤖  ARC WORKNET — ONCHAIN VOLUME BOT  🤖     ║");
+  console.log("  ║          ERC-8183 Escrow Cycle Simulator          ║");
+  console.log("  ╚══════════════════════════════════════════════════╝");
+  console.log(C.reset);
+  console.log(`  ${C.gray}Wallet 1        :${C.reset} ${account1.address}`);
+  console.log(`  ${C.gray}Wallet 2        :${C.reset} ${account2.address}`);
+  console.log(`  ${C.gray}Escrow Contract :${C.reset} ${ERC8183_CONTRACT_ADDRESS}`);
+  console.log(`  ${C.gray}USDC Contract   :${C.reset} ${ARC_USDC_ADDRESS}`);
+  console.log(`  ${C.gray}RPC             :${C.reset} ${ARC_RPC_URL}`);
 
   await recoverStuckJobs();
 
@@ -322,10 +441,12 @@ async function main() {
 
   while (iteration < MAX_ITERATIONS) {
     iteration++;
-    console.log(`\n--- Iteration ${iteration} / ${MAX_ITERATIONS === Infinity ? "Infinity" : MAX_ITERATIONS} ---`);
+    const cycleStart = Date.now();
+    console.log(`\n${C.cyan}${C.bold}┌────────────────────────────────────────────────────┐${C.reset}`);
+    console.log(`${C.cyan}${C.bold}│ 🔄 CYCLE #${String(iteration).padEnd(5)} • Uptime ${fmtUptime(Date.now() - stats.startedAt)} • Done: ${String(stats.jobsCompleted).padEnd(5)}│${C.reset}`);
+    console.log(`${C.cyan}${C.bold}└────────────────────────────────────────────────────┘${C.reset}`);
 
     // Read initial balances for both wallets to determine who should be Client
-    console.log("\nReading USDC balances...");
     const bal1 = await publicClient.readContract({
       address: ARC_USDC_ADDRESS,
       abi: erc20UsdcAbi,
@@ -340,8 +461,8 @@ async function main() {
       args: [account2.address],
     });
 
-    console.log(`Wallet 1 Balance : ${formatUnits(bal1, 6)} USDC`);
-    console.log(`Wallet 2 Balance : ${formatUnits(bal2, 6)} USDC`);
+    console.log(`  💳 Wallet 1 ${C.gray}${shortAddr(account1.address)}${C.reset} : ${C.bold}${fmtUsdc(bal1)}${C.reset}`);
+    console.log(`  💳 Wallet 2 ${C.gray}${shortAddr(account2.address)}${C.reset} : ${C.bold}${fmtUsdc(bal2)}${C.reset}`);
 
     const wallet1IsClient = bal1 >= bal2;
     const clientWallet = wallet1IsClient ? client1 : client2;
@@ -352,8 +473,8 @@ async function main() {
     const providerAccount = wallet1IsClient ? account2 : account1;
     const providerBal = wallet1IsClient ? bal2 : bal1;
 
-    console.log(`Client (Evaluator) : ${clientAccount.address}`);
-    console.log(`Provider           : ${providerAccount.address}`);
+    console.log(`  🧑‍💼 Client (Evaluator) : ${shortAddr(clientAccount.address)}`);
+    console.log(`  👷 Provider           : ${shortAddr(providerAccount.address)}`);
 
     // Ensure Provider has enough gas to execute submit (e.g. at least 1 USDC)
     const minGasBuffer = BigInt(1000000); // 1 USDC
@@ -361,45 +482,48 @@ async function main() {
     let providerBalAfterSeed = providerBal;
 
     if (providerBal < minGasBuffer) {
-      console.log(`\n[Gas Seeding] Provider has low balance for gas (${formatUnits(providerBal, 6)} USDC).`);
+      console.log(`\n  ⛽ ${C.yellow}[Gas Seeding]${C.reset} Provider low on gas (${fmtUsdc(providerBal)})`);
       const seedAmount = minGasBuffer; // Flat 1 USDC
 
       // Check if client can afford to seed and still have gas buffer
       const requiredClientBalance = seedAmount + BigInt(2000000) + BigInt(1000000); // seed + 2 USDC gas + 1 USDC budget
       if (clientBal >= requiredClientBalance) {
-        console.log(`Seeding Provider with ${formatUnits(seedAmount, 6)} USDC for gas...`);
+        const seedStart = Date.now();
         const seedHash = await clientWallet.writeContract({
           address: ARC_USDC_ADDRESS,
           abi: usdcAbiWithTransfer,
           functionName: "transfer",
           args: [providerAccount.address, seedAmount],
         });
-        console.log(`Seed TX Hash: ${seedHash}`);
         await publicClient.waitForTransactionReceipt({ hash: seedHash });
-        console.log("Seeding complete!");
+        trackTx();
+        stats.gasSeeds++;
+        stats.seededVolume += seedAmount;
+        console.log(`     ${C.green}✔${C.reset} Seeded ${fmtUsdc(seedAmount)} in ${fmtDuration(Date.now() - seedStart)} ${C.gray}tx ${shortHash(seedHash)}${C.reset}`);
 
         clientBalAfterSeed = clientBal - seedAmount;
         providerBalAfterSeed = providerBal + seedAmount;
-        console.log(`New Balances: Client = ${formatUnits(clientBalAfterSeed, 6)} USDC, Provider = ${formatUnits(providerBalAfterSeed, 6)} USDC`);
+        console.log(`     ${C.gray}New balances → Client: ${fmtUsdc(clientBalAfterSeed)} | Provider: ${fmtUsdc(providerBalAfterSeed)}${C.reset}`);
       } else {
-        console.log("⚠️  Client does not have enough balance to seed provider gas.");
+        console.log(`     ${C.red}⚠️  Client does not have enough balance to seed provider gas.${C.reset}`);
       }
     }
 
     // Calculate budget: usdc balance - 2 USDC (2_000_000 micro-USDC)
     const twoUsdc = BigInt(2000000);
     if (clientBalAfterSeed <= twoUsdc + BigInt(1000000)) {
-      console.log(`⚠️  Client balance after potential seeding is too low to run this iteration (need > 3 USDC).`);
-      console.log("Please transfer USDC to the client address and run again.");
+      console.log(`\n  ${C.red}⚠️  Client balance too low to run this cycle (need > 3 USDC).${C.reset}`);
+      console.log(`  ${C.red}Please transfer USDC to the client address and run again.${C.reset}`);
       break;
     }
 
     const budget = clientBalAfterSeed - twoUsdc;
-    console.log(`Calculated Escrow Budget: ${formatUnits(budget, 6)} USDC (2 USDC kept for gas)`);
+    console.log(`  💵 Escrow Budget : ${C.bold}${C.green}${fmtUsdc(budget)}${C.reset} ${C.gray}(2 USDC kept for gas)${C.reset}`);
 
     try {
       // Step 1: Create Job
-      console.log("\n[Step 1] Creating Job on Escrow contract...");
+      logStep(1, 6, "📝", "createJob — registering job on escrow contract");
+      let t0 = Date.now();
       const createHash = await clientWallet.writeContract({
         address: ERC8183_CONTRACT_ADDRESS,
         abi: erc8183Abi,
@@ -412,10 +536,8 @@ async function main() {
           "0x0000000000000000000000000000000000000000", // hook
         ],
       });
-      console.log(`TX Hash: ${createHash}`);
-      console.log("Waiting for confirmation...");
       const createReceipt = await publicClient.waitForTransactionReceipt({ hash: createHash });
-      console.log(`Job Created! Block: ${createReceipt.blockNumber}`);
+      trackTx();
 
       // Extract jobId from event logs
       let jobId: bigint | undefined;
@@ -438,35 +560,38 @@ async function main() {
       if (jobId === undefined) {
         throw new Error("Could not find JobCreated event log in tx receipt.");
       }
-      console.log(`Job ID: ${jobId}`);
+      logTx(createHash, Date.now() - t0, `${C.bold}Job ID #${jobId}${C.reset} ${C.gray}(block ${createReceipt.blockNumber})${C.reset}`);
+      stats.lastJobId = jobId;
 
       await sleep(STAGE_DELAY);
 
       // Step 2: Set Budget
-      console.log("\n[Step 2] Setting Budget...");
+      logStep(2, 6, "💵", `setBudget — locking in ${fmtUsdc(budget)}`);
+      t0 = Date.now();
       const budgetHash = await clientWallet.writeContract({
         address: ERC8183_CONTRACT_ADDRESS,
         abi: erc8183Abi,
         functionName: "setBudget",
         args: [jobId, budget, "0x"],
       });
-      console.log(`TX Hash: ${budgetHash}`);
       await publicClient.waitForTransactionReceipt({ hash: budgetHash });
-      console.log("Budget Set!");
+      trackTx();
+      logTx(budgetHash, Date.now() - t0);
 
       await sleep(STAGE_DELAY);
 
       // Step 3: Approve Escrow contract to spend client USDC
-      console.log("\n[Step 3] Approving USDC for Escrow Contract...");
+      logStep(3, 6, "🔓", "approve — allowing escrow to spend client USDC");
+      t0 = Date.now();
       const approveHash = await clientWallet.writeContract({
         address: ARC_USDC_ADDRESS,
         abi: erc20UsdcAbi,
         functionName: "approve",
         args: [ERC8183_CONTRACT_ADDRESS, budget],
       });
-      console.log(`TX Hash: ${approveHash}`);
       await publicClient.waitForTransactionReceipt({ hash: approveHash });
-      console.log("USDC Approved!");
+      trackTx();
+      logTx(approveHash, Date.now() - t0);
 
       // Poll allowance to ensure RPC node has synced the state before calling fund
       let allowanceSynced = false;
@@ -484,27 +609,29 @@ async function main() {
         await sleep(50);
       }
       if (!allowanceSynced) {
-        console.warn("⚠️ Warning: Allowance might not be synced yet on the RPC node.");
+        console.warn(`        ${C.yellow}⚠️  Allowance might not be synced yet on the RPC node.${C.reset}`);
       }
 
       await sleep(STAGE_DELAY);
 
       // Step 4: Fund the Job
-      console.log("\n[Step 4] Funding Escrow...");
+      logStep(4, 6, "🏦", "fund — depositing budget into escrow");
+      t0 = Date.now();
       const fundHash = await clientWallet.writeContract({
         address: ERC8183_CONTRACT_ADDRESS,
         abi: erc8183Abi,
         functionName: "fund",
         args: [jobId, "0x"],
       });
-      console.log(`TX Hash: ${fundHash}`);
       await publicClient.waitForTransactionReceipt({ hash: fundHash });
-      console.log("Escrow Funded!");
+      trackTx();
+      logTx(fundHash, Date.now() - t0);
 
       await sleep(STAGE_DELAY);
 
       // Step 5: Submit Job
-      console.log("\n[Step 5] Submitting Deliverable...");
+      logStep(5, 6, "📦", "submit — provider delivering the work");
+      t0 = Date.now();
       const deliverableHash = "0x1234567890123456789012345678901234567890123456789012345678901234" as `0x${string}`;
       const submitHash = await providerWallet.writeContract({
         address: ERC8183_CONTRACT_ADDRESS,
@@ -512,14 +639,15 @@ async function main() {
         functionName: "submit",
         args: [jobId, deliverableHash, "0x"],
       });
-      console.log(`TX Hash: ${submitHash}`);
       await publicClient.waitForTransactionReceipt({ hash: submitHash });
-      console.log("Deliverable Submitted!");
+      trackTx();
+      logTx(submitHash, Date.now() - t0);
 
       await sleep(STAGE_DELAY);
 
       // Step 6: Complete Job (Release Funds)
-      console.log("\n[Step 6] Completing Job (Releasing Funds)...");
+      logStep(6, 6, "🏁", "complete — releasing funds to provider");
+      t0 = Date.now();
       const completionReasonHash = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd" as `0x${string}`;
       const completeHash = await clientWallet.writeContract({
         address: ERC8183_CONTRACT_ADDRESS,
@@ -527,11 +655,10 @@ async function main() {
         functionName: "complete",
         args: [jobId, completionReasonHash, "0x"],
       });
-      console.log(`TX Hash: ${completeHash}`);
       await publicClient.waitForTransactionReceipt({ hash: completeHash });
-      console.log("Job Completed!");
+      trackTx();
+      logTx(completeHash, Date.now() - t0);
 
-      console.log("\nWaiting for block finality...");
       await sleep(STAGE_DELAY);
 
       // Read final balances
@@ -549,12 +676,20 @@ async function main() {
         args: [providerAccount.address],
       });
 
-      console.log(`\nFinal USDC Balances:`);
-      console.log(`Client Balance   : ${formatUnits(clientBalFinal, 6)} USDC (Diff: ${formatUnits(clientBalFinal - clientBal, 6)} USDC)`);
-      console.log(`Provider Balance : ${formatUnits(providerBalFinal, 6)} USDC (Diff: ${formatUnits(providerBalFinal - providerBal, 6)} USDC)`);
+      const cycleMs = Date.now() - cycleStart;
+
+      // Update session stats
+      stats.jobsCompleted++;
+      stats.totalVolume += budget;
+      stats.cycleTimesMs.push(cycleMs);
+
+      console.log(`\n  ${C.green}${C.bold}🎉 JOB #${jobId} COMPLETE${C.reset} ${C.gray}— full escrow cycle in ${C.reset}${C.yellow}${fmtDuration(cycleMs)}${C.reset}`);
+      console.log(`  ${C.gray}├${C.reset} 💸 Volume moved    : ${C.bold}${fmtUsdc(budget)}${C.reset}`);
+      console.log(`  ${C.gray}├${C.reset} 🧑‍💼 Client balance  : ${fmtUsdc(clientBalFinal)} ${C.red}(${formatUnits(clientBalFinal - clientBal, 6)})${C.reset}`);
+      console.log(`  ${C.gray}└${C.reset} 👷 Provider balance: ${fmtUsdc(providerBalFinal)} ${C.green}(+${formatUnits(providerBalFinal - providerBal, 6)})${C.reset}`);
 
       // Sync job and update user statistics in Supabase
-      console.log("\nSyncing job result to database...");
+      console.log(`\n  ${C.blue}🗄  Syncing to database...${C.reset}`);
       await syncJobToDatabase({
         clientAddress: clientAccount.address,
         providerAddress: providerAccount.address,
@@ -564,16 +699,21 @@ async function main() {
         completeTxHash: completeHash,
       });
 
+      // Show running session totals after every cycle
+      printSessionDashboard();
+
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(`❌ Error in iteration ${iteration}:`, errorMsg);
+      stats.failures++;
+      console.error(`\n  ${C.red}❌ Error in cycle #${iteration}: ${errorMsg}${C.reset}`);
       break;
     }
   }
 
-  console.log("\n====================================================");
-  console.log("            Simulation Complete                     ");
-  console.log("====================================================");
+  console.log(`\n${C.magenta}${C.bold}  ╔═══════════════════════════════════════════════════╗${C.reset}`);
+  console.log(`${C.magenta}${C.bold}  ║               🏁 SIMULATION FINISHED               ║${C.reset}`);
+  console.log(`${C.magenta}${C.bold}  ╚═══════════════════════════════════════════════════╝${C.reset}`);
+  printSessionDashboard();
 }
 
 main().catch((err) => {
