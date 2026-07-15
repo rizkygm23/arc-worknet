@@ -147,6 +147,6 @@ export async function POST(request: Request, context: RouteContext) {
     confirmed_at: new Date().toISOString(),
   });
 
-  void invalidateBootstrapCache();
+  void invalidateBootstrapCache(id);
   return NextResponse.json({ review, workerPenalty, clientRefund });
 }

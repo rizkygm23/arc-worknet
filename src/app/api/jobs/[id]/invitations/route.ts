@@ -69,6 +69,6 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  void invalidateBootstrapCache();
+  void invalidateBootstrapCache(jobId);
   return NextResponse.json({ invitation: data }, { status: 201 });
 }

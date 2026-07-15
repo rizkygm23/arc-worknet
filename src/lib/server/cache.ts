@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { broadcastBootstrapBump } from "./realtime";
+import { broadcastBootstrapBump, broadcastJobBump } from "./realtime";
 
 // In-memory cache for the public bootstrap response. The payload is identical
 // for every caller (public marketplace data only), so we serialize it once and
@@ -34,7 +34,8 @@ function clearPublicBootstrapCache() {
   publicBootstrap = undefined;
 }
 
-export async function invalidateBootstrapCache() {
+export async function invalidateBootstrapCache(jobId?: string) {
   clearPublicBootstrapCache();
   void broadcastBootstrapBump();
+  if (jobId) void broadcastJobBump(jobId);
 }

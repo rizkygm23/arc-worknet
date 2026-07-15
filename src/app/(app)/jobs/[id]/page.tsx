@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageHeader, SkeletonPanel, WalletPill } from "@/components/app-shell";
 import {
   BudgetAmount,
@@ -27,8 +27,10 @@ import {
   JobStatusBadge,
 } from "@/components/job-components";
 import { useApplicationOverlay } from "@/lib/application-overlay";
+import { hasSupabaseBrowserConfig } from "@/lib/env";
 import { useJobMessages } from "@/lib/job-messages";
 import { nextOnchainAction, useWorkNet } from "@/lib/store";
+import { getBrowserSupabase } from "@/lib/supabase/browser";
 import type { Job, Profile } from "@/lib/types";
 
 function relativeTime(iso: string): string {
@@ -379,7 +381,7 @@ export default function JobDetailPage() {
     getJobEvaluation,
     getJobSubmissions,
     getProfile,
-    isSyncing,
+    loadJobDetail,
     state,
     wallet,
   } = useWorkNet();
@@ -387,11 +389,41 @@ export default function JobDetailPage() {
   const [applyAs, setApplyAs] = useState<string>("");
   const [actionError, setActionError] = useState<string | undefined>();
   const [busyAction, setBusyAction] = useState<string | undefined>();
+  const [isDetailLoading, setIsDetailLoading] = useState(true);
   const { decline, getEffectiveStatus, getDeclineReason } = useApplicationOverlay();
   const job = getJob(params.id);
 
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        await loadJobDetail(params.id);
+      } catch (error) {
+        if (!cancelled) {
+          setActionError(error instanceof Error ? error.message : "Could not load job.");
+        }
+      } finally {
+        if (!cancelled) setIsDetailLoading(false);
+      }
+    };
+    void refresh();
+
+    const supabase = hasSupabaseBrowserConfig() ? getBrowserSupabase() : null;
+    const channel = supabase
+      ?.channel(`arcworknet:job:${params.id}`)
+      .on("broadcast", { event: "bump" }, () => {
+        if (document.visibilityState === "visible") void refresh();
+      })
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      if (channel && supabase) void supabase.removeChannel(channel);
+    };
+  }, [loadJobDetail, params.id]);
+
   if (!job) {
-    if (isSyncing) return <SkeletonPanel lines={6} />;
+    if (isDetailLoading) return <SkeletonPanel lines={6} />;
     notFound();
   }
 

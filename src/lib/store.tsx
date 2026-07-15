@@ -71,6 +71,7 @@ type DataContextValue = {
   clockError?: string;
   isSyncing: boolean;
   refreshState: () => Promise<void>;
+  loadJobDetail: (jobId: string) => Promise<void>;
   setActiveProfile: (profileId: string) => void;
   resetDemo: () => void;
   loadDemoData: () => void;
@@ -190,6 +191,45 @@ function mergeState(current: WorkNetState, incoming: WorkNetState, walletAddress
   }
 
   return next;
+}
+
+type JobDetailResponse = {
+  job: Job;
+  profiles: Profile[];
+  agents: Agent[];
+  applications: JobApplication[];
+  submissions: JobSubmission[];
+  aiEvaluations: AiEvaluation[];
+};
+
+function mergeJobDetail(current: WorkNetState, detail: JobDetailResponse): WorkNetState {
+  const replaceById = <T extends { id: string }>(currentItems: T[], incoming: T[]) => {
+    const incomingIds = new Set(incoming.map((item) => item.id));
+    return [...currentItems.filter((item) => !incomingIds.has(item.id)), ...incoming];
+  };
+  const submissionIds = new Set([
+    ...current.submissions.filter((item) => item.jobId === detail.job.id).map((item) => item.id),
+    ...detail.submissions.map((item) => item.id),
+  ]);
+  const next: WorkNetState = {
+    ...current,
+    jobs: replaceById(current.jobs, [detail.job]),
+    profiles: replaceById(current.profiles, detail.profiles),
+    agents: replaceById(current.agents, detail.agents),
+    applications: [
+      ...current.applications.filter((item) => item.jobId !== detail.job.id),
+      ...detail.applications,
+    ],
+    submissions: [
+      ...current.submissions.filter((item) => item.jobId !== detail.job.id),
+      ...detail.submissions,
+    ],
+    aiEvaluations: [
+      ...current.aiEvaluations.filter((item) => !submissionIds.has(item.submissionId)),
+      ...detail.aiEvaluations,
+    ],
+  };
+  return stableJson(current) === stableJson(next) ? current : next;
 }
 
 type PrivateBootstrapResponse =
@@ -391,6 +431,11 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       setIsSyncing(false);
     }
   }, [wallet.address]);
+
+  const loadJobDetail = useCallback(async (jobId: string) => {
+    const detail = await apiJson<JobDetailResponse>(`/api/jobs/${encodeURIComponent(jobId)}?t=${Date.now()}`);
+    setState((current) => mergeJobDetail(current, detail));
+  }, []);
 
   useEffect(() => {
     void refreshState();
@@ -1233,6 +1278,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       clockError,
       isSyncing,
       refreshState,
+      loadJobDetail,
       setActiveProfile,
       resetDemo,
       loadDemoData,
@@ -1250,6 +1296,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       clockError,
       isSyncing,
       refreshState,
+      loadJobDetail,
       setActiveProfile,
       resetDemo,
       loadDemoData,
