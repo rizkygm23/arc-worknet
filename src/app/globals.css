@@ -152,6 +152,7 @@ button:disabled {
   display: flex;
   flex-direction: row;
   min-height: 100dvh;
+  background: #ffffff;
 }
 
 .sidebar {
@@ -836,7 +837,7 @@ button:disabled {
 .app-shell .worker-card,
 .app-shell .onboarding-card {
   min-width: 0;
-  border: 1px solid color-mix(in srgb, var(--line-strong) 72%, white 28%);
+  border: 0;
   border-radius: 22px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 249, 246, 0.96) 100%),
@@ -847,7 +848,6 @@ button:disabled {
     0 6px 16px rgba(18, 24, 22, 0.04);
   transition:
     box-shadow var(--dur-short) var(--ease-out),
-    border-color var(--dur-short) var(--ease-out),
     background var(--dur-short) var(--ease-out),
     transform var(--dur-short) var(--ease-out);
 }
@@ -861,7 +861,6 @@ button:disabled {
 .app-shell .panel:hover,
 .app-shell .worker-card:hover,
 .app-shell .onboarding-card:hover {
-  border-color: color-mix(in srgb, var(--line-strong) 88%, var(--accent) 12%);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(246, 247, 244, 0.98) 100%),
     var(--surface);
@@ -2776,6 +2775,70 @@ pre {
     animation-iteration-count: 1 !important;
     transition-duration: 150ms !important;
   }
+}
+
+/* Flat app surfaces. Landing is outside `.app-shell`. */
+.app-shell :is(.card, .panel, .onboarding-card),
+.app-shell :is(.card, .panel, .onboarding-card):hover {
+  border: 0;
+  background: #ffffff;
+  box-shadow: none;
+  transform: none;
+}
+
+.app-shell .stat,
+.app-shell .stat:hover {
+  border: 0;
+  background: #f9fafb;
+  box-shadow: none;
+  transform: none;
+}
+
+.app-shell :is(
+  .job-row,
+  .worker-card,
+  .recommend-row,
+  .activity-item,
+  .review-item,
+  .portfolio-item,
+  .message-item,
+  .invitation-item,
+  .invite-item
+) {
+  border: 0;
+  border-top: var(--rule-thin) solid var(--hairline);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: background-color var(--dur-short) var(--ease-out);
+}
+
+.app-shell :is(
+  .job-row,
+  .worker-card,
+  .recommend-row,
+  .activity-item,
+  .review-item,
+  .portfolio-item,
+  .message-item,
+  .invitation-item,
+  .invite-item
+):hover {
+  border-color: var(--hairline);
+  background: #f3f4f6;
+  box-shadow: none;
+  transform: none;
+}
+
+.app-shell :is(
+  .icon-button,
+  .portfolio-icon,
+  .empty-icon,
+  .activity-icon,
+  .avatar,
+  .message-avatar
+) {
+  border: 0;
 }
 
 /* ─── Onboarding wizard ─── */

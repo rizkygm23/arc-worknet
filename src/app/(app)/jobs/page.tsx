@@ -2,13 +2,14 @@
 
 import { Briefcase, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { EmptyState, PageHeader, SkeletonPanel, StatCard, WalletPill } from "@/components/app-shell";
 import { JobRow } from "@/components/job-components";
 import { useSavedJobs } from "@/lib/saved-jobs";
 import { formatUsdcUnits } from "@/lib/money";
 import { useWorkNet } from "@/lib/store";
+import { useStatistics } from "@/lib/use-statistics";
 import type { ActorType, Agent, Job, JobStatus, Profile } from "@/lib/types";
 
 const statuses: Array<"all" | JobStatus> = [
@@ -34,7 +35,9 @@ type BudgetBucketId = (typeof budgetBuckets)[number]["id"];
 
 export default function JobsPage() {
   const { state } = useWorkNet();
+  const statistics = useStatistics(state.activeProfileId);
   const { savedIds, isSaved, toggleSaved, hydrated } = useSavedJobs();
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | JobStatus>("all");
   const [category, setCategory] = useState("all");
@@ -89,6 +92,19 @@ export default function JobsPage() {
     return () => window.clearTimeout(timeout);
   }, [loadPage]);
 
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || !nextCursor || isLoading) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) void loadPage(nextCursor);
+      },
+      { rootMargin: "400px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [isLoading, loadPage, nextCursor]);
+
   const jobs = useMemo(() => {
     const bucket = budgetBuckets.find((item) => item.id === budgetBucket)!;
     return pageJobs.filter((job) => {
@@ -98,9 +114,10 @@ export default function JobsPage() {
     });
   }, [budgetBucket, pageJobs, savedIds, showSavedOnly]);
 
-  const openBudget = pageJobs
-    .filter((job) => ["open", "assigned", "funded", "submitted"].includes(job.status))
-    .reduce((sum, job) => sum + job.budgetUsdcUnits, 0);
+  const totalJobs = statistics?.public.totalJobs ?? pageJobs.length;
+  const openBudget = statistics?.public.openBudgetUsdcUnits ?? 0;
+  const myApplications = statistics?.private?.myApplications ?? state.applications.length;
+  const knownAgents = statistics?.public.knownAgents ?? state.agents.length;
 
   const activeFilterCount =
     (status !== "all" ? 1 : 0) +
@@ -143,10 +160,10 @@ export default function JobsPage() {
       {showSkeleton ? null : (
       <>
       <section className="stat-grid" style={{ marginBottom: 16 }}>
-        <StatCard label="Loaded jobs" value={String(pageJobs.length)} />
-        <StatCard label="Loaded open budget" value={formatUsdcUnits(openBudget, { compact: true })} />
-        <StatCard label="My applications" value={String(state.applications.length)} />
-        <StatCard label="Known agents" value={String(state.agents.length)} />
+        <StatCard label="Total jobs" value={String(totalJobs)} />
+        <StatCard label="Open budget" value={formatUsdcUnits(openBudget, { compact: true })} />
+        <StatCard label="My applications" value={String(myApplications)} />
+        <StatCard label="Known agents" value={String(knownAgents)} />
       </section>
 
       <section className="panel">
@@ -293,11 +310,12 @@ export default function JobsPage() {
           </div>
         )}
         {nextCursor ? (
-          <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
-            <button className="button secondary" type="button" disabled={isLoading} onClick={() => void loadPage(nextCursor)}>
-              {isLoading ? "Loading..." : "Load more"}
-            </button>
-          </div>
+          <div ref={loadMoreRef} aria-hidden style={{ height: 1 }} />
+        ) : null}
+        {isLoading && pageJobs.length > 0 ? (
+          <p className="small muted" role="status" style={{ margin: "16px 0 0", textAlign: "center" }}>
+            Loading more jobs…
+          </p>
         ) : null}
       </section>
       </>

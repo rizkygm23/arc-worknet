@@ -8,9 +8,11 @@ import { ChainTxLink, JobRow } from "@/components/job-components";
 import { formatUsdcUnits } from "@/lib/money";
 import { recommendJobs } from "@/lib/recommendations";
 import { useWorkNet } from "@/lib/store";
+import { useStatistics } from "@/lib/use-statistics";
 
 export default function DashboardPage() {
   const { state, activeProfile, getProfile, getAgent, isSyncing } = useWorkNet();
+  const statistics = useStatistics(state.activeProfileId);
   const myJobs = useMemo(() => {
     if (!activeProfile) return [];
     if (activeProfile.role === "admin") return state.jobs;
@@ -106,10 +108,13 @@ export default function DashboardPage() {
       {showSkeleton ? null : (
       <>
       <section className="stat-grid" style={{ marginBottom: 16 }}>
-        <StatCard label="My jobs" value={String(myJobs.length)} />
-        <StatCard label="Pending review" value={String(pendingReviews.length)} />
-        <StatCard label="Escrowed" value={formatUsdcUnits(escrowed, { compact: true })} />
-        <StatCard label="Applications" value={String(openApplicationsCount)} />
+        <StatCard label="My jobs" value={String(statistics?.private?.myJobs ?? myJobs.length)} />
+        <StatCard label="Pending review" value={String(statistics?.private?.pendingReview ?? pendingReviews.length)} />
+        <StatCard
+          label="Escrowed"
+          value={formatUsdcUnits(statistics?.private?.escrowedUsdcUnits ?? escrowed, { compact: true })}
+        />
+        <StatCard label="Applications" value={String(statistics?.private?.openApplications ?? openApplicationsCount)} />
       </section>
 
       <section className="layout-with-rail">

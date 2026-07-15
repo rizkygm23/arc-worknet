@@ -10,6 +10,7 @@ import { ProfileReputationBadges } from "@/components/job-components";
 import { availabilityLabel } from "@/lib/availability";
 import { formatUsdcUnits } from "@/lib/money";
 import { useWorkNet } from "@/lib/store";
+import { useStatistics } from "@/lib/use-statistics";
 import type { Availability } from "@/lib/types";
 
 type SortKey = "rating" | "jobs" | "earnings" | "name";
@@ -20,6 +21,7 @@ const availabilityOptions: Array<"all" | Availability> = ["all", "open", "limite
 
 export default function WorkersDirectoryPage() {
   const { state, isSyncing } = useWorkNet();
+  const statistics = useStatistics(state.activeProfileId);
   const [query, setQuery] = useState("");
   const [role, setRole] = useState<RoleFilter>("all");
   const [skill, setSkill] = useState("all");
@@ -90,17 +92,17 @@ export default function WorkersDirectoryPage() {
       {showSkeleton ? null : (
       <>
       <section className="stat-grid" style={{ marginBottom: 16 }}>
-        <StatCard label="Workers" value={String(candidates.length)} />
+        <StatCard label="Workers" value={String(statistics?.public.workers ?? candidates.length)} />
         <StatCard
           label="Open to work"
-          value={String(candidates.filter((p) => p.availability === "open").length)}
+          value={String(statistics?.public.openWorkers ?? candidates.filter((p) => p.availability === "open").length)}
         />
-        <StatCard label="Skills" value={String(skillOptions.length - 1)} />
+        <StatCard label="Skills" value={String(statistics?.public.workerSkills ?? skillOptions.length - 1)} />
         <StatCard
           label="Avg rating"
-          value={(
+          value={(statistics?.public.averageWorkerRating ?? (
             candidates.reduce((sum, p) => sum + p.ratingAvg, 0) / Math.max(candidates.length, 1)
-          ).toFixed(2)}
+          )).toFixed(2)}
         />
       </section>
 

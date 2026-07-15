@@ -422,7 +422,16 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_public_statistics_arcworker: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      get_private_statistics_arcworker: {
+        Args: { p_profile_id: string };
+        Returns: Json;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
