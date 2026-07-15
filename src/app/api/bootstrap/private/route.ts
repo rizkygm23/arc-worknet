@@ -91,6 +91,7 @@ export async function GET() {
           .or(
             `client_profile_id.eq.${session.profileId},provider_profile_id.eq.${session.profileId}`,
           )
+          .or("category.neq.simulation,category.is.null")
           .order("created_at", { ascending: false })
           .limit(PRIVATE_LIST_LIMIT),
       ),
@@ -168,6 +169,7 @@ export async function GET() {
         supabase
           .from(TABLES.jobs)
           .select("*")
+          .or("category.neq.simulation,category.is.null")
           .order("created_at", { ascending: false })
           .limit(PRIVATE_LIST_LIMIT),
         "provider_agent_id",

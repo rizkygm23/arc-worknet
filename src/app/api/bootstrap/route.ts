@@ -85,6 +85,7 @@ export async function GET(request: Request) {
           .from(TABLES.jobs)
           .select("*")
           .in("status", [...PUBLIC_JOB_STATUSES])
+          .or("category.neq.simulation,category.is.null")
           .order("created_at", { ascending: false })
           .limit(PUBLIC_LIST_LIMIT),
       ),

@@ -266,9 +266,10 @@ function Hero() {
                 $
                 <CountUp
                   from={0}
-                  to={baseVolumeUnits > 0 ? baseVolumeUnits / 1_000_000 : 2480}
+                  to={Math.round(baseVolumeUnits > 0 ? baseVolumeUnits / 1_000_000 : 2480)}
                   separator=","
-                  duration={1}
+                  decimals={0}
+                  duration={2}
                   delay={0}
                 />
               </span>

@@ -57,6 +57,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from(TABLES.jobs)
     .select("*")
+    .or("category.neq.simulation,category.is.null")
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(limit + 1);
