@@ -68,6 +68,7 @@ arc-worknet/
 │       ├── store.tsx             # Global state + bootstrap fetcher
 │       ├── wallet.ts             # Read-only viem helpers
 │       └── env.ts                # zod-validated env
+├── docs/                         # Project documentation and drafts
 ├── tokens.css                    # Design tokens (xAI-inspired dark theme)
 ├── AGENTS.md                     # Coding-agent rules
 └── arc-worknet-mvp-architecture.md
