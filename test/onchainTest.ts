@@ -75,11 +75,92 @@ if (!FIRST_WALLET_PRIVATE_KEY || !SECOND_WALLET_PRIVATE_KEY) {
   process.exit(1);
 }
 
+// Helper for waiting/sleeping
+const STAGE_DELAY = 2000; // Delay in ms between transaction steps
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// ─────────────────────────────────────────────────────────────
+//  Rate-limit aware RPC transport
+//  RPC testnet Arc punya limit request per-IP yang sangat ketat.
+//  Transport ini (1) memberi jeda antar SEMUA request RPC dari
+//  semua client lewat satu antrian global, dan (2) retry dengan
+//  exponential backoff saat node menjawab "request limit reached"
+//  (code -32011), termasuk untuk polling receipt internal viem.
+// ─────────────────────────────────────────────────────────────
+const MIN_REQUEST_GAP_MS = Number(process.env.RPC_MIN_REQUEST_GAP_MS || 750);
+const MAX_RATE_LIMIT_RETRIES = 8;
+let lastRequestAt = 0;
+let throttleQueue: Promise<void> = Promise.resolve();
+
+function isRateLimitError(err: unknown, depth = 0): boolean {
+  if (!err || typeof err !== "object" || depth > 10) return false;
+  const e = err as {
+    code?: number;
+    status?: number;
+    details?: string;
+    shortMessage?: string;
+    message?: string;
+    cause?: unknown;
+  };
+  if (e.code === -32011 || e.code === -32005 || e.status === 429) return true;
+  const text = `${e.details ?? ""} ${e.shortMessage ?? ""} ${e.message ?? ""}`.toLowerCase();
+  if (
+    text.includes("request limit") ||
+    text.includes("rate limit") ||
+    text.includes("too many request")
+  ) {
+    return true;
+  }
+  return isRateLimitError(e.cause, depth + 1);
+}
+
+// All clients share one queue so total traffic stays under the IP limit
+function waitForRequestSlot(): Promise<void> {
+  const myTurn = throttleQueue.then(async () => {
+    const wait = lastRequestAt + MIN_REQUEST_GAP_MS - Date.now();
+    if (wait > 0) await sleep(wait);
+    lastRequestAt = Date.now();
+  });
+  throttleQueue = myTurn.catch(() => {});
+  return myTurn;
+}
+
+const baseTransport = http(ARC_RPC_URL, { retryCount: 0 });
+
+const rateLimitedTransport: typeof baseTransport = (params) => {
+  const transport = baseTransport(params);
+  const baseRequest = transport.request as unknown as (
+    args: unknown,
+    options?: unknown
+  ) => Promise<unknown>;
+
+  const request = (async (args: unknown, options?: unknown) => {
+    for (let attempt = 0; ; attempt++) {
+      await waitForRequestSlot();
+      try {
+        return await baseRequest(args, options);
+      } catch (err) {
+        if (isRateLimitError(err) && attempt < MAX_RATE_LIMIT_RETRIES) {
+          const backoffMs = Math.min(2000 * 2 ** attempt, 30000);
+          console.log(
+            `\x1b[33m  ⏳ RPC rate limited — retry ${attempt + 1}/${MAX_RATE_LIMIT_RETRIES} in ${(backoffMs / 1000).toFixed(0)}s...\x1b[0m`
+          );
+          await sleep(backoffMs);
+          continue;
+        }
+        throw err;
+      }
+    }
+  }) as unknown as typeof transport.request;
+
+  return { ...transport, request };
+};
+
 // 2. Setup Viem Clients
 const publicClient = createPublicClient({
   chain: arcTestnet,
-  transport: http(ARC_RPC_URL),
-  pollingInterval: 100, // Query blocks every 100ms for fast sub-second finality
+  transport: rateLimitedTransport,
+  pollingInterval: 3000, // Poll receipt pelan-pelan agar hemat kuota RPC
 });
 
 const account1 = privateKeyToAccount(FIRST_WALLET_PRIVATE_KEY as `0x${string}`);
@@ -88,18 +169,14 @@ const account2 = privateKeyToAccount(SECOND_WALLET_PRIVATE_KEY as `0x${string}`)
 const client1 = createWalletClient({
   account: account1,
   chain: arcTestnet,
-  transport: http(ARC_RPC_URL),
+  transport: rateLimitedTransport,
 });
 
 const client2 = createWalletClient({
   account: account2,
   chain: arcTestnet,
-  transport: http(ARC_RPC_URL),
+  transport: rateLimitedTransport,
 });
-
-// Helper for waiting/sleeping
-const STAGE_DELAY = 100; // Delay in ms between transaction steps
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ─────────────────────────────────────────────────────────────
 //  Pretty output helpers (ANSI colors + formatting)
@@ -353,6 +430,7 @@ async function recoverStuckJobs() {
 
     console.log(`${C.gray}   Range: Job #${endScan} → #${startScan}${C.reset}`);
     for (let id = startScan; id >= endScan; id--) {
+      // Jeda antar request sudah diatur global oleh rateLimitedTransport
       const job = await publicClient.readContract({
         address: ERC8183_CONTRACT_ADDRESS,
         abi: erc8183Abi,
@@ -434,6 +512,9 @@ async function main() {
   console.log(`  ${C.gray}RPC             :${C.reset} ${ARC_RPC_URL}`);
 
   await recoverStuckJobs();
+  
+  console.log(`\n${C.yellow}⏳ Menunggu 2 detik agar RPC mereset limit IP...${C.reset}`);
+  await sleep(2000);
 
   // Configurable Max Iterations
   const MAX_ITERATIONS = Infinity; // Set to Infinity for endless loop
@@ -606,7 +687,7 @@ async function main() {
           allowanceSynced = true;
           break;
         }
-        await sleep(50);
+        await sleep(1000); // Jangan mem-bombardir RPC!
       }
       if (!allowanceSynced) {
         console.warn(`        ${C.yellow}⚠️  Allowance might not be synced yet on the RPC node.${C.reset}`);
@@ -706,6 +787,16 @@ async function main() {
       const errorMsg = err instanceof Error ? err.message : String(err);
       stats.failures++;
       console.error(`\n  ${C.red}❌ Error in cycle #${iteration}: ${errorMsg}${C.reset}`);
+
+      // Rate limit lolos dari semua retry transport → cooldown lalu lanjut,
+      // jangan matikan bot. recoverStuckJobs di start berikutnya akan
+      // menyelamatkan job yang tertinggal di tengah cycle ini.
+      if (isRateLimitError(err)) {
+        const cooldownMs = 60000;
+        console.log(`  ${C.yellow}🧊 Cooling down ${cooldownMs / 1000}s sebelum cycle berikutnya...${C.reset}`);
+        await sleep(cooldownMs);
+        continue;
+      }
       break;
     }
   }
