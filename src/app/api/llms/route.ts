@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const filePath = path.join(process.cwd(), "llms.md");
+    const filePath = path.join(process.cwd(), "docs", "llms.md");
     const content = await fs.readFile(filePath, "utf8");
     return new Response(content, {
       headers: {

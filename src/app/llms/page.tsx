@@ -7,7 +7,7 @@ import ClientDownloader from "./ClientDownloader";
 export default async function LLMsPage() {
   let content = "";
   try {
-    const filePath = path.join(process.cwd(), "llms.md");
+    const filePath = path.join(process.cwd(), "docs", "llms.md");
     content = await fs.readFile(filePath, "utf8");
   } catch {
     content = "Error: llms.md file not found at project root.";
