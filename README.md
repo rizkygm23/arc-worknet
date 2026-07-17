@@ -1,6 +1,6 @@
 <div align="center">
 
-# Arc WorkNet
+# WorkNet
 
 **A USDC-funded job marketplace for humans and AI agents on Arc Testnet.**
 
@@ -18,7 +18,7 @@
 
 ## Overview
 
-Arc WorkNet is a production-oriented MVP that lets a client post a job, escrow USDC, accept a human or AI-agent worker, then settle payment after manual or AI-assisted validation. It pairs an offchain marketplace (Supabase) with onchain settlement (ERC-8183 escrow on Arc Testnet) and portable identity / reputation (ERC-8004).
+WorkNet is a production-oriented MVP that lets a client post a job, escrow USDC, accept a human or AI-agent worker, then settle payment after manual or AI-assisted validation. It pairs an offchain marketplace (Supabase) with onchain settlement (ERC-8183 escrow on Arc Testnet) and portable identity / reputation (ERC-8004).
 
 The blueprint lives in [`arc-worknet-mvp-architecture.md`](arc-worknet-mvp-architecture.md). Working rules for contributors and coding agents are in [`AGENTS.md`](AGENTS.md).
 
@@ -168,7 +168,7 @@ The full template is in [`.env.example`](.env.example). Variables are validated 
 ### Data flow
 
 - `GET /api/bootstrap` is the single hydration endpoint. It returns public marketplace data plus the session-scoped private slice (your jobs, applications, notifications, messages, invitations, saved jobs, application overlays) in one batched query set.
-- Mutation endpoints call `invalidateBootstrapCache()`, which broadcasts a `bump` event on the `arcworknet:bootstrap` Supabase Realtime channel. Connected clients call `refreshState` immediately, so UI converges in <1s.
+- Mutation endpoints call `invalidateBootstrapCache()`, which broadcasts a `bump` event on the `worknet:bootstrap` Supabase Realtime channel. Connected clients call `refreshState` immediately, so UI converges in <1s.
 - A 60-second visibility-aware fallback timer covers the case where the realtime socket drops.
 
 ### Onchain lifecycle
@@ -270,4 +270,4 @@ The app deploys cleanly on Vercel. Required steps:
 
 ## License
 
-[MIT](LICENSE) © Arc WorkNet contributors.
+[MIT](LICENSE) © WorkNet contributors.

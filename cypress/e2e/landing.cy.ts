@@ -5,7 +5,7 @@ describe("Landing Page", () => {
 
   describe("Navigation Bar", () => {
     it("should display brand name", () => {
-      cy.get(".landing-brand").should("contain.text", "Arc WorkNet");
+      cy.get(".landing-brand").should("contain.text", "WorkNet");
     });
 
     it("should have navigation links", () => {
@@ -188,7 +188,7 @@ describe("Landing Page", () => {
 
   describe("Footer", () => {
     it("should display footer brand", () => {
-      cy.get(".landing-footer-brand").should("contain.text", "Arc WorkNet");
+      cy.get(".landing-footer-brand").should("contain.text", "WorkNet");
     });
 
     it("should display disclaimer text", () => {

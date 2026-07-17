@@ -4,7 +4,7 @@ import { env } from "@/lib/env";
 const PREFIX = "enc:v1";
 
 type EncryptedJsonEnvelope = {
-  __arcworknet_encrypted: "v1";
+  __worknet_encrypted: "v1";
   iv: string;
   tag: string;
   data: string;
@@ -60,7 +60,7 @@ export function encryptJson(value: Record<string, unknown>) {
 
   const [, , iv, tag, data] = encrypted.split(":");
   return {
-    __arcworknet_encrypted: "v1",
+    __worknet_encrypted: "v1",
     iv,
     tag,
     data,
@@ -70,7 +70,7 @@ export function encryptJson(value: Record<string, unknown>) {
 export function decryptJson(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const record = value as Partial<EncryptedJsonEnvelope> & Record<string, unknown>;
-  if (record.__arcworknet_encrypted !== "v1") return record;
+  if (record.__worknet_encrypted !== "v1") return record;
   if (typeof record.iv !== "string" || typeof record.tag !== "string" || typeof record.data !== "string") {
     return {};
   }

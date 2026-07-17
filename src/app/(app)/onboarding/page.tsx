@@ -148,7 +148,7 @@ export default function OnboardingPage() {
       <div className="onboarding-card">
         <div className="onboarding-head">
           <p className="eyebrow">
-            Welcome to Arc WorkNet
+            Welcome to WorkNet
           </p>
           {!isNewUser ? (
             <button type="button" className="button ghost small" onClick={handleSkip} disabled={saving}>

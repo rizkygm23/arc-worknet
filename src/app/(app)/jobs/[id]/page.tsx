@@ -410,7 +410,7 @@ export default function JobDetailPage() {
 
     const supabase = hasSupabaseBrowserConfig() ? getBrowserSupabase() : null;
     const channel = supabase
-      ?.channel(`arcworknet:job:${params.id}`)
+      ?.channel(`worknet:job:${params.id}`)
       .on("broadcast", { event: "bump" }, () => {
         if (document.visibilityState === "visible") void refresh();
       })

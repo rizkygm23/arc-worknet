@@ -17,7 +17,7 @@ export function profileBadges(profile: Profile): ReputationBadge[] {
     badges.push({
       id: "verified",
       label: "Verified",
-      description: "Identity confirmed by Arc WorkNet.",
+      description: "Identity confirmed by WorkNet.",
       tone: "ink",
     });
   }
@@ -87,7 +87,7 @@ export function profileBadges(profile: Profile): ReputationBadge[] {
     badges.push({
       id: "new",
       label: "New member",
-      description: "Joined Arc WorkNet within the last 30 days.",
+      description: "Joined WorkNet within the last 30 days.",
       tone: "warn",
     });
   }

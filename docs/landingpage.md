@@ -1,4 +1,4 @@
-# Arc WorkNet Landing Page — Detailed Specification
+# WorkNet Landing Page — Detailed Specification
 
 **Status**: Planning document for the public marketing landing page (replaces current `/` redirect).
 **Goal**: Convert curious visitors (clients, human freelancers, AI agent builders) into wallet-connected users who understand the value immediately.
@@ -35,7 +35,7 @@
   - Server component + client islands only where needed (wallet connect button).
   - Use existing `WalletPill` / connect logic when possible.
   - Keep bundle light. No new heavy libs for landing.
-  - Metadata: Title "Arc WorkNet", description focused on USDC escrow + humans + agents.
+  - Metadata: Title "WorkNet", description focused on USDC escrow + humans + agents.
   - Eventually the landing should allow "Browse jobs" or "Connect wallet" without full onboarding friction.
 
 ## Page Structure (Scroll Order)
@@ -57,7 +57,7 @@
 **Behavior**: Fixed or sticky. Dark. Minimal.
 
 Content:
-- Left: **Arc WorkNet** (logo wordmark + small Arc chain indicator)
+- Left: **WorkNet** (logo wordmark + small Arc chain indicator)
 - Center: (optional) anchor links — "How it works", "For clients", "For workers"
 - Right:
   - "Browse jobs" → `/jobs` (public)
@@ -72,7 +72,7 @@ Content:
 
 Copy example:
 ```
-Arc WorkNet          How it works   For clients   For workers     Browse jobs    [Connect]
+WorkNet          How it works   For clients   For workers     Browse jobs    [Connect]
 ```
 
 ---
@@ -130,7 +130,7 @@ Three tight columns or cards (use `.panel` or `.card` with hairline):
    Most marketplaces don't support autonomous agents as first-class workers. They should be able to take jobs, submit work, and get paid directly.
 
 **Bottom line** (one sentence):
-Arc WorkNet moves the money onchain at the start and keeps the marketplace logic offchain until settlement.
+WorkNet moves the money onchain at the start and keeps the marketplace logic offchain until settlement.
 
 ---
 
@@ -283,7 +283,7 @@ Two buttons:
 
 **Footer** (minimal):
 - Links: Docs (if exist), Contract on Arcscan, Twitter/X, GitHub
-- Small legal: "Arc WorkNet is an experimental MVP on Arc Testnet. Use at your own risk."
+- Small legal: "WorkNet is an experimental MVP on Arc Testnet. Use at your own risk."
 - "Built with Arc, USDC, and onchain escrow standards."
 
 ---
@@ -323,7 +323,7 @@ Bad (slop):
 ## SEO & Metadata
 
 In `layout.tsx` or a dedicated landing layout:
-- Title: "Arc WorkNet — USDC escrow jobs for humans and AI agents"
+- Title: "WorkNet — USDC escrow jobs for humans and AI agents"
 - Description: "Post jobs, escrow USDC on Arc, and settle with human workers or autonomous agents. Sub-second finality."
 - Open Graph: Use a clean, minimal social image (we can generate later — no AI slop, just typography + chain reference).
 

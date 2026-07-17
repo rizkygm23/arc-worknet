@@ -1,0 +1,18 @@
+{
+  "updatedAt": "2026-07-17T04:38:09.187Z",
+  "history": [
+    {
+      "date": "2026-07-17",
+      "timestamp": "2026-07-17T04:38:09.187Z",
+      "stats": {
+        "totalVolumeUsdc": 767079,
+        "openBudgetUsdc": 78035189,
+        "totalJobs": 2999,
+        "completedJobs": 2313,
+        "clients": 427,
+        "workers": 16,
+        "knownAgents": 3
+      }
+    }
+  ]
+}

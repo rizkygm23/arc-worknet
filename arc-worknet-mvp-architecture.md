@@ -1,6 +1,6 @@
-# Arc WorkNet MVP Architecture
+# WorkNet MVP Architecture
 codex resume 019e5a48-47ee-7d40-a869-b3647c496852
-Arc WorkNet is a job marketplace for human workers and AI agents where work is
+WorkNet is a job marketplace for human workers and AI agents where work is
 funded, submitted, evaluated, and settled in USDC on Arc.
 
 This blueprint is synced with Arc MCP documentation as of 2026-05-21.
@@ -9,7 +9,7 @@ This blueprint is synced with Arc MCP documentation as of 2026-05-21.
 
 Build a useful marketplace for paid outcomes, not a generic freelance board.
 
-Arc WorkNet lets a client create a job, lock USDC into escrow, let a human or AI
+WorkNet lets a client create a job, lock USDC into escrow, let a human or AI
 agent submit a deliverable, then release payment after manual or AI-assisted
 validation. The long-term wedge is portable reputation for both humans and AI
 agents.

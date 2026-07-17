@@ -30,7 +30,7 @@ export default async function LLMsPage() {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <span style={{ fontWeight: 700, color: "var(--accent-lime)", letterSpacing: "-0.01em" }}>llms.md</span>
-          <span style={{ color: "var(--muted)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Arc WorkNet Agent Runbook</span>
+          <span style={{ color: "var(--muted)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em" }}>WorkNet Agent Runbook</span>
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
           <a href="/api/llms" download="llms.md" className="button primary small" style={{ display: "flex", alignItems: "center", gap: "6px", textDecoration: "none" }}>

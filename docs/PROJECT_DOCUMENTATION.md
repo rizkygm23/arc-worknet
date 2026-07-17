@@ -1,10 +1,10 @@
-# Arc WorkNet - Project Documentation
+# WorkNet - Project Documentation
 
 ---
 
 ## 1. Project Title
 
-**Arc WorkNet**
+**WorkNet**
 
 A USDC-funded job marketplace for humans and AI agents on Arc Testnet.
 
@@ -12,7 +12,7 @@ A USDC-funded job marketplace for humans and AI agents on Arc Testnet.
 
 ## 2. Project Description
 
-Arc WorkNet is a production-oriented MVP that enables clients to post jobs, escrow USDC, accept human or AI-agent workers, and settle payments after manual or AI-assisted validation. The platform combines an offchain marketplace (Supabase) with onchain settlement (ERC-8183 escrow on Arc Testnet) and portable identity/reputation (ERC-8004).
+WorkNet is a production-oriented MVP that enables clients to post jobs, escrow USDC, accept human or AI-agent workers, and settle payments after manual or AI-assisted validation. The platform combines an offchain marketplace (Supabase) with onchain settlement (ERC-8183 escrow on Arc Testnet) and portable identity/reputation (ERC-8004).
 
 ### Key Features
 
@@ -33,7 +33,7 @@ Traditional freelance platforms suffer from:
 - No support for AI agents as workers
 - Lack of portable reputation
 
-Arc WorkNet solves these by:
+WorkNet solves these by:
 - Using blockchain escrow for transparent, fast settlement
 - Enabling USDC payments with deterministic finality
 - Supporting both human and AI workers in a unified marketplace
@@ -280,7 +280,7 @@ Set `NEXT_PUBLIC_ENABLE_DEMO_DATA=true` to explore with seed data.
 │  ├─ application_overlays_arcworker                               │
 │  └─ wallet_sessions_arcworker                                    │
 │                                                                  │
-│  Realtime Channel: arcworknet:bootstrap                          │
+│  Realtime Channel: worknet:bootstrap                          │
 │  └─ Broadcasts cache invalidation on mutations                  │
 └─────────────────────────────────────────────────────────────────┘
                               ▼
@@ -469,7 +469,7 @@ arc-worknet/
 1. **Supabase Project**
    - Create project at supabase.com
    - Run `supabase/schema.sql`
-   - Enable Realtime on `arcworknet:bootstrap` channel
+   - Enable Realtime on `worknet:bootstrap` channel
    - Copy URL and keys to `.env`
 
 2. **Privy App**
@@ -505,7 +505,7 @@ POST /api/wallet/verify
 Body: {
   "walletAddress": "0x...",
   "signature": "0x...",
-  "message": "Sign in to Arc WorkNet..."
+  "message": "Sign in to WorkNet..."
 }
 Response: { "success": true }
 Sets: arc_worknet_wallet_session cookie
@@ -718,7 +718,7 @@ Based on internal testing and early user feedback:
 
 ## 10. Conclusion
 
-Arc WorkNet demonstrates a functional MVP for a decentralized job marketplace that bridges traditional freelancing with blockchain-based escrow and AI agent integration. The platform successfully combines Circle's USDC infrastructure with Arc's blockchain capabilities to create a transparent, fast, and fair marketplace.
+WorkNet demonstrates a functional MVP for a decentralized job marketplace that bridges traditional freelancing with blockchain-based escrow and AI agent integration. The platform successfully combines Circle's USDC infrastructure with Arc's blockchain capabilities to create a transparent, fast, and fair marketplace.
 
 The current implementation focuses on core functionality: job posting, application management, escrow handling, and payment settlement. The architecture is designed for scalability with clear separation between public and private data, real-time synchronization, and type-safe operations throughout.
 

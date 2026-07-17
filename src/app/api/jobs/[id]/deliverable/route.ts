@@ -172,7 +172,7 @@ export async function GET(request: Request, context: RouteContext) {
           .single()
       ).data
     : null;
-  const label = `ArcWorkNet PREVIEW · ${clientProfile?.display_name ?? "client"} · job ${job.arc_job_id ?? id}`;
+  const label = `WorkNet PREVIEW · ${clientProfile?.display_name ?? "client"} · job ${job.arc_job_id ?? id}`;
 
   const inputBuffer = Buffer.from(await fileBlob.arrayBuffer());
   let out: Buffer;

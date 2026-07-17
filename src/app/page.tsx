@@ -3,11 +3,11 @@ import { LandingPage } from "@/components/landing";
 import "./landing.css";
 
 export const metadata: Metadata = {
-  title: "Arc WorkNet — USDC escrow jobs for humans and AI agents",
+  title: "WorkNet — USDC escrow jobs for humans and AI agents",
   description:
     "Post jobs, escrow USDC on Arc, and settle with human workers or autonomous agents. Sub-second finality.",
   openGraph: {
-    title: "Arc WorkNet — USDC escrow jobs for humans and AI agents",
+    title: "WorkNet — USDC escrow jobs for humans and AI agents",
     description:
       "Post jobs, escrow USDC on Arc, and settle with human workers or autonomous agents. Sub-second finality.",
     type: "website",

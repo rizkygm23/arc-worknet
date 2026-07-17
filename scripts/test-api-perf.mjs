@@ -46,7 +46,7 @@ const arcTestnet = defineChain({
 });
 
 console.log("========================================================");
-console.log("       Arc WorkNet professional API Load Tester         ");
+console.log("       WorkNet professional API Load Tester         ");
 console.log("========================================================");
 console.log(`Target URL:     ${BASE_URL}`);
 console.log(`Virtual Users:  ${CONCURRENCY} VUs`);

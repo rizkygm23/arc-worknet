@@ -76,7 +76,7 @@ if (!FIRST_WALLET_PRIVATE_KEY || !SECOND_WALLET_PRIVATE_KEY) {
 }
 
 // Helper for waiting/sleeping
-const STAGE_DELAY = 2000; // Delay in ms between transaction steps
+const STAGE_DELAY = 5000; // Delay in ms between transaction steps
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ─────────────────────────────────────────────────────────────
@@ -87,8 +87,9 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 //  exponential backoff saat node menjawab "request limit reached"
 //  (code -32011), termasuk untuk polling receipt internal viem.
 // ─────────────────────────────────────────────────────────────
-const MIN_REQUEST_GAP_MS = Number(process.env.RPC_MIN_REQUEST_GAP_MS || 750);
-const MAX_RATE_LIMIT_RETRIES = 8;
+let dynamicRequestGapMs = 500;
+const MAX_REQUEST_GAP_MS = 10000;
+const MAX_RATE_LIMIT_RETRIES = 50;
 let lastRequestAt = 0;
 let throttleQueue: Promise<void> = Promise.resolve();
 
@@ -117,7 +118,7 @@ function isRateLimitError(err: unknown, depth = 0): boolean {
 // All clients share one queue so total traffic stays under the IP limit
 function waitForRequestSlot(): Promise<void> {
   const myTurn = throttleQueue.then(async () => {
-    const wait = lastRequestAt + MIN_REQUEST_GAP_MS - Date.now();
+    const wait = lastRequestAt + dynamicRequestGapMs - Date.now();
     if (wait > 0) await sleep(wait);
     lastRequestAt = Date.now();
   });
@@ -141,11 +142,11 @@ const rateLimitedTransport: typeof baseTransport = (params) => {
         return await baseRequest(args, options);
       } catch (err) {
         if (isRateLimitError(err) && attempt < MAX_RATE_LIMIT_RETRIES) {
-          const backoffMs = Math.min(2000 * 2 ** attempt, 30000);
+          dynamicRequestGapMs = Math.min(dynamicRequestGapMs + 100, MAX_REQUEST_GAP_MS);
           console.log(
-            `\x1b[33m  ⏳ RPC rate limited — retry ${attempt + 1}/${MAX_RATE_LIMIT_RETRIES} in ${(backoffMs / 1000).toFixed(0)}s...\x1b[0m`
+            `\x1b[33m  ⏳ RPC rate limited — increasing gap to ${dynamicRequestGapMs}ms (retry ${attempt + 1}/${MAX_RATE_LIMIT_RETRIES})\x1b[0m`
           );
-          await sleep(backoffMs);
+          await sleep(dynamicRequestGapMs);
           continue;
         }
         throw err;
@@ -430,6 +431,7 @@ async function recoverStuckJobs() {
 
     console.log(`${C.gray}   Range: Job #${endScan} → #${startScan}${C.reset}`);
     for (let id = startScan; id >= endScan; id--) {
+      process.stdout.write(`\r${C.gray}   Checking Job #${id} (${startScan - id + 1}/${startScan - endScan + 1})...\x1b[K${C.reset}`);
       // Jeda antar request sudah diatur global oleh rateLimitedTransport
       const job = await publicClient.readContract({
         address: ERC8183_CONTRACT_ADDRESS,
@@ -449,9 +451,8 @@ async function recoverStuckJobs() {
 
       // If both client and provider are user wallets, and status is active with funded funds
       if (isUserWallet(client) && isUserWallet(provider) && fundedAmount > BigInt(0)) {
-        // Status: 3 = Funded, 4 = Submitted, 5 = RevisionRequested
         if (status === 3 || status === 4 || status === 5) {
-          console.log(`\n${C.yellow}⚠️  Found stuck Job #${id} with ${C.bold}${fmtUsdc(fundedAmount)}${C.reset}${C.yellow} locked!${C.reset}`);
+          console.log(`\n\n${C.yellow}⚠️  Found stuck Job #${id} with ${C.bold}${fmtUsdc(fundedAmount)}${C.reset}${C.yellow} locked!${C.reset}`);
 
           // Determine which wallet is Client/Provider
           const isWallet1Client = client.toLowerCase() === account1.address.toLowerCase();
@@ -491,7 +492,7 @@ async function recoverStuckJobs() {
         }
       }
     }
-    console.log(`${C.green}   Scan complete — ${stats.recoveredJobs} stuck job(s) recovered.${C.reset}\n`);
+    console.log(`\n${C.green}   Scan complete — ${stats.recoveredJobs} stuck job(s) recovered.${C.reset}\n`);
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error("Error during stuck jobs recovery scan:", errorMsg);
@@ -501,7 +502,7 @@ async function recoverStuckJobs() {
 async function main() {
   console.log(`${C.magenta}${C.bold}`);
   console.log("  ╔══════════════════════════════════════════════════╗");
-  console.log("  ║      🤖  ARC WORKNET — ONCHAIN VOLUME BOT  🤖     ║");
+  console.log("  ║      🤖  WORKNET — ONCHAIN VOLUME BOT  🤖     ║");
   console.log("  ║          ERC-8183 Escrow Cycle Simulator          ║");
   console.log("  ╚══════════════════════════════════════════════════╝");
   console.log(C.reset);

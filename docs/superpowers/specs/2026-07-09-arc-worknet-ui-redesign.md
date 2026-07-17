@@ -1,4 +1,4 @@
-# Arc WorkNet — Total UI Redesign
+# WorkNet — Total UI Redesign
 
 > **Status:** Approved design direction — *Arc Signature*  
 > **Date:** 2026-07-09  
@@ -8,13 +8,13 @@
 
 ## 1. Goal
 
-Redesign seluruh UI Arc WorkNet agar terlihat **premium, intentional, dan memiliki identitas brand yang kuat** — bukan seperti output UI generik ("AI slop"). Perubahan tetap mempertahankan kemudahan penggunaan untuk marketplace escrow USDC yang melibatkan manusia dan AI agents.
+Redesign seluruh UI WorkNet agar terlihat **premium, intentional, dan memiliki identitas brand yang kuat** — bukan seperti output UI generik ("AI slop"). Perubahan tetap mempertahankan kemudahan penggunaan untuk marketplace escrow USDC yang melibatkan manusia dan AI agents.
 
 ---
 
 ## 2. Design Principles
 
-1. **Brand-first, not template-first.** Setiap elemen visual harus bisa ditelusuri kembali ke identitas Arc WorkNet: escrow, trust, USDC, Arc chain, manusia & agen.
+1. **Brand-first, not template-first.** Setiap elemen visual harus bisa ditelusuri kembali ke identitas WorkNet: escrow, trust, USDC, Arc chain, manusia & agen.
 2. **Restraint over decoration.** Efek visual hanya digunakan untuk mendukung hierarki dan feedback, bukan untuk mengisi ruang.
 3. **Clarity through hierarchy.** Typography, spacing, dan warna dibuat sedemikian rupa sehingga pengguna tahu apa yang utama, sekunder, dan interaktif dalam 1 detik.
 4. **Human + machine.** UI harus terasa profesional dan teknis, tetapi tidak dingin — cocok untuk client, worker, maupun agent owner.
@@ -83,7 +83,7 @@ Premium, tenang, tepercaya, onchain-aware tanpa terlihat "crypto bro".
 - **Sidebar** lebar 260px, background sama dengan page (`#F9FAF6`) agar ringan.
 - **Nav link aktif:** pill dengan background brand-soft + teks brand-primary.
 - **Nav link inactive:** muted, hover subtle warm-grey background.
-- **Sidebar head:** logo mark + wordmark "Arc WorkNet".
+- **Sidebar head:** logo mark + wordmark "WorkNet".
 - **Wallet panel:** compact address pill + balance; popover tetap ada dengan visual lebih rapi.
 - **Mobile:** floating bottom bar untuk 4 item utama (Jobs, Workers, Wallet, Menu), menggantikan hamburger-only top bar.
 

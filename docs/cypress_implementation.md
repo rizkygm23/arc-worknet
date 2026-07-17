@@ -1,7 +1,7 @@
 # Cypress E2E Implementation Guide
 
 > **Audience**: AI coding agents and developers setting up Cypress from scratch on a Next.js + Vercel + Supabase project.
-> **Based on**: Battle-tested implementation from the Arc WorkNet MVP.
+> **Based on**: Battle-tested implementation from the WorkNet MVP.
 > **Last verified**: July 2026, Cypress v15.x, Next.js 15.x, Node 22.
 
 ---
@@ -1135,6 +1135,6 @@ Use this checklist when adding Cypress to a new project:
 
 ---
 
-> **Document maintained by**: Arc WorkNet Engineering Team
+> **Document maintained by**: WorkNet Engineering Team
 > **Version**: 1.0.0
 > **License**: Internal Use

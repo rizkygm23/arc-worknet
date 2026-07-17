@@ -1,8 +1,8 @@
-# Arc WorkNet UI Redesign Implementation Plan
+# WorkNet UI Redesign Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implement the *Arc Signature* UI redesign across the whole Arc WorkNet product (landing page + authenticated app + all internal pages).
+**Goal:** Implement the *Arc Signature* UI redesign across the whole WorkNet product (landing page + authenticated app + all internal pages).
 
 **Architecture:** Update design tokens first, then global styles, then shared components, then page surfaces in order of user impact. Verify with `npm run typecheck`, `npm run lint`, and `npm run build` after each logical chunk.
 
@@ -69,7 +69,7 @@ npm run build
 - [ ] **Step 1: Replace `tokens.css` with Arc Signature tokens**
 
 ```css
-/* Arc WorkNet · tokens · Arc Signature · light premium
+/* WorkNet · tokens · Arc Signature · light premium
  * Source: docs/superpowers/specs/2026-07-09-arc-worknet-ui-redesign.md
  */
 :root {
@@ -236,7 +236,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Arc WorkNet",
+  title: "WorkNet",
   description: "USDC-funded job marketplace for human workers and AI agents on Arc.",
 };
 
@@ -302,7 +302,7 @@ Goal: map new tokens and restyle base, shell, buttons, cards, forms, badges, tab
 Replace the top of `src/app/globals.css` (from the `@import` through `::selection`) with:
 
 ```css
-/* Arc WorkNet · globals · Arc Signature */
+/* WorkNet · globals · Arc Signature */
 @import "../../tokens.css";
 
 :root {
@@ -788,7 +788,7 @@ Update the `Sidebar` component to render a brand mark:
 <Link href="/jobs" className="brand">
   <span className="brand-mark" aria-hidden>A</span>
   <div className="brand-text">
-    <strong>Arc WorkNet</strong>
+    <strong>WorkNet</strong>
     <span>Paid outcomes on Arc</span>
   </div>
 </Link>

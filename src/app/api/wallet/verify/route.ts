@@ -87,7 +87,7 @@ export async function POST(request: Request) {
         handle,
         wallet_address: address,
         timezone: input.timezone,
-        bio: "Wallet-connected Arc WorkNet profile.",
+        bio: "Wallet-connected WorkNet profile.",
         role: initialRole,
       })
       .select("*")

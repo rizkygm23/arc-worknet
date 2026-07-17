@@ -103,7 +103,7 @@ function LandingNav() {
             alt="Logo"
             style={{ height: 28, width: "auto", objectFit: "contain" }}
           />
-          Arc WorkNet
+          WorkNet
         </span>
         <div className="landing-nav-links">
           <a className="landing-nav-link" href="#how">
@@ -445,7 +445,7 @@ function Problem() {
         </WobbleCard>
       </div>
       <p className="landing-pullquote reveal" data-reveal>
-        Arc WorkNet moves the money onchain at the start and keeps the
+        WorkNet moves the money onchain at the start and keeps the
         marketplace logic offchain until settlement.
       </p>
     </section>
@@ -794,10 +794,10 @@ function Footer() {
               alt="Logo"
               style={{ height: 24, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
             />
-            Arc WorkNet
+            WorkNet
           </div>
           <p className="landing-footer-blurb">
-            Arc WorkNet is an experimental MVP on Arc Testnet. Use at your own
+            WorkNet is an experimental MVP on Arc Testnet. Use at your own
             risk. Built with Arc, USDC, and onchain escrow standards.
           </p>
           <div className="landing-footer-legal">

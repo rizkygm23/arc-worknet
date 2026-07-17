@@ -1,6 +1,6 @@
 "use client";
 
-export const TOUR_DONE_KEY = "arcworknet_tour_done";
+export const TOUR_DONE_KEY = "worknet_tour_done";
 
 export function readTourDone(): boolean {
   if (typeof window === "undefined") return false;

@@ -382,7 +382,7 @@ function SidebarLogo() {
         }}
         className="flex flex-col min-w-0"
       >
-        <strong style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-md)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--ink)', whiteSpace: 'nowrap' }}>Arc WorkNet</strong>
+        <strong style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-md)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--ink)', whiteSpace: 'nowrap' }}>WorkNet</strong>
         <span style={{ marginTop: 2, color: 'var(--muted)', fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Paid outcomes on Arc</span>
       </motion.div>
     </Link>
@@ -411,7 +411,7 @@ function MobileSidebarLogo() {
         className="shrink-0"
         style={{ width: 24, height: 24, objectFit: 'contain' }}
       />
-      <strong style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-sm)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--ink)', whiteSpace: 'nowrap' }}>Arc WorkNet</strong>
+      <strong style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-sm)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--ink)', whiteSpace: 'nowrap' }}>WorkNet</strong>
     </Link>
   );
 }

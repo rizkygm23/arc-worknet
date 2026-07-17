@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This repository is the Arc WorkNet MVP application. Treat it as a production-oriented Next.js, Supabase, wallet-auth, and Arc smart-contract project.
+This repository is the WorkNet MVP application. Treat it as a production-oriented Next.js, Supabase, wallet-auth, and Arc smart-contract project.
 
 ## Source Of Truth
 
@@ -10,7 +10,7 @@ This repository is the Arc WorkNet MVP application. Treat it as a production-ori
 - Smart contract source: `contracts/ArcWorknetEscrow.sol`
 - Environment template: `.env.example`
 
-The `skills/andrej-karpathy-skill/`, `.codex-plugin/`, `instruction.md`, and `EXAMPLES.md` files describe the coding-agent workflow used in this repo. They are not the product architecture for Arc WorkNet.
+The `skills/andrej-karpathy-skill/`, `.codex-plugin/`, `instruction.md`, and `EXAMPLES.md` files describe the coding-agent workflow used in this repo. They are not the product architecture for WorkNet.
 
 ## Working Rules
 

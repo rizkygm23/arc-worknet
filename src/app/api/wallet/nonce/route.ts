@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
   const address = parsed.data.address.toLowerCase();
   const message = [
-    "Sign in to Arc WorkNet",
+    "Sign in to WorkNet",
     "",
     `Wallet: ${address}`,
     `Chain ID: ${parsed.data.chainId}`,

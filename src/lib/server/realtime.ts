@@ -1,9 +1,9 @@
 import { hasSupabaseServiceConfig } from "@/lib/env";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 
-export const BOOTSTRAP_CHANNEL = "arcworknet:bootstrap";
+export const BOOTSTRAP_CHANNEL = "worknet:bootstrap";
 export const BOOTSTRAP_EVENT = "bump";
-export const jobChannel = (jobId: string) => `arcworknet:job:${jobId}`;
+export const jobChannel = (jobId: string) => `worknet:job:${jobId}`;
 export const JOB_EVENT = "bump";
 
 let warned = false;

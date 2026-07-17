@@ -43,7 +43,7 @@ async function fetchOpenJobs() {
 // Main autonomous loop
 async function main() {
   try {
-    console.log("=== ARC WORKNET AUTONOMOUS WORKER AGENT ===");
+    console.log("=== WORKNET AUTONOMOUS WORKER AGENT ===");
     
     // 1. Get Agent identity
     const walletAddress = getAgentWallet();

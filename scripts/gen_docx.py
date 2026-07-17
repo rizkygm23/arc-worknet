@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate a professional .docx whitepaper for Arc WorkNet using ONLY the Python
+Generate a professional .docx whitepaper for WorkNet using ONLY the Python
 standard library (zipfile + raw OOXML). No external packages, works offline.
 
 Run:  py scripts/gen_docx.py
@@ -141,9 +141,9 @@ def table(rows, widths, header=True):
 B = []
 
 # ---- COVER ----
-B.append(para([run("ARC WORKNET", b=True, caps=True, color=TEAL, sz=18, font="Consolas", spacing=60)],
+B.append(para([run("WORKNET", b=True, caps=True, color=TEAL, sz=18, font="Consolas", spacing=60)],
               align="center", space_before=1600, space_after=120))
-B.append(para([run("Arc WorkNet", b=True, color=INK, sz=64, font="Calibri")],
+B.append(para([run("WorkNet", b=True, color=INK, sz=64, font="Calibri")],
               align="center", space_after=80))
 B.append(para([run("A USDC-Settled Marketplace for Human and AI-Agent Labor on Arc",
                    color=GREY, sz=26, font="Calibri")],
@@ -168,7 +168,7 @@ B.append(page_break())
 # ---- ABSTRACT ----
 B.append(heading("Abstract"))
 B.append(para(
-    "Arc WorkNet is an onchain labor marketplace that lets a client post a job, escrow "
+    "WorkNet is an onchain labor marketplace that lets a client post a job, escrow "
     "USDC into a smart contract, engage a human worker or an autonomous AI agent, and "
     "settle payment atomically once a deliverable is validated. The protocol pairs an "
     "offchain coordination layer (Supabase Postgres with realtime broadcast) with onchain "
@@ -183,7 +183,7 @@ B.append(divider())
 # ---- 1. PROJECT TITLE ----
 B.append(heading("Project Title", 1, "1."))
 B.append(eyebrow("Identity"))
-B.append(para([run("Arc WorkNet", b=True, sz=24, color=INK, font="Calibri")], space_after=40))
+B.append(para([run("WorkNet", b=True, sz=24, color=INK, font="Calibri")], space_after=40))
 B.append(para([run("Tagline — ", b=True, color=INK),
                run("“Escrowed work for humans and machines, settled in USDC on Arc.”",
                    i=True, color=GREY)], space_after=160))
@@ -213,7 +213,7 @@ B.append(para(
 B.append(heading("Track", 1, "3."))
 B.append(para([run("DeFi / Payments / Onchain Labor Markets", b=True, color=ACCENT, sz=22, font="Calibri")], space_after=80))
 B.append(para(
-    "Arc WorkNet sits at the intersection of three categories: decentralized finance "
+    "WorkNet sits at the intersection of three categories: decentralized finance "
     "(USDC escrow and programmatic payout), payments infrastructure (Circle USDC settlement "
     "rail), and marketplace coordination (job posting, applications, reviews, reputation).",
     space_after=160))
@@ -231,7 +231,7 @@ B.append(para([run("Action required: ", b=True, color="B45309"),
 B.append(heading("Products Used", 1, "5."))
 B.append(eyebrow("Circle"))
 B.append(table([
-    ["Product", "Role in Arc WorkNet"],
+    ["Product", "Role in WorkNet"],
     ["Circle USDC", "Unit of account for budgets, escrow funding, and worker payouts."],
     ["USDC Escrow on Arc", "Budget locked in ArcWorknetEscrow; released on validation."],
     ["Circle App Kit", "Wallet onboarding and fiat on-ramp (integration scaffolded)."],
@@ -327,7 +327,7 @@ B.append(code_block([
     "|  DATA - Supabase Postgres  |   |  CHAIN - Arc Testnet 5042002|",
     "|  15 tables (_arcworker)    |   |  ArcWorknetEscrow (ERC-8183)|",
     "|  Realtime channel:         |   |  USDC token (Circle)        |",
-    "|  arcworknet:bootstrap      |   |  ERC-8004 registries        |",
+    "|  worknet:bootstrap      |   |  ERC-8004 registries        |",
     "+----------------------------+   +----------------------------+",
 ]))
 B.append(eyebrow("Escrow state machine"))
@@ -444,7 +444,7 @@ B.append(para([run("Requests: ", b=True, color="B45309"),
                run("“need testnet USDC to try it,” “add category filters/search,” “show agent execution,” “improve mobile.”", i=True, color=GREY)], space_after=160))
 
 B.append(divider())
-B.append(para([run("Arc WorkNet · Technical Whitepaper v1.0 · ", color=GREY, sz=15),
+B.append(para([run("WorkNet · Technical Whitepaper v1.0 · ", color=GREY, sz=15),
                run("github.com/rizkygm23/arc-worknet", color=ACCENT, sz=15),
                run(" · MIT License", color=GREY, sz=15)],
               align="center", space_before=80))
@@ -497,17 +497,17 @@ DOC_RELS = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 
 CORE = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-<dc:title>Arc WorkNet - Technical Whitepaper</dc:title>
-<dc:creator>Arc WorkNet</dc:creator>
-<cp:lastModifiedBy>Arc WorkNet</cp:lastModifiedBy>
+<dc:title>WorkNet - Technical Whitepaper</dc:title>
+<dc:creator>WorkNet</dc:creator>
+<cp:lastModifiedBy>WorkNet</cp:lastModifiedBy>
 <dcterms:created xsi:type="dcterms:W3CDTF">2026-05-29T00:00:00Z</dcterms:created>
 <dcterms:modified xsi:type="dcterms:W3CDTF">2026-05-29T00:00:00Z</dcterms:modified>
 </cp:coreProperties>'''
 
 APP = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">
-<Application>Arc WorkNet DocGen</Application>
-<Company>Arc WorkNet</Company>
+<Application>WorkNet DocGen</Application>
+<Company>WorkNet</Company>
 </Properties>'''
 
 with zipfile.ZipFile(OUT, "w", zipfile.ZIP_DEFLATED) as z:

@@ -1,8 +1,8 @@
-# Arc WorkNet X/Twitter Launch Plan (Official Admin Voice)
-**Project:** Arc WorkNet MVP  
+# WorkNet X/Twitter Launch Plan (Official Admin Voice)
+**Project:** WorkNet MVP  
 **Voice:** Official Project Admin / Project Lead (bukan personal builder)  
-**Goal:** Establish ArcWorkNet as a serious, professional project in the Arc ecosystem, attract attention from Arc core team, and build credibility in the Agentic Economy community.  
-**Target Account:** @ArcWorkNet  
+**Goal:** Establish WorkNet as a serious, professional project in the Arc ecosystem, attract attention from Arc core team, and build credibility in the Agentic Economy community.  
+**Target Account:** @WorkNet  
 **Date:** June 2026
 
 ---
@@ -10,22 +10,22 @@
 ## 1. Account Setup Recommendations
 
 ### Recommended Username (Priority):
-1. **@ArcWorkNet** ← Best and most professional
+1. **@WorkNet** ← Best and most professional
 2. **@WorkOnArc**
 3. **@ArcWorkers**
 4. **@ArcAgentWork**
 
-**Action:** Register @ArcWorkNet immediately.
+**Action:** Register @WorkNet immediately.
 
 ### Official Bio
 ```
-ArcWorkNet — Official Job Marketplace for Humans and AI Agents on Arc by Circle. 
+WorkNet — Official Job Marketplace for Humans and AI Agents on Arc by Circle. 
 
 USDC-native escrow • Agentic commerce infrastructure • Active on Arc Testnet.
 Participating in Lepton Agents Hackathon.
 ```
 
-**Link in bio:** https://arcworknet.xyz
+**Link in bio:** https://worknet.xyz
 
 ### Profile Visuals
 Use logo and banner generated from prompts below. Maintain clean, professional, institutional tech aesthetic (dark theme with Arc/Circle colors).
@@ -36,12 +36,12 @@ Use logo and banner generated from prompts below. Maintain clean, professional, 
 
 **Logo Prompt:**
 ```
-Futuristic minimalist logo for ArcWorkNet, deep black background, electric cyan blue and vibrant circle orange color palette, stylized network of nodes forming a stylized "A" combined with human and AI agent silhouette in professional handshake, subtle blockchain hexagonal pattern, clean modern sans-serif typography "ArcWorkNet", premium institutional tech aesthetic, sharp, high-end, professional, negative space --stylize 750 --v 6
+Futuristic minimalist logo for WorkNet, deep black background, electric cyan blue and vibrant circle orange color palette, stylized network of nodes forming a stylized "A" combined with human and AI agent silhouette in professional handshake, subtle blockchain hexagonal pattern, clean modern sans-serif typography "WorkNet", premium institutional tech aesthetic, sharp, high-end, professional, negative space --stylize 750 --v 6
 ```
 
 **Banner Prompt (1500x500):**
 ```
-Clean professional X/Twitter header for ArcWorkNet, 1500x500px, dark professional background with electric blue and orange accents, futuristic network connecting AI agents and human professionals, subtle USDC elements, bold clean text "ArcWorkNet" with tagline "Agentic Job Marketplace on Arc • USDC Native", institutional tech aesthetic, high quality, minimal clutter, corporate crypto style --ar 3:1 --stylize 600
+Clean professional X/Twitter header for WorkNet, 1500x500px, dark professional background with electric blue and orange accents, futuristic network connecting AI agents and human professionals, subtle USDC elements, bold clean text "WorkNet" with tagline "Agentic Job Marketplace on Arc • USDC Native", institutional tech aesthetic, high quality, minimal clutter, corporate crypto style --ar 3:1 --stylize 600
 ```
 
 ---
@@ -51,7 +51,7 @@ Clean professional X/Twitter header for ArcWorkNet, 1500x500px, dark professiona
 ```
 Thread 1/8
 
-ArcWorkNet is now in active development.
+WorkNet is now in active development.
 
 We are building a dedicated job marketplace on Arc where both human professionals and AI agents can receive paid assignments, submit deliverables, and settle payments natively in USDC.
 
@@ -75,7 +75,7 @@ Current Development Status:
 Our objective is clear: to deliver one of the first production-grade applications on Arc that enables real economic activity between humans and autonomous agents.
 
 5/8
-ArcWorkNet is also participating in the Lepton Agents Hackathon. We will publish regular technical updates, integration reports, and agent performance demonstrations throughout the development cycle.
+WorkNet is also participating in the Lepton Agents Hackathon. We will publish regular technical updates, integration reports, and agent performance demonstrations throughout the development cycle.
 
 6/8
 This account will serve as the official channel for:
@@ -96,7 +96,7 @@ We welcome constructive feedback from the Arc community.
 
 What features would be most valuable in an agent-native job marketplace?
 
-#BuildOnArc #ArcTestnet #AgenticEconomy #ArcWorkNet
+#BuildOnArc #ArcTestnet #AgenticEconomy #WorkNet
 ```
 
 ---
@@ -111,7 +111,7 @@ What features would be most valuable in an agent-native job marketplace?
 5. **Community & Hackathon Participation**
 
 **Tone Guidelines:**
-- Speak as "ArcWorkNet", "We", or "The team"
+- Speak as "WorkNet", "We", or "The team"
 - Professional, confident, and structured
 - Focus on project capability, technical decisions, and milestones
 - Avoid personal phrases like "I'm building", "builder journey", "building in public"
@@ -122,7 +122,7 @@ What features would be most valuable in an agent-native job marketplace?
 - 4–6 supporting updates (screenshots, short reports, poll)
 
 ### Sample Thread Titles (Admin Style)
-- "ArcWorkNet Completes Core Architecture Phase"
+- "WorkNet Completes Core Architecture Phase"
 - "Integration Report: Implementing ERC-8183 on Arc Testnet"
 - "Agent Registration Successful — First On-Chain Assignment Executed"
 - "Technical Deep Dive: Why Arc's Deterministic Finality Matters for Agent Workflows"

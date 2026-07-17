@@ -1,6 +1,6 @@
-# Circle Grant Application Form - Arc WorkNet
+# Circle Grant Application Form - WorkNet
 
-This document contains the completed responses for the Circle Grant application, pre-filled using the codebase and technical specifications of Arc WorkNet.
+This document contains the completed responses for the Circle Grant application, pre-filled using the codebase and technical specifications of WorkNet.
 
 ---
 
@@ -38,7 +38,7 @@ This document contains the completed responses for the Circle Grant application,
 
 ## Company Doing-Business-As (DBA) Name
 
-**ArcWorkNet**
+**WorkNet**
 
 ---
 
@@ -46,19 +46,19 @@ This document contains the completed responses for the Circle Grant application,
 
 **Muhammad Rizky**
 *Founder & Lead Full-Stack Engineer*
-Software Engineer specializing in Next.js, Solidity, AI Agents, and Web3 infrastructure. Experienced in building production web applications, database integration, and decentralized protocols. Lead builder of Arc WorkNet, designing the customized escrow smart contracts and frontend workflow.
+Software Engineer specializing in Next.js, Solidity, AI Agents, and Web3 infrastructure. Experienced in building production web applications, database integration, and decentralized protocols. Lead builder of WorkNet, designing the customized escrow smart contracts and frontend workflow.
 
 ---
 
 ## Project website
 
-**https://arcworknet.xyz** *(atau domain production Anda)*
+**https://worknet.xyz** *(atau domain production Anda)*
 
 ---
 
 ## Project X Handle
 
-**@ArcWorkNet** *(atau username X Anda)*
+**@WorkNet** *(atau username X Anda)*
 
 ---
 
@@ -86,7 +86,7 @@ Software Engineer specializing in Next.js, Solidity, AI Agents, and Web3 infrast
 
 ## Project Name
 
-**Arc WorkNet**
+**WorkNet**
 
 ---
 
@@ -105,13 +105,13 @@ Traditional freelance platforms (e.g., Upwork, Fiverr) fail to address the needs
 4. **Data Silos**: Portability of reputation (success rates, ratings, transaction history) does not exist; freelancers are locked into single platforms.
 
 **Why it is important**:
-The "Agentic Economy" is scaling rapidly. AI agents are now capable of executing specific development, design, and research tasks autonomously. However, they lack a native, programmable escrow and payment protocol. Arc WorkNet solves this by introducing a dual-workforce freelance marketplace, allowing humans and AI agents to receive instant, programmable escrow payments with sub-second finality.
+The "Agentic Economy" is scaling rapidly. AI agents are now capable of executing specific development, design, and research tasks autonomously. However, they lack a native, programmable escrow and payment protocol. WorkNet solves this by introducing a dual-workforce freelance marketplace, allowing humans and AI agents to receive instant, programmable escrow payments with sub-second finality.
 
 ---
 
 ## What is your solution?
 
-Arc WorkNet is an AI-native, USDC-funded freelance marketplace. 
+WorkNet is an AI-native, USDC-funded freelance marketplace. 
 
 **Key Components**:
 1. **Custom Escrow Contracts (`ArcWorknetEscrow.sol`)**: A fully transparent escrow contract handles the job lifecycle: `createJob -> setBudget -> approve USDC -> fund escrow -> submit deliverable -> complete/payout`.
@@ -170,7 +170,7 @@ We are active Web3 and AI developers with hands-on experience in full-stack engi
 
 ## Which Circle products do you plan to integrate?
 
-- **Circle App Kit (Bridge & Unified Balance)**: To allow clients to bring USDC from other EVM chains (Base, Ethereum, Arbitrum) directly into their Arc WorkNet escrow budget without needing external bridging websites.
+- **Circle App Kit (Bridge & Unified Balance)**: To allow clients to bring USDC from other EVM chains (Base, Ethereum, Arbitrum) directly into their WorkNet escrow budget without needing external bridging websites.
 - **CCTP (Cross-Chain Transfer Protocol)**: To support native, capital-efficient, zero-slippage cross-chain USDC transfers.
 - **Circle Smart Contract Platform (Event Monitors)**: To push onchain escrow events to our Supabase webhooks for seamless real-time UI updates.
 
@@ -209,7 +209,7 @@ We are active Web3 and AI developers with hands-on experience in full-stack engi
 
 **Description**
 
-- Launch the public beta application of Arc WorkNet.
+- Launch the public beta application of WorkNet.
 - Implement the offchain worker/agent application dashboard.
 - Integrate deliverable uploads (notes, files, and URL hashes) tied directly to onchain submissions.
 - Implement the trustless rejection penalty (5% worker fee / 95% client refund) and test state-transitions.
@@ -251,7 +251,7 @@ We are active Web3 and AI developers with hands-on experience in full-stack engi
 
 **Description**
 
-- Release the Arc WorkNet Developer SDK/API to allow autonomous AI agents on other chains to query jobs, apply, and submit work onchain.
+- Release the WorkNet Developer SDK/API to allow autonomous AI agents on other chains to query jobs, apply, and submit work onchain.
 - Launch community and partnership campaigns targeting Web3 developer groups and AI agent builders.
 - Deploy the production smart contracts to Arc Mainnet.
 

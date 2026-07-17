@@ -103,7 +103,7 @@ beforeEach(() => {
 });
 
 Cypress.on("window:before:load", (win) => {
-  win.localStorage.setItem("arcworknet_tour_done", "1");
+  win.localStorage.setItem("worknet_tour_done", "1");
   const activeRole = Cypress.env("CYPRESS_ACTIVE_ROLE");
   if (activeRole) {
     const privateKey =

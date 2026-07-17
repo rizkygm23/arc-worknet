@@ -1,6 +1,6 @@
-# Arc WorkNet — API Testing & Latency Guide (testing.md)
+# WorkNet — API Testing & Latency Guide (testing.md)
 
-Dokumen ini menyediakan panduan lengkap untuk melakukan pengujian fungsionalitas dan kinerja (latensi) pada seluruh endpoint API Arc WorkNet. Dokumen ini juga menjelaskan cara mengidentifikasi endpoint mana yang memiliki latensi tinggi (lemot).
+Dokumen ini menyediakan panduan lengkap untuk melakukan pengujian fungsionalitas dan kinerja (latensi) pada seluruh endpoint API WorkNet. Dokumen ini juga menjelaskan cara mengidentifikasi endpoint mana yang memiliki latensi tinggi (lemot).
 
 ---
 

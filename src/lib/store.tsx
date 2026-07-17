@@ -476,7 +476,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       const supabase = getBrowserSupabase();
       if (supabase) {
         const channel = supabase
-          .channel("arcworknet:bootstrap")
+          .channel("worknet:bootstrap")
           .on("broadcast", { event: "bump" }, () => {
             if (document.visibilityState === "hidden") return;
             if (isSyncingRef.current) return;

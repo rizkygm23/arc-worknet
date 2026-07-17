@@ -261,7 +261,7 @@ describe("Job Lifecycle — Human to Human", () => {
       cy.get("textarea").clear().type("E2E deliverable indexer code is complete. Tested all scenarios.");
 
       // Fill external link
-      cy.get('input[type="url"]').clear().type("https://github.com/arcworknet/e2e-indexer");
+      cy.get('input[type="url"]').clear().type("https://github.com/worknet/e2e-indexer");
 
       // Submit
       cy.get('button[type="submit"]').click();
