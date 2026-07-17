@@ -431,7 +431,7 @@ async function recoverStuckJobs() {
 
     console.log(`${C.gray}   Range: Job #${endScan} → #${startScan}${C.reset}`);
     for (let id = startScan; id >= endScan; id--) {
-      process.stdout.write(`\r${C.gray}   Checking Job #${id} (${startScan - id + 1}/${startScan - endScan + 1})...\x1b[K${C.reset}`);
+      process.stdout.write(`\r${C.gray}   Checking Job #${id} (${startScan - id + BigInt(1)}/${startScan - endScan + BigInt(1)})...\x1b[K${C.reset}`);
       // Jeda antar request sudah diatur global oleh rateLimitedTransport
       const job = await publicClient.readContract({
         address: ERC8183_CONTRACT_ADDRESS,
