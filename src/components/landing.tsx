@@ -318,20 +318,406 @@ function Hero() {
             </BorderGlow>
           </div>
         </div>
-        <div className="landing-hero-visual" data-reveal>
-          <svg className="hero-mark" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-            <circle cx="210" cy="210" r="160" stroke="var(--accent)" strokeOpacity="0.12" strokeWidth="1" />
-            <circle cx="210" cy="210" r="110" stroke="var(--accent)" strokeOpacity="0.2" strokeWidth="1" />
-            <circle cx="210" cy="210" r="60" fill="var(--accent-soft)" />
-            <path d="M210 50 L210 370 M50 210 L370 210" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
-          </svg>
+        <div className="landing-hero-visual" data-reveal style={{ position: "relative" }}>
+          <AgentVisual />
         </div>
       </section>
     </div>
   );
 }
 
+interface Agent {
+  id: number;
+  x: number;
+  y: number;
+  targetX: number;
+  targetY: number;
+  state: number;
+  speed: number;
+  scale: number;
+  targetTaskId: number | null;
+  workTimer: number;
+}
 
+interface TaskNode {
+  id: number;
+  x: number;
+  y: number;
+  name: string;
+  progress: number;
+}
+
+interface FloatingText {
+  id: number;
+  x: number;
+  y: number;
+  text: string;
+  age: number;
+}
+
+function AgentVisual() {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [tasks, setTasks] = useState<TaskNode[]>([]);
+  const [floatingTexts, setFloatingTexts] = useState<FloatingText[]>([]);
+
+  const agentsRef = useRef<Agent[]>([]);
+  const tasksRef = useRef<TaskNode[]>([]);
+  const floatingTextsRef = useRef<FloatingText[]>([]);
+
+  // Initialize agents and tasks
+  useEffect(() => {
+    const initialAgents = Array.from({ length: 4 }).map((_, i) => {
+      const x = Math.random() * 300 + 60;
+      const y = Math.random() * 300 + 60;
+      return {
+        id: i,
+        x,
+        y,
+        targetX: x,
+        targetY: y,
+        state: Math.floor(Math.random() * 2) + 1,
+        speed: 0.5 + Math.random() * 0.8,
+        scale: 0.8 + Math.random() * 0.2,
+        targetTaskId: null,
+        workTimer: 0,
+      };
+    });
+
+    const taskNames = ["Code API", "Audit Escrow", "Verify Node", "Deploy contract", "Render banner", "Pay gas"];
+    const initialTasks = Array.from({ length: 4 }).map((_, i) => {
+      return {
+        id: i,
+        x: Math.random() * 240 + 90,
+        y: Math.random() * 240 + 90,
+        name: taskNames[i % taskNames.length],
+        progress: 0,
+      };
+    });
+
+    agentsRef.current = initialAgents;
+    tasksRef.current = initialTasks;
+    
+    setAgents(initialAgents);
+    setTasks(initialTasks);
+  }, []);
+
+  // Physics animation loop
+  useEffect(() => {
+    let animationFrameId: number;
+
+    const tick = () => {
+      const currentAgents = [...agentsRef.current];
+      let currentTasks = [...tasksRef.current];
+      let currentTexts = [...floatingTextsRef.current];
+
+      // 1. Process floating texts
+      currentTexts = currentTexts
+        .map((t) => ({ ...t, y: t.y - 0.8, age: t.age + 1 }))
+        .filter((t) => t.age < 60);
+
+      // 2. Spawn tasks if needed
+      while (currentTasks.length < 4) {
+        const taskNames = ["Code API", "Audit Escrow", "Verify Node", "Deploy contract", "Render banner", "Pay gas", "Verify Agent", "Lock budget"];
+        currentTasks.push({
+          id: Date.now() + Math.random(),
+          x: Math.random() * 240 + 90,
+          y: Math.random() * 240 + 90,
+          name: taskNames[Math.floor(Math.random() * taskNames.length)],
+          progress: 0,
+        });
+      }
+
+      // 3. Update agents
+      const nextAgents = currentAgents.map((agent) => {
+        let targetX = agent.targetX;
+        let targetY = agent.targetY;
+        let targetTaskId = agent.targetTaskId;
+        let workTimer = agent.workTimer;
+        let state = agent.state;
+
+        // Check if target task still exists
+        const taskExists = currentTasks.some((t) => t.id === targetTaskId);
+        if (!taskExists) {
+          targetTaskId = null;
+          workTimer = 0;
+        }
+
+        // Find closest task if not targeted
+        if (targetTaskId === null && currentTasks.length > 0) {
+          const taskTargetCounts: Record<number, number> = {};
+          currentAgents.forEach((a) => {
+            if (a.targetTaskId !== null) {
+              taskTargetCounts[a.targetTaskId] = (taskTargetCounts[a.targetTaskId] || 0) + 1;
+            }
+          });
+
+          let bestTask = currentTasks[0];
+          let bestScore = Infinity;
+          currentTasks.forEach((t) => {
+            const d = Math.sqrt((t.x - agent.x) ** 2 + (t.y - agent.y) ** 2);
+            const targetCount = taskTargetCounts[t.id] || 0;
+            const score = d + targetCount * 150; // Heavy penalty for already targeted tasks
+            if (score < bestScore) {
+              bestScore = score;
+              bestTask = t;
+            }
+          });
+          targetTaskId = bestTask.id;
+          targetX = bestTask.x;
+          targetY = bestTask.y;
+        }
+
+
+        // Wander if no tasks
+        if (targetTaskId === null) {
+          const dx = targetX - agent.x;
+          const dy = targetY - agent.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 4) {
+            targetX = Math.random() * 300 + 60;
+            targetY = Math.random() * 300 + 60;
+          }
+        }
+
+        const dx = targetX - agent.x;
+        const dy = targetY - agent.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        let newX = agent.x;
+        let newY = agent.y;
+
+        if (targetTaskId !== null && dist < 12) {
+          // Arrived at task, stand and work
+          workTimer += 1;
+          state = 3; // Working face
+
+          // Find task and progress it
+          const taskIndex = currentTasks.findIndex((t) => t.id === targetTaskId);
+          if (taskIndex !== -1) {
+            currentTasks[taskIndex] = {
+              ...currentTasks[taskIndex],
+              progress: Math.min(currentTasks[taskIndex].progress + 0.8, 100),
+            };
+
+            if (currentTasks[taskIndex].progress >= 100) {
+              // Task completed!
+              const payout = [10, 25, 50, 100][Math.floor(Math.random() * 4)];
+              currentTexts.push({
+                id: Date.now() + Math.random(),
+                x: agent.x,
+                y: agent.y - 20,
+                text: `+${payout} USDC`,
+                age: 0,
+              });
+
+              currentTasks.splice(taskIndex, 1);
+              targetTaskId = null;
+              workTimer = 0;
+              state = 4; // Complete face
+            }
+          }
+        } else {
+          // Walk towards target
+          newX += (dx / dist) * agent.speed;
+          newY += (dy / dist) * agent.speed;
+
+          if (Math.random() < 0.01) {
+            state = Math.random() < 0.5 ? 1 : 2;
+          }
+        }
+
+        return {
+          ...agent,
+          x: newX,
+          y: newY,
+          targetX,
+          targetY,
+          targetTaskId,
+          workTimer,
+          state,
+        };
+      });
+
+      agentsRef.current = nextAgents;
+      tasksRef.current = currentTasks;
+      floatingTextsRef.current = currentTexts;
+
+      setAgents(nextAgents);
+      setTasks(currentTasks);
+      setFloatingTexts(currentTexts);
+
+      animationFrameId = requestAnimationFrame(tick);
+    };
+
+    animationFrameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, []);
+
+  const handleRadarClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (agentsRef.current.length >= 12) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = ((e.clientX - rect.left) / rect.width) * 420;
+    const clickY = ((e.clientY - rect.top) / rect.height) * 420;
+
+    const newAgent: Agent = {
+      id: Date.now(),
+      x: clickX,
+      y: clickY,
+      targetX: Math.random() * 300 + 60,
+      targetY: Math.random() * 300 + 60,
+      state: 1,
+      speed: 0.6 + Math.random() * 1.2,
+      scale: 0.8 + Math.random() * 0.3,
+      targetTaskId: null,
+      workTimer: 0,
+    };
+
+    const updated = [...agentsRef.current, newAgent];
+    agentsRef.current = updated;
+    setAgents(updated);
+  };
+
+  return (
+    <div
+      className="hero-mark"
+      onClick={handleRadarClick}
+      style={{
+        position: "relative",
+        cursor: "pointer",
+        overflow: "hidden",
+      }}
+    >
+      <style>{`
+        @keyframes taskPulse {
+          0% { transform: scale(0.8); opacity: 0.5; }
+          50% { transform: scale(1.2); opacity: 1; }
+          100% { transform: scale(0.8); opacity: 0.5; }
+        }
+        .task-pulse-dot {
+          width: 5px;
+          height: 5px;
+          background-color: var(--accent);
+          border-radius: 50%;
+          animation: taskPulse 1.5s infinite ease-in-out;
+        }
+        @keyframes floatUp {
+          0% { transform: translate(-50%, 0); opacity: 1; }
+          100% { transform: translate(-50%, -20px); opacity: 0; }
+        }
+      `}</style>
+
+      {/* Background Radar SVG */}
+      <svg
+        viewBox="0 0 420 420"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          zIndex: 1,
+          pointerEvents: "none",
+        }}
+      >
+        <circle cx="210" cy="210" r="160" stroke="var(--accent)" strokeOpacity="0.12" strokeWidth="1" />
+        <circle cx="210" cy="210" r="110" stroke="var(--accent)" strokeOpacity="0.2" strokeWidth="1" />
+        <circle cx="210" cy="210" r="60" fill="var(--accent-soft)" />
+        <path d="M210 50 L210 370 M50 210 L370 210" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
+      </svg>
+
+      {/* Tasks layer */}
+      <div style={{ position: "absolute", inset: 0, zIndex: 1.5, pointerEvents: "none" }}>
+        {tasks.map((task) => (
+          <div
+            key={task.id}
+            style={{
+              position: "absolute",
+              left: `${(task.x / 420) * 100}%`,
+              top: `${(task.y / 420) * 100}%`,
+              transform: "translate(-50%, -50%)",
+            }}
+          >
+            <div style={{
+              background: "rgba(15, 122, 62, 0.08)",
+              border: "1px solid var(--accent)",
+              color: "var(--accent)",
+              fontSize: "9px",
+              fontFamily: "var(--font-mono)",
+              padding: "2px 6px",
+              borderRadius: "3px",
+              whiteSpace: "nowrap",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "2px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.1)"
+            }}>
+              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontWeight: 600 }}>
+                <span className="task-pulse-dot" />
+                {task.name}
+              </span>
+              <div style={{ width: "30px", height: "2px", background: "rgba(15, 122, 62, 0.2)", borderRadius: "1px", overflow: "hidden", marginTop: "2px" }}>
+                <div style={{ width: `${task.progress}%`, height: "100%", background: "var(--accent)" }} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Agents overlay */}
+      <div style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: "none" }}>
+        {agents.map((agent) => {
+          const stateSrc = `/agent/agent_state_0${agent.state}.svg`;
+
+          return (
+            <div
+              key={agent.id}
+              style={{
+                position: "absolute",
+                left: `${(agent.x / 420) * 100}%`,
+                top: `${(agent.y / 420) * 100}%`,
+                width: `${47 * agent.scale}px`,
+                height: `${40 * agent.scale}px`,
+                transform: "translate(-50%, -50%)",
+              }}
+            >
+              <img
+                src={stateSrc}
+                alt={`Agent ${agent.id}`}
+                style={{ width: "100%", height: "100%", display: "block" }}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Floating Texts layer */}
+      <div style={{ position: "absolute", inset: 0, zIndex: 3, pointerEvents: "none" }}>
+        {floatingTexts.map((text) => (
+          <div
+            key={text.id}
+            style={{
+              position: "absolute",
+              left: `${(text.x / 420) * 100}%`,
+              top: `${(text.y / 420) * 100}%`,
+              transform: "translate(-50%, -50%)",
+              color: "var(--accent)",
+              fontSize: "11px",
+              fontFamily: "var(--font-mono)",
+              fontWeight: "bold",
+              animation: "floatUp 1s forwards ease-out",
+            }}
+          >
+            {text.text}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Problem() {
   return (
