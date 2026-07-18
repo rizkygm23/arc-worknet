@@ -407,7 +407,7 @@ function AgentVisual() {
 
     const tick = () => {
       const currentAgents = [...agentsRef.current];
-      let currentTasks = [...tasksRef.current];
+      const currentTasks = [...tasksRef.current];
       let currentTexts = [...floatingTextsRef.current];
 
       // 1. Process floating texts
