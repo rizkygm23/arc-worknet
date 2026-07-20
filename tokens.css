@@ -3,10 +3,10 @@
  */
 :root {
   /* ─── Brand & Ink ─── */
-  --color-bg: #f9faf6;
+  --color-bg: #f4f8f5;
   --color-surface: #ffffff;
-  --color-surface-2: #f3f4f0;
-  --color-surface-3: #e8e9e4;
+  --color-surface-2: #edf5ef;
+  --color-surface-3: #dcebe1;
   --color-text: #151515;
   --color-text-mid: #4a4f4c;
   --color-text-mute: #6e756f;
@@ -15,11 +15,11 @@
   --color-hairline: #e8e9e4;
 
   /* ─── Accent ─── */
-  --color-brand: #0f7a3e;
-  --color-brand-strong: #0b5c2e;
+  --color-brand: #087a43;
+  --color-brand-strong: #056033;
   --color-on-brand: #ffffff;
-  --color-accent-sunset: #0f7a3e;
-  --color-accent-sunset-soft: #d4f5e0;
+  --color-accent-sunset: #087a43;
+  --color-accent-sunset-soft: #d9eddf;
   --color-warning-soft: #fbf3d6;
   --color-danger-soft: #fde8e8;
   --color-success-soft: #d4f5e0;

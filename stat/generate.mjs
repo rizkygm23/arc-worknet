@@ -71,19 +71,19 @@ function delta(current, previous) {
 }
 
 function deltaChip(diff, { money = false, suffix = "" } = {}) {
-  if (diff === null) return `<span class="delta flat">first snapshot</span>`;
+  if (diff === null) return `<span class="delta muted">—</span>`;
   const cls = diff > 0 ? "up" : diff < 0 ? "down" : "flat";
-  const arrow = diff > 0 ? "▲" : diff < 0 ? "▼" : "●";
+  const arrow = diff > 0 ? "↑" : diff < 0 ? "↓" : "·";
   const magnitude = money ? usd(Math.abs(diff)) : int(Math.abs(diff));
-  const text = diff === 0 ? "no change" : `${arrow} ${diff > 0 ? "+" : "-"}${magnitude}${suffix}`;
-  return `<span class="delta ${cls}">${text} <em>vs last</em></span>`;
+  const text = diff === 0 ? "—" : `${arrow}${diff > 0 ? "+" : "−"}${magnitude}${suffix}`;
+  return `<span class="delta ${cls}">${text}</span>`;
 }
 
 function sparkline(history, key) {
   const points = history.slice(-14).map((h) => h.stats[key]);
   if (points.length < 2) return "";
-  const w = 360;
-  const h = 72;
+  const w = 460;
+  const h = 64;
   const min = Math.min(...points);
   const max = Math.max(...points);
   const span = max - min || 1;
@@ -96,24 +96,27 @@ function sparkline(history, key) {
   const [lx, ly] = coords[coords.length - 1];
   return `
     <svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true">
-      <polyline points="${line}" fill="none" stroke="#0f7a3e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-      <circle cx="${lx}" cy="${ly}" r="5" fill="#0f7a3e" stroke="#f9faf6" stroke-width="2"/>
+      <polyline points="${line}" fill="none" stroke="#00ff41" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.7"/>
+      <circle cx="${lx}" cy="${ly}" r="4" fill="#00ff41" stroke="#0a0a0a" stroke-width="2"/>
     </svg>`;
 }
 
 function renderPoster({ today, stats, deltas, history }) {
   const dateLabel = new Date(`${today}T12:00:00`).toLocaleDateString("en-US", {
-    weekday: "long",
     year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
   });
+
+  const completionRate = stats.totalJobs > 0
+    ? Math.round((stats.completedJobs / stats.totalJobs) * 100)
+    : 0;
 
   const tiles = [
     { label: "Total jobs", value: int(stats.totalJobs), chip: deltaChip(deltas.totalJobs) },
     { label: "Clients", value: int(stats.clients), chip: deltaChip(deltas.clients) },
-    { label: "Jobs completed", value: int(stats.completedJobs), chip: deltaChip(deltas.completedJobs) },
-    { label: "Workers & agents", value: int(stats.workers + stats.knownAgents), chip: deltaChip(deltas.workforce) },
+    { label: "Completed", value: int(stats.completedJobs), chip: deltaChip(deltas.completedJobs) },
+    { label: "Workers", value: int(stats.workers + stats.knownAgents), chip: deltaChip(deltas.workforce) },
   ];
 
   return `<!DOCTYPE html>
@@ -121,152 +124,251 @@ function renderPoster({ today, stats, deltas, history }) {
 <head>
   <meta charset="UTF-8" />
   <title>WorkNet — Network Stats ${today}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 1080px; height: 1350px; overflow: hidden; background: #f9faf6; }
+    html, body { width: 1080px; height: 1350px; overflow: hidden; background: #0a0a0a; }
+
     .poster {
       position: relative; width: 1080px; height: 1350px;
-      background: #f9faf6; color: #151515;
+      background: #0a0a0a; color: #e8e8e8;
       font-family: Inter, system-ui, sans-serif; overflow: hidden;
     }
-    .gridbg {
-      position: absolute; inset: 0;
-      background-image:
-        linear-gradient(to right, rgba(15, 122, 62, 0.10) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(15, 122, 62, 0.10) 1px, transparent 1px);
-      background-size: 48px 48px; opacity: 0.4;
+
+    /* subtle noise grain — not a grid */
+    .poster::before {
+      content: ""; position: absolute; inset: 0; opacity: 0.035; z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 256px 256px;
     }
-    .rail { position: absolute; top: 0; left: 0; width: 8px; height: 100%; background: #0f7a3e; }
-    .frame { position: absolute; inset: 28px; border: 1px solid rgba(15, 122, 62, 0.30); }
-    .frame b { position: absolute; width: 20px; height: 20px; border: 2px solid #0f7a3e; }
-    .frame b:nth-child(1) { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
-    .frame b:nth-child(2) { top: -1px; right: -1px; border-left: 0; border-bottom: 0; }
-    .frame b:nth-child(3) { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
-    .frame b:nth-child(4) { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+
+    /* top accent bar */
+    .accent { position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: #00ff41; z-index: 1; }
 
     .content {
       position: relative; z-index: 2; height: 100%;
       display: flex; flex-direction: column;
-      padding: 84px 88px 96px;
+      padding: 72px 80px 64px;
     }
-    .head { display: flex; align-items: center; gap: 20px; }
-    .logo-wrap {
-      width: 84px; height: 84px; display: grid; place-items: center;
-      border: 1px solid rgba(15, 122, 62, 0.35); background: #ffffff; flex: 0 0 auto;
-    }
-    .logo-wrap img { width: 62px; height: 62px; object-fit: contain; display: block; }
-    .head-copy { display: flex; flex-direction: column; gap: 6px; }
-    .eyebrow {
-      display: inline-flex; align-items: center; gap: 10px;
-      font-size: 14px; font-weight: 600; letter-spacing: 0.16em;
-      text-transform: uppercase; color: #3d7a64;
-    }
-    .eyebrow i { width: 9px; height: 9px; border-radius: 999px; background: #0f7a3e; font-style: normal; }
-    .wordmark {
-      font-family: "Plus Jakarta Sans", Inter, sans-serif;
-      font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1;
-    }
-    .wordmark span { color: #0f7a3e; }
-    .date { margin-left: auto; text-align: right; font-size: 15px; font-weight: 600; color: #6e756f; letter-spacing: 0.04em; }
 
-    .hero { margin-top: 96px; }
-    .hero .label {
-      font-size: 17px; font-weight: 600; letter-spacing: 0.14em;
-      text-transform: uppercase; color: #3d7a64;
-    }
-    .hero .value {
-      margin-top: 14px;
-      font-family: "Plus Jakarta Sans", Inter, sans-serif;
-      font-size: 148px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: #151515;
-    }
-    .hero .sub { margin-top: 16px; font-size: 20px; font-weight: 500; color: #4a4f4c; }
-    .hero-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
-    .spark { display: block; margin-bottom: 10px; opacity: 0.9; }
-
-    .delta {
-      display: inline-flex; align-items: center; gap: 8px;
-      margin-top: 18px; height: 40px; padding: 0 16px;
-      border: 1px solid rgba(15, 122, 62, 0.40); background: #ffffff;
-      font-size: 16px; font-weight: 700; letter-spacing: 0.02em;
-    }
-    .delta em { font-style: normal; font-weight: 600; color: #6e756f; }
-    .delta.up { color: #0f7a3e; }
-    .delta.down { color: #dc2626; }
-    .delta.flat { color: #4a4f4c; }
-
-    .tiles { margin-top: 92px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-    .tile { border: 1px solid rgba(15, 122, 62, 0.30); background: #ffffff; padding: 30px 32px 26px; }
-    .tile .label {
-      font-size: 14px; font-weight: 600; letter-spacing: 0.14em;
-      text-transform: uppercase; color: #3d7a64;
-    }
-    .tile .value {
-      margin-top: 12px;
-      font-family: "Plus Jakarta Sans", Inter, sans-serif;
-      font-size: 58px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; color: #151515;
-    }
-    .tile .delta { margin-top: 16px; height: 32px; padding: 0 12px; font-size: 13px; }
-
-    .footer {
-      margin-top: auto; padding-top: 28px;
-      border-top: 1px solid rgba(15, 122, 62, 0.25);
+    /* header */
+    .head {
       display: flex; align-items: center; justify-content: space-between;
     }
-    .chips { display: flex; gap: 12px; }
-    .chip {
-      display: inline-flex; align-items: center; height: 36px; padding: 0 14px;
-      border: 1px solid rgba(15, 122, 62, 0.40); background: #ffffff;
-      color: #2a2f2c; font-size: 13px; font-weight: 600;
+    .brand { display: flex; align-items: center; gap: 16px; }
+    .brand img { width: 44px; height: 44px; object-fit: contain; display: block; filter: brightness(0) invert(1); }
+    .brand-name {
+      font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: #e8e8e8;
     }
-    .chip strong { color: #0f7a3e; margin-right: 6px; font-weight: 700; }
-    .url { font-size: 15px; font-weight: 600; letter-spacing: 0.06em; color: #6e756f; }
+    .brand-name span { color: #00ff41; }
+    .head-meta {
+      display: flex; align-items: center; gap: 20px;
+      font-family: "JetBrains Mono", monospace; font-size: 13px; color: #555; font-weight: 500;
+    }
+    .head-meta .dot { width: 6px; height: 6px; border-radius: 50%; background: #00ff41; }
+    .head-tag {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+      color: #00ff41; opacity: 0.7;
+    }
+
+    /* dividers */
+    .rule { border: none; border-top: 1px solid #1a1a1a; margin: 0; }
+    .rule-strong { border: none; border-top: 1px solid #222; margin: 0; }
+
+    /* hero section */
+    .hero { margin-top: 64px; }
+    .hero-label {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13px; font-weight: 500; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #555;
+    }
+    .hero-value {
+      margin-top: 20px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 128px; font-weight: 700; letter-spacing: -0.04em; line-height: 1;
+      color: #fff;
+    }
+    .hero-sub {
+      margin-top: 20px;
+      display: flex; align-items: center; gap: 24px;
+    }
+    .hero-desc {
+      font-size: 17px; font-weight: 400; color: #666; line-height: 1.4;
+    }
+    .hero .delta { font-family: "JetBrains Mono", monospace; font-size: 15px; font-weight: 500; }
+
+    /* sparkline area */
+    .spark-area {
+      margin-top: 40px; padding: 24px 0;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .spark-header {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px; font-weight: 500; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #444; margin-bottom: 12px;
+    }
+    .spark { display: block; opacity: 1; }
+
+    /* stats row */
+    .stats-row {
+      margin-top: 56px;
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+    }
+    .stat-col {
+      padding: 0 28px;
+      border-left: 1px solid #1a1a1a;
+    }
+    .stat-col:first-child { padding-left: 0; border-left: none; }
+    .stat-col:last-child { padding-right: 0; }
+    .stat-label {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px; font-weight: 500; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #555;
+    }
+    .stat-value {
+      margin-top: 16px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 52px; font-weight: 700; letter-spacing: -0.03em; line-height: 1;
+      color: #fff;
+    }
+    .stat-col .delta {
+      margin-top: 14px;
+      font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 500;
+    }
+
+    /* delta colors */
+    .delta.up { color: #00ff41; }
+    .delta.down { color: #ff4141; }
+    .delta.flat { color: #444; }
+    .delta.muted { color: #333; }
+
+    /* completion bar section */
+    .mid-section {
+      margin-top: 56px;
+      padding: 40px 0;
+      border-top: 1px solid #1a1a1a;
+    }
+    .mid-row {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 56px;
+    }
+    .mid-block { flex: 1; }
+    .mid-label {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px; font-weight: 500; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #555;
+    }
+    .mid-value {
+      margin-top: 12px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 36px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; color: #fff;
+    }
+    .bar-track {
+      margin-top: 16px; width: 100%; height: 8px;
+      background: #1a1a1a; overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%; background: #00ff41;
+      transition: width 0.3s;
+    }
+    .bar-label {
+      margin-top: 10px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px; font-weight: 500; color: #444;
+    }
+    .mid-desc {
+      margin-top: 8px;
+      font-size: 13px; font-weight: 400; color: #444;
+    }
+
+    /* footer */
+    .foot {
+      margin-top: auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 32px;
+      border-top: 1px solid #1a1a1a;
+    }
+    .foot-left {
+      display: flex; align-items: center; gap: 16px;
+    }
+    .foot-tag {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 12px; font-weight: 500; color: #555;
+      padding: 8px 14px; border: 1px solid #222;
+    }
+    .foot-tag strong { color: #00ff41; font-weight: 700; }
+    .foot-url {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 14px; font-weight: 500; color: #555; letter-spacing: 0.02em;
+    }
   </style>
 </head>
 <body>
   <div class="poster">
-    <div class="gridbg"></div>
-    <div class="rail"></div>
-    <div class="frame"><b></b><b></b><b></b><b></b></div>
+    <div class="accent"></div>
     <div class="content">
       <div class="head">
-        <div class="logo-wrap"><img src="../public/img/worknet_logo.png" alt="WorkNet" /></div>
-        <div class="head-copy">
-          <div class="eyebrow"><i></i> Network stats</div>
-          <div class="wordmark">Work<span>Net</span></div>
+        <div class="brand">
+          <img src="../public/img/worknet_logo.png" alt="" />
+          <div class="brand-name">Work<span>Net</span></div>
         </div>
-        <div class="date">${dateLabel}</div>
+        <div class="head-meta">
+          <span class="head-tag">Network Stats</span>
+          <span class="dot"></span>
+          <span>${dateLabel}</span>
+        </div>
       </div>
 
       <div class="hero">
-        <div class="label">Total volume</div>
-        <div class="hero-row">
-          <div class="value">${usd(stats.totalVolumeUsdc)}</div>
-          ${sparkline(history, "totalVolumeUsdc")}
+        <div class="hero-label">Total volume (USDC)</div>
+        <div class="hero-value">${usd(stats.totalVolumeUsdc)}</div>
+        <div class="hero-sub">
+          <span class="hero-desc">Settled through onchain escrow</span>
+          ${deltaChip(deltas.totalVolumeUsdc, { money: true })}
         </div>
-        <div class="sub">USDC settled through WorkNet escrow</div>
-        ${deltaChip(deltas.totalVolumeUsdc, { money: true })}
       </div>
 
-      <div class="tiles">
+      ${history.length >= 2 ? `
+      <div class="spark-area">
+        <div class="spark-header">14-day volume</div>
+        ${sparkline(history, "totalVolumeUsdc")}
+      </div>` : ""}
+
+      <div class="stats-row">
         ${tiles
           .map(
-            (t) => `<div class="tile">
-          <div class="label">${t.label}</div>
-          <div class="value">${t.value}</div>
+            (t) => `<div class="stat-col">
+          <div class="stat-label">${t.label}</div>
+          <div class="stat-value">${t.value}</div>
           ${t.chip}
         </div>`,
           )
           .join("\n        ")}
       </div>
 
-      <div class="footer">
-        <div class="chips">
-          <span class="chip"><strong>USDC</strong> Native Escrow</span>
-          <span class="chip"><strong>Arc</strong> Testnet Live</span>
-          <span class="chip"><strong>Humans</strong> + Agents</span>
+      <div class="mid-section">
+        <div class="mid-row">
+          <div class="mid-block">
+            <div class="mid-label">Completion rate</div>
+            <div class="mid-value">${completionRate}%</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${completionRate}%"></div></div>
+            <div class="bar-label">${int(stats.completedJobs)} of ${int(stats.totalJobs)} jobs</div>
+          </div>
+          <div class="mid-block">
+            <div class="mid-label">Open budget pool</div>
+            <div class="mid-value">${usd(stats.openBudgetUsdc, { compact: true })}</div>
+            <div class="mid-desc">USDC in active escrow contracts</div>
+          </div>
         </div>
-        <div class="url">${SITE_LABEL}</div>
+      </div>
+
+      <div class="foot">
+        <div class="foot-left">
+          <span class="foot-tag"><strong>USDC</strong> Escrow</span>
+          <span class="foot-tag"><strong>Arc</strong> Testnet</span>
+        </div>
+        <div class="foot-url">${SITE_LABEL}</div>
       </div>
     </div>
   </div>
