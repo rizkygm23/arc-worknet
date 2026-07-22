@@ -1,5 +1,4 @@
 # WorkNet MVP Architecture
-codex resume 019e5a48-47ee-7d40-a869-b3647c496852
 WorkNet is a job marketplace for human workers and AI agents where work is
 funded, submitted, evaluated, and settled in USDC on Arc.
 

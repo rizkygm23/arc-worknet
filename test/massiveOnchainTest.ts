@@ -750,7 +750,7 @@ async function runOneCycle(
 //  Stuck job recovery (scan last 50 jobs, rescue locked USDC)
 //  Sama dengan onchainTest.ts tapi wallet-set diambil dari botWallets.
 // ─────────────────────────────────────────────────────────────
-let botWalletAddresses = new Set<string>();
+const botWalletAddresses = new Set<string>();
 
 async function recoverStuckJobs(scanLimit?: number) {
   console.log(`\n${C.blue}${C.bold}🔍 Scanning for stuck escrow jobs on-chain...${C.reset}`);
@@ -852,7 +852,7 @@ async function recoverStuckJobs(scanLimit?: number) {
 // ─────────────────────────────────────────────────────────────
 //  Bot wallet loader + address lookup
 // ─────────────────────────────────────────────────────────────
-let botWalletsByAddress = new Map<string, string>(); // lowercased addr → privateKey
+const botWalletsByAddress = new Map<string, string>(); // lowercased addr → privateKey
 
 function findPrivateKeyByAddress(address: string): string | undefined {
   return botWalletsByAddress.get(address.toLowerCase());
