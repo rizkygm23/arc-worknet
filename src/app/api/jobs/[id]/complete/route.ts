@@ -31,7 +31,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const { data: targetJob, error: targetJobError } = await supabase
     .from(TABLES.jobs)
-    .select("client_profile_id,arc_job_id,status")
+    .select("client_profile_id,provider_profile_id,provider_agent_id,budget_usdc_units,arc_job_id,status")
     .eq("id", id)
     .single();
 
@@ -117,6 +117,85 @@ export async function POST(request: Request, context: RouteContext) {
     .from(TABLES.jobs)
     .update({ status, complete_tx_hash: completeTxHash, last_indexed_block: blockNumber })
     .eq("id", id);
+
+  if (input.decision === "approve") {
+    // 1. Update Provider profile stats (rating_avg, rating_count, completed_jobs_count, total_earned)
+    if (targetJob.provider_profile_id) {
+      const { data: providerProfile } = await supabase
+        .from(TABLES.profiles)
+        .select("completed_jobs_count,rating_avg,rating_count,total_earned_usdc_units")
+        .eq("id", targetJob.provider_profile_id)
+        .maybeSingle();
+
+      if (providerProfile) {
+        const currentCount = providerProfile.rating_count ?? 0;
+        const currentAvg = Number(providerProfile.rating_avg ?? 0);
+        const newRating = input.rating ?? 5;
+        const newCount = currentCount + 1;
+        const newAvg = Number(((currentAvg * currentCount + newRating) / newCount).toFixed(2));
+        const newCompleted = (providerProfile.completed_jobs_count ?? 0) + 1;
+        const newEarned = (Number(providerProfile.total_earned_usdc_units) || 0) + (Number(targetJob.budget_usdc_units) || 0);
+
+        await supabase
+          .from(TABLES.profiles)
+          .update({
+            completed_jobs_count: newCompleted,
+            rating_avg: newAvg,
+            rating_count: newCount,
+            total_earned_usdc_units: newEarned,
+          })
+          .eq("id", targetJob.provider_profile_id);
+      }
+    }
+
+    // 2. Update Client profile stats (completed_jobs_count, total_spent)
+    const { data: clientProfile } = await supabase
+      .from(TABLES.profiles)
+      .select("completed_jobs_count,total_spent_usdc_units")
+      .eq("id", targetJob.client_profile_id)
+      .maybeSingle();
+
+    if (clientProfile) {
+      const newCompleted = (clientProfile.completed_jobs_count ?? 0) + 1;
+      const newSpent = (Number(clientProfile.total_spent_usdc_units) || 0) + (Number(targetJob.budget_usdc_units) || 0);
+
+      await supabase
+        .from(TABLES.profiles)
+        .update({
+          completed_jobs_count: newCompleted,
+          total_spent_usdc_units: newSpent,
+        })
+        .eq("id", targetJob.client_profile_id);
+    }
+
+    // 3. Update Agent stats if provider was an agent
+    if (targetJob.provider_agent_id) {
+      const { data: agent } = await supabase
+        .from(TABLES.agents)
+        .select("jobs_completed,reputation_score")
+        .eq("id", targetJob.provider_agent_id)
+        .maybeSingle();
+
+      if (agent) {
+        const currentCount = agent.jobs_completed ?? 0;
+        const newCompleted = currentCount + 1;
+        const ratingVal = input.rating ?? 5;
+        const scoreFromRating = Math.round(ratingVal * 20); // 5 stars -> 100
+        const currentScore = agent.reputation_score ?? 0;
+        const newRepScore = currentCount === 0
+          ? scoreFromRating
+          : Math.round((currentScore * currentCount + scoreFromRating) / newCompleted);
+
+        await supabase
+          .from(TABLES.agents)
+          .update({
+            jobs_completed: newCompleted,
+            reputation_score: newRepScore,
+          })
+          .eq("id", targetJob.provider_agent_id);
+      }
+    }
+  }
 
   await supabase.from(TABLES.transactions).insert({
     job_id: id,

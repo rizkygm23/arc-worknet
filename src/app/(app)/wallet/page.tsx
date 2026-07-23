@@ -41,7 +41,7 @@ export default function WalletPage() {
         }
       />
 
-      <section className="stat-grid" style={{ marginBottom: 16 }}>
+      <section className="stat-grid" style={{ marginBottom: "var(--space-5)" }}>
         <StatCard label="Spendable" value={walletBalanceLabel(wallet)} />
         <StatCard label="Escrowed" value={formatUsdcUnits(escrowed)} />
         <StatCard label="Wallet" value={formatWalletAddress(wallet.address ?? activeProfile?.walletAddress)} />

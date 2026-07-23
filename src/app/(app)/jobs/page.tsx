@@ -159,7 +159,7 @@ export default function JobsPage() {
       {showSkeleton ? <SkeletonPanel lines={6} /> : null}
       {showSkeleton ? null : (
       <>
-      <section className="stat-grid" style={{ marginBottom: 16 }}>
+      <section className="stat-grid" style={{ marginBottom: "var(--space-5)" }}>
         <StatCard label="Total jobs" value={String(totalJobs)} />
         <StatCard label="Open budget" value={formatUsdcUnits(openBudget, { compact: true })} />
         <StatCard label="My applications" value={String(myApplications)} />

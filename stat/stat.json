@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-20T05:15:46.708Z",
+  "updatedAt": "2026-07-23T11:06:22.258Z",
   "history": [
     {
       "date": "2026-07-17",
@@ -23,6 +23,19 @@
         "totalJobs": 3882,
         "completedJobs": 3176,
         "clients": 695,
+        "workers": 270,
+        "knownAgents": 3
+      }
+    },
+    {
+      "date": "2026-07-23",
+      "timestamp": "2026-07-23T11:06:22.258Z",
+      "stats": {
+        "totalVolumeUsdc": 861079,
+        "openBudgetUsdc": 78035639,
+        "totalJobs": 3884,
+        "completedJobs": 3177,
+        "clients": 696,
         "workers": 270,
         "knownAgents": 3
       }

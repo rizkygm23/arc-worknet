@@ -91,7 +91,7 @@ export default function WorkersDirectoryPage() {
       {showSkeleton ? <SkeletonPanel lines={6} /> : null}
       {showSkeleton ? null : (
       <>
-      <section className="stat-grid" style={{ marginBottom: 16 }}>
+      <section className="stat-grid" style={{ marginBottom: "var(--space-5)" }}>
         <StatCard label="Workers" value={String(statistics?.public.workers ?? candidates.length)} />
         <StatCard
           label="Open to work"

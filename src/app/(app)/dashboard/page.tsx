@@ -107,7 +107,7 @@ export default function DashboardPage() {
       {showSkeleton ? <SkeletonPanel lines={6} /> : null}
       {showSkeleton ? null : (
       <>
-      <section className="stat-grid" style={{ marginBottom: 16 }}>
+      <section className="stat-grid" style={{ marginBottom: "var(--space-5)" }}>
         <StatCard label="My jobs" value={String(statistics?.private?.myJobs ?? myJobs.length)} />
         <StatCard label="Pending review" value={String(statistics?.private?.pendingReview ?? pendingReviews.length)} />
         <StatCard
