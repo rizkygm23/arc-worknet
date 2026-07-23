@@ -84,7 +84,8 @@ ehthumbs_vista.db
 .hallmark/
 .zcode/
 x.ai/
-skills/
+skills/*
+!skills/worknet/
 skills-lock.json
 
 # ---------- Misc ----------
