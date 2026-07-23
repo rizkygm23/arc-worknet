@@ -160,6 +160,18 @@ export async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+function dedupeById<T extends { id: string }>(...sets: T[][]): T[] {
+  const map = new Map<string, T>();
+  for (const set of sets) {
+    for (const item of set) {
+      if (item && item.id) {
+        map.set(item.id, item);
+      }
+    }
+  }
+  return Array.from(map.values());
+}
+
 function mergeState(current: WorkNetState, incoming: WorkNetState, walletAddress?: string): WorkNetState {
   const activeStillExists = incoming.profiles.some((profile) => profile.id === current.activeProfileId);
   const walletProfile = walletAddress
@@ -171,6 +183,12 @@ function mergeState(current: WorkNetState, incoming: WorkNetState, walletAddress
     activeProfileId: activeStillExists
       ? current.activeProfileId
       : walletProfile?.id ?? incoming.activeProfileId,
+    profiles: dedupeById(current.profiles, incoming.profiles),
+    agents: dedupeById(current.agents, incoming.agents),
+    jobs: dedupeById(current.jobs, incoming.jobs),
+    transactions: dedupeById(current.transactions, incoming.transactions),
+    events: dedupeById(current.events, incoming.events),
+    skills: dedupeById(current.skills, incoming.skills),
     // Preserve private-slice fields from prior fetch — public bootstrap doesn't
     // include them. They get refreshed by /api/bootstrap/private.
     applications: current.applications,
@@ -256,12 +274,6 @@ function mergePrivate(
   current: WorkNetState,
   priv: Extract<PrivateBootstrapResponse, { activeProfileId: string }>,
 ): WorkNetState {
-  const dedupeById = <T extends { id: string }>(...sets: T[][]) => {
-    const map = new Map<string, T>();
-    for (const set of sets) for (const item of set) map.set(item.id, item);
-    return Array.from(map.values());
-  };
-
   const next: WorkNetState = {
     ...current,
     activeProfileId: priv.activeProfileId,
@@ -270,14 +282,14 @@ function mergePrivate(
       : current.profiles,
     agents: dedupeById(current.agents, priv.ownedAgents),
     jobs: dedupeById(current.jobs, priv.privateJobs),
-    applications: priv.applications,
-    submissions: priv.submissions,
-    reviews: priv.reviews,
-    aiEvaluations: priv.aiEvaluations,
+    applications: dedupeById(current.applications, priv.applications),
+    submissions: dedupeById(current.submissions, priv.submissions),
+    reviews: dedupeById(current.reviews, priv.reviews),
+    aiEvaluations: dedupeById(current.aiEvaluations, priv.aiEvaluations),
     transactions: dedupeById(current.transactions, priv.privateTransactions, priv.profileTransactions),
-    notifications: priv.notifications,
-    jobMessages: priv.jobMessages,
-    jobInvitations: priv.jobInvitations,
+    notifications: dedupeById(current.notifications, priv.notifications),
+    jobMessages: dedupeById(current.jobMessages, priv.jobMessages),
+    jobInvitations: dedupeById(current.jobInvitations, priv.jobInvitations),
     savedJobs: priv.savedJobs,
     applicationOverlays: priv.applicationOverlays,
   };
