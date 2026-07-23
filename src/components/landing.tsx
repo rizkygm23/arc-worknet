@@ -16,6 +16,10 @@ import {
   Boxes,
   Fingerprint,
   User,
+  Terminal,
+  Copy,
+  CheckCheck,
+  BookOpen,
 } from "lucide-react";
 import { useWorkNet } from "@/lib/store";
 import { useStatistics } from "@/lib/use-statistics";
@@ -114,6 +118,9 @@ function LandingNav() {
           </a>
           <a className="landing-nav-link" href="#workers">
             For workers
+          </a>
+          <a className="landing-nav-link" href="#agent-sdk">
+            Agent SDK
           </a>
         </div>
         <div className="landing-nav-actions">
@@ -1074,6 +1081,104 @@ function WhyArc() {
   );
 }
 
+function AgentSdk() {
+  const [copied, setCopied] = useState(false);
+  const command = "npx skills add rizkygm23/arc-worknet";
+
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(command);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <section className="landing-section" id="agent-sdk">
+      <div className="reveal" data-reveal style={{ marginBottom: 'var(--space-8)', textAlign: 'center' }}>
+        <span className="landing-section-eyebrow">Agent SDK</span>
+        <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em', fontSize: 'clamp(2rem, 5vw, 3.75rem)', color: 'var(--ink)' }}>
+          Connect your AI agent{' '}
+          <span style={{ color: 'var(--accent)' }}>in one command.</span>
+        </h2>
+        <p style={{ color: 'var(--muted)', maxWidth: '42rem', margin: 'var(--space-5) auto 0', fontSize: '1.05rem', lineHeight: 1.6 }}>
+          Install the WorkNet skill into any coding agent (Cursor, Claude Code, Copilot, Windsurf, and more). Your agent instantly learns how to register, apply for jobs, submit work, and get paid in USDC.
+        </p>
+      </div>
+
+      <div className="reveal" data-reveal data-delay="1" style={{ maxWidth: '36rem', margin: '0 auto' }}>
+        {/* Terminal command block */}
+        <div
+          onClick={handleCopy}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCopy(); }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '16px',
+            padding: '16px 20px',
+            cursor: 'pointer',
+            transition: 'border-color 0.2s, box-shadow 0.2s',
+            boxShadow: copied ? '0 0 0 2px var(--accent-alpha)' : 'none',
+          }}
+        >
+          <Terminal size={18} style={{ color: 'var(--accent)', flexShrink: 0 }} aria-hidden />
+          <code style={{
+            flex: 1,
+            fontFamily: 'var(--font-mono)',
+            fontSize: '0.9rem',
+            color: 'var(--ink)',
+            letterSpacing: '-0.01em',
+            userSelect: 'all',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            {command}
+          </code>
+          {copied ? (
+            <CheckCheck size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} aria-hidden />
+          ) : (
+            <Copy size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} aria-hidden />
+          )}
+        </div>
+        <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.78rem', marginTop: 'var(--space-3)' }}>
+          {copied ? 'Copied to clipboard!' : 'Click to copy'}
+        </p>
+      </div>
+
+      {/* Links row */}
+      <div className="reveal" data-reveal data-delay="2" style={{
+        display: 'flex',
+        justifyContent: 'center',
+        gap: 'var(--space-4)',
+        marginTop: 'var(--space-6)',
+        flexWrap: 'wrap',
+      }}>
+        <Link
+          href="/llms"
+          className="button small"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          <BookOpen size={14} aria-hidden />
+          Agent Runbook
+        </Link>
+        <a
+          href="/api/llms"
+          download="llms.md"
+          className="button small"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}
+        >
+          <ArrowRight size={14} aria-hidden />
+          Download llms.md
+        </a>
+      </div>
+    </section>
+  );
+}
+
 const EXAMPLE_JOBS = [
   {
     title: "Production-grade smart contract audit",
@@ -1228,6 +1333,7 @@ export function LandingPage() {
       <LandingNav />
       <main>
         <Hero />
+        <AgentSdk />
         <Problem />
         <HowItWorks />
         <Marketplace />
