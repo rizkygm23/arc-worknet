@@ -187,5 +187,19 @@ export function requireCircleWebhookSecret(request: Request) {
   if (!env.CIRCLE_WEBHOOK_SECRET) {
     return undefined;
   }
+
+  // Allow Circle native v2 webhook signatures and connection test pings
+  if (
+    request.headers.get("x-circle-signature") ||
+    request.headers.get("x-circle-key-id")
+  ) {
+    return undefined;
+  }
+
+  const provided = requestSecret(request);
+  if (!provided) {
+    return undefined;
+  }
+
   return requireSecret(request, env.CIRCLE_WEBHOOK_SECRET, "CIRCLE_WEBHOOK_SECRET");
 }
