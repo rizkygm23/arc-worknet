@@ -11,7 +11,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { env } from "@/lib/env";
-import { arcTestnet, ARC_RPC_URL } from "@/lib/arc";
+import { arcTestnet, ARC_RPC_URL, ARC_USDC_ADDRESS, erc20UsdcAbi } from "@/lib/arc";
 import {
   ARC_CCTP_DOMAIN,
   ARC_MESSAGE_TRANSMITTER_ADDRESS,
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     let mintTxHash: string | undefined;
     let methodUsed = "CCTP_RECEIVE_MESSAGE";
 
-    // Attempt CCTP receiveMessage on Arc's MessageTransmitterV2 contract if burn tx is indexed
+    // Step A: Attempt CCTP receiveMessage on Arc's MessageTransmitterV2 contract if burn tx is indexed
     const sourceNetwork = CCTP_TESTNET_NETWORKS.find((n) => n.chainId === sourceChainId);
     if (sourceNetwork) {
       try {
@@ -108,22 +108,28 @@ export async function POST(request: Request) {
           }
         }
       } catch (cctpErr) {
-        console.warn("[Bridge Relayer] CCTP receiveMessage step notice (falling back to native USDC transfer):", cctpErr);
+        console.warn("[Bridge Relayer] CCTP receiveMessage step notice (falling back to USDC contract transfer):", cctpErr);
       }
     }
 
-    // Fallback: If CCTP MessageTransmitter contract call didn't trigger, execute fast native USDC delivery on Arc Testnet
+    // Step B: Direct ERC-20 transfer of USDC on Arc Testnet (0x3600000000000000000000000000000000000000)
+    // using exact 6-decimal USDC base units (1 USDC = 1,000,000 units)
     if (!mintTxHash) {
-      methodUsed = "NATIVE_USDC_RELAY";
+      methodUsed = "ARC_USDC_ERC20_TRANSFER";
+      const usdcBaseUnits = BigInt(Math.round(amountUnits));
+
       try {
-        mintTxHash = await arcWalletClient.sendTransaction({
+        mintTxHash = await arcWalletClient.writeContract({
           chain: arcTestnet,
-          to: recipient,
-          value: BigInt(Math.round(amountUnits)),
+          address: ARC_USDC_ADDRESS,
+          abi: erc20UsdcAbi,
+          functionName: "transfer",
+          args: [recipient, usdcBaseUnits],
         });
-      } catch (err1) {
-        console.warn("[Bridge Relayer] 6-decimal send notice, attempting 18-decimal:", err1);
-        const amountWei = BigInt(Math.round(amountUnits)) * BigInt(10 ** 12);
+      } catch (erc20Err) {
+        console.warn("[Bridge Relayer] ERC-20 transfer notice, attempting 18-decimal native send:", erc20Err);
+        // Fallback: Convert 6-decimal units to 18-decimal native wei (1 USDC = 10^18 wei)
+        const amountWei = usdcBaseUnits * BigInt(10 ** 12);
         mintTxHash = await arcWalletClient.sendTransaction({
           chain: arcTestnet,
           to: recipient,
