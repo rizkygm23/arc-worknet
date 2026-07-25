@@ -4,7 +4,7 @@ import { ArrowLeft, Check, CircleDollarSign, Handshake } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { PageHeader, SkeletonPanel } from "@/components/app-shell";
-import { AddFundsButton } from "@/components/add-funds";
+import { AppKitBridgePanel } from "@/components/AppKitBridgePanel";
 import { ChainTxLink, EscrowTimeline, JobStatusBadge } from "@/components/job-components";
 import { ARC_USDC_GAS_BUFFER_UNITS, formatUsdcUnits } from "@/lib/money";
 import { nextOnchainAction, useWorkNet } from "@/lib/store";
@@ -76,11 +76,13 @@ export default function FundJobPage() {
               ) : null}
               {!action ? <p className="muted">No funding action is required right now.</p> : null}
               {!canCoverBudget ? (
-                <p className="small" style={{ color: "var(--danger)" }}>
-                  Your wallet balance is below the budget plus the gas buffer.
-                </p>
+                <div style={{ marginTop: 16 }}>
+                  <p className="small" style={{ color: "var(--danger)", marginBottom: 12 }}>
+                    Your wallet balance is below the required budget plus gas buffer. Use Circle App Kit Bridge to bring USDC from other chains.
+                  </p>
+                  <AppKitBridgePanel requiredAmountUnits={requiredBalanceUnits - walletBalanceUnits} />
+                </div>
               ) : null}
-              {!canCoverBudget ? <AddFundsButton /> : null}
             </div>
           ) : (
             <p className="muted">Only the client can fund this escrow.</p>
