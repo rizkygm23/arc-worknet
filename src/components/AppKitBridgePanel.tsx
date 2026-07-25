@@ -162,9 +162,73 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         console.warn("wallet_watchAsset notice:", watchErr);
       }
 
-      // Step 3: Real EVM Onchain CCTP depositForBurn (Target Domain 26: Arc Network)
-      setStatus("burning");
+      // Step 3: Check USDC Allowance & EVM Approve if needed
+      setStatus("approving");
       const usdcAmountBaseUnits = parseUnits(amountInput, 6);
+
+      const allowanceData = encodeFunctionData({
+        abi: erc20UsdcAbi,
+        functionName: "allowance",
+        args: [connectedUserAddress, selectedNetwork.tokenMessengerAddress],
+      });
+
+      let currentAllowance = BigInt(0);
+      try {
+        const rawAllowance = (await provider.request({
+          method: "eth_call",
+          params: [{ to: selectedNetwork.usdcAddress, data: allowanceData }, "latest"],
+        })) as string;
+        if (rawAllowance && rawAllowance !== "0x") {
+          currentAllowance = BigInt(rawAllowance);
+        }
+      } catch (e) {
+        console.warn("Could not fetch allowance, proceeding to approve:", e);
+      }
+
+      if (currentAllowance < usdcAmountBaseUnits) {
+        const approveData = encodeFunctionData({
+          abi: erc20UsdcAbi,
+          functionName: "approve",
+          args: [selectedNetwork.tokenMessengerAddress, usdcAmountBaseUnits],
+        });
+
+        const approveTxHash = (await provider.request({
+          method: "eth_sendTransaction",
+          params: [
+            {
+              from: connectedUserAddress,
+              to: selectedNetwork.usdcAddress,
+              data: approveData,
+            },
+          ],
+        })) as string;
+
+        console.log("Waiting for USDC approve transaction receipt:", approveTxHash);
+
+        let isApprovedMined = false;
+        for (let i = 0; i < 30; i++) {
+          await new Promise((r) => setTimeout(r, 2000));
+          try {
+            const receipt = (await provider.request({
+              method: "eth_getTransactionReceipt",
+              params: [approveTxHash],
+            })) as { status?: string } | null;
+            if (receipt && receipt.status) {
+              isApprovedMined = receipt.status === "0x1";
+              break;
+            }
+          } catch {
+            // Keep polling
+          }
+        }
+
+        if (!isApprovedMined) {
+          throw new Error("USDC approve transaction timeout or reverted onchain.");
+        }
+      }
+
+      // Step 4: Real EVM Onchain CCTP depositForBurn (Target Domain 26: Arc Network)
+      setStatus("burning");
       const recipientBytes32 = addressToBytes32(destinationAddress);
       let burnTxHash: string;
 
