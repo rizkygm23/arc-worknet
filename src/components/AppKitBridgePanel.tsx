@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check, CircleDollarSign, ExternalLink, Globe, RefreshCw, ShieldCheck, Sparkles, AlertCircle, X } from "lucide-react";
+import { ArrowDownUp, Check, ExternalLink, RefreshCw, X, ArrowUpRight, ShieldCheck, AlertCircle, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { getAddress, parseUnits, encodeFunctionData } from "viem";
 import { useWorkNet } from "@/lib/store";
@@ -15,10 +15,15 @@ interface AppKitBridgePanelProps {
 
 export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: AppKitBridgePanelProps) {
   const { wallet } = useWorkNet();
+  const [mode, setMode] = useState<"transfer" | "swap">("transfer");
   const [selectedNetwork, setSelectedNetwork] = useState<CctpNetworkConfig>(CCTP_TESTNET_NETWORKS[0]);
+  const [isChainDropdownOpen, setIsChainDropdownOpen] = useState(false);
   const [amountInput, setAmountInput] = useState<string>(
     requiredAmountUnits ? (requiredAmountUnits / 1_000_000).toString() : "10"
   );
+  const [customAddress, setCustomAddress] = useState<string>("");
+  const [useCustomAddress, setUseCustomAddress] = useState(false);
+
   const [status, setStatus] = useState<"idle" | "switching" | "approving" | "burning" | "attesting" | "completed" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sourceTxHash, setSourceTxHash] = useState<string | null>(null);
@@ -40,7 +45,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
     }
 
     try {
-      // Step 1: Request wallet connection & accounts popup
+      // Step 1: Request wallet connection
       setStatus("switching");
       const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
       if (!accounts || accounts.length === 0) {
@@ -49,7 +54,8 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         return;
       }
 
-      const userAddress = getAddress(accounts[0]);
+      const connectedUserAddress = getAddress(accounts[0]);
+      const destinationAddress = useCustomAddress && customAddress ? getAddress(customAddress) : connectedUserAddress;
       const targetChainHex = `0x${selectedNetwork.chainId.toString(16)}`;
 
       // Step 2: Switch Network to target testnet
@@ -78,7 +84,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         }
       }
 
-      // Step 3: Real EVM Transaction 1 - Approve USDC to TokenMessenger
+      // Step 3: EVM Approve USDC to TokenMessenger
       setStatus("approving");
       const usdcAmountBaseUnits = parseUnits(amountInput, 6);
       const approveData = encodeFunctionData({
@@ -87,22 +93,20 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         args: [selectedNetwork.tokenMessengerAddress, usdcAmountBaseUnits],
       });
 
-      const approveTxHash = (await provider.request({
+      await provider.request({
         method: "eth_sendTransaction",
         params: [
           {
-            from: userAddress,
+            from: connectedUserAddress,
             to: selectedNetwork.usdcAddress,
             data: approveData,
           },
         ],
-      })) as string;
+      });
 
-      console.log("Real USDC approve tx hash:", approveTxHash);
-
-      // Step 4: Real EVM Transaction 2 - depositForBurn via CCTP TokenMessenger
+      // Step 4: EVM depositForBurn via CCTP TokenMessenger
       setStatus("burning");
-      const recipientBytes32 = addressToBytes32(userAddress);
+      const recipientBytes32 = addressToBytes32(destinationAddress);
       const depositData = encodeFunctionData({
         abi: cctpTokenMessengerAbi,
         functionName: "depositForBurn",
@@ -118,14 +122,13 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         method: "eth_sendTransaction",
         params: [
           {
-            from: userAddress,
+            from: connectedUserAddress,
             to: selectedNetwork.tokenMessengerAddress,
             data: depositData,
           },
         ],
       })) as string;
 
-      console.log("Real CCTP depositForBurn tx hash:", burnTxHash);
       setSourceTxHash(burnTxHash);
 
       // Step 5: Circle Iris Attestation Polling
@@ -146,7 +149,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
       const error = err as { code?: number; message?: string };
       setStatus("error");
       if (error.code === 4001 || error.message?.includes("user rejected") || error.message?.includes("User denied")) {
-        setErrorMessage("Transaction was cancelled by user in wallet.");
+        setErrorMessage("Transaction was cancelled in wallet.");
       } else {
         setErrorMessage(error.message || "Failed to execute EVM transaction on wallet.");
       }
@@ -160,60 +163,119 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
   }
 
   return (
-    <div className="panel" style={{ position: "relative", border: "1px solid var(--border-focus)" }}>
-      {onClose ? (
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 480,
+        background: "#121316",
+        color: "#ffffff",
+        borderRadius: 24,
+        padding: 20,
+        boxShadow: "0 20px 40px rgba(0, 0, 0, 0.6)",
+        border: "1px solid rgba(255, 255, 255, 0.08)",
+        fontFamily: "var(--font-body, sans-serif)",
+        position: "relative",
+      }}
+    >
+      {/* Top Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img src="/img/worknet_logo.png" alt="WorkNet" style={{ width: 22, height: 22, objectFit: "contain" }} />
+          <span style={{ fontWeight: 700, fontSize: 15, letterSpacing: "-0.01em" }}>WorkNet Bridge</span>
+          <span style={{ fontSize: 10, background: "rgba(15, 122, 62, 0.2)", color: "#10B981", padding: "2px 8px", borderRadius: 12, fontWeight: 600 }}>
+            Arc CCTP
+          </span>
+        </div>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: "rgba(255, 255, 255, 0.06)",
+              border: "none",
+              color: "#a0a5b5",
+              borderRadius: "50%",
+              width: 30,
+              height: 30,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >
+            <X size={16} />
+          </button>
+        ) : null}
+      </div>
+
+      {/* Mode Switcher */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          background: "rgba(255, 255, 255, 0.04)",
+          borderRadius: 14,
+          padding: 4,
+          marginBottom: 16,
+        }}
+      >
         <button
           type="button"
-          className="button ghost small"
-          onClick={onClose}
-          style={{ position: "absolute", top: 12, right: 12, padding: 6 }}
-          aria-label="Close panel"
-        >
-          <X size={16} />
-        </button>
-      ) : null}
-
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-        <div
+          onClick={() => setMode("transfer")}
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 8,
-            background: "rgba(0, 102, 255, 0.1)",
+            border: "none",
+            borderRadius: 10,
+            padding: "8px 0",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+            background: mode === "transfer" ? "rgba(16, 185, 129, 0.15)" : "transparent",
+            color: mode === "transfer" ? "#10B981" : "#808595",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "var(--accent)",
+            gap: 6,
           }}
         >
-          <Globe size={20} />
-        </div>
-        <div>
-          <h3 className="panel-title" style={{ fontSize: 16, margin: 0 }}>
-            Real Circle CCTP Cross-Chain Bridge
-          </h3>
-          <p className="small muted" style={{ margin: 0 }}>
-            Burn USDC on testnets (Arbitrum, Base, Sepolia) and mint 1:1 on Arc Network.
-          </p>
-        </div>
+          <ShieldCheck size={15} /> Transfer
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("swap")}
+          style={{
+            border: "none",
+            borderRadius: 10,
+            padding: "8px 0",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+            background: mode === "swap" ? "rgba(255, 255, 255, 0.08)" : "transparent",
+            color: mode === "swap" ? "#ffffff" : "#808595",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+          }}
+        >
+          <ArrowDownUp size={15} /> Swap
+        </button>
       </div>
 
       {errorMessage ? (
-        <div className="wallet-error" style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-          <AlertCircle size={16} style={{ color: "var(--danger)" }} />
-          <span className="small">{errorMessage}</span>
+        <div style={{ background: "rgba(220, 38, 38, 0.15)", border: "1px solid rgba(220, 38, 38, 0.3)", borderRadius: 12, padding: 10, marginBottom: 14, display: "flex", alignItems: "center", gap: 8, color: "#ef4444", fontSize: 12 }}>
+          <AlertCircle size={16} /> {errorMessage}
         </div>
       ) : null}
 
       {status === "completed" ? (
-        <div style={{ padding: "16px 0", textAlign: "center" }}>
+        <div style={{ padding: "20px 0", textAlign: "center" }}>
           <div
             style={{
-              width: 48,
-              height: 48,
+              width: 52,
+              height: 52,
               borderRadius: "50%",
               background: "rgba(16, 185, 129, 0.15)",
-              color: "var(--success, #10B981)",
+              color: "#10B981",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -222,231 +284,339 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
           >
             <Check size={28} />
           </div>
-          <h4 style={{ margin: "0 0 4px", fontSize: 16 }}>Onchain Bridge Transaction Executed!</h4>
-          <p className="small muted" style={{ margin: "0 0 16px" }}>
-            USDC CCTP message verified. Native USDC is minted on Arc Network for wallet {wallet.address ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}` : ""}.
+          <h4 style={{ margin: "0 0 4px", fontSize: 17, fontWeight: 700 }}>Cross-Chain Mint Complete!</h4>
+          <p style={{ fontSize: 13, color: "#808595", margin: "0 0 16px" }}>
+            USDC has been burned on {selectedNetwork.name} and minted 1:1 on Arc Network.
           </p>
 
           {sourceTxHash ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16, alignItems: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
               <a
                 href={`${selectedNetwork.explorerUrl}/tx/${sourceTxHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="small"
-                style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--accent)" }}
+                style={{ fontSize: 12, color: "#3B82F6", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}
               >
-                View Burn on {selectedNetwork.name} Explorer <ExternalLink size={12} />
+                Burn on {selectedNetwork.name} <ArrowUpRight size={12} />
               </a>
               <a
                 href={`${ARC_EXPLORER_URL}/address/${wallet.address}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="small"
-                style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--success, #10B981)" }}
+                style={{ fontSize: 12, color: "#10B981", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}
               >
-                View Balance on Arc Explorer <ExternalLink size={12} />
+                Mint Balance on Arc Explorer <ExternalLink size={12} />
               </a>
             </div>
           ) : null}
 
-          <button type="button" className="button ghost small" onClick={handleReset}>
-            <RefreshCw size={14} /> Bridge again
+          <button
+            type="button"
+            onClick={handleReset}
+            style={{
+              width: "100%",
+              padding: 12,
+              borderRadius: 30,
+              border: "none",
+              background: "#ffffff",
+              color: "#121316",
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: "pointer",
+            }}
+          >
+            Done
           </button>
         </div>
       ) : status !== "idle" ? (
-        <div style={{ padding: "16px 0" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ padding: "20px 0" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  background: status === "switching" ? "var(--accent)" : "rgba(16, 185, 129, 0.2)",
-                  color: "#fff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
-                {status === "switching" ? <RefreshCw className="animate-spin" size={14} /> : <Check size={14} />}
+              <div style={{ width: 26, height: 26, borderRadius: "50%", background: status === "switching" ? "#10B981" : "#262830", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
+                {status === "switching" ? <RefreshCw className="animate-spin" size={13} /> : <Check size={13} />}
               </div>
-              <span className="small">1. Connect & Switch to {selectedNetwork.name} (Chain ID: {selectedNetwork.chainId})</span>
+              <span style={{ fontSize: 13, color: "#d1d5db" }}>Connecting to {selectedNetwork.name}</span>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  background: status === "approving" ? "var(--accent)" : ["burning", "attesting"].includes(status) ? "rgba(16, 185, 129, 0.2)" : "var(--border)",
-                  color: "#fff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
-                {status === "approving" ? <RefreshCw className="animate-spin" size={14} /> : ["burning", "attesting"].includes(status) ? <Check size={14} /> : "2"}
+              <div style={{ width: 26, height: 26, borderRadius: "50%", background: status === "approving" ? "#10B981" : ["burning", "attesting"].includes(status) ? "#10B981" : "#262830", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
+                {status === "approving" ? <RefreshCw className="animate-spin" size={13} /> : ["burning", "attesting"].includes(status) ? <Check size={13} /> : "2"}
               </div>
-              <span className="small">2. EVM Transaction: Approve USDC to TokenMessenger</span>
+              <span style={{ fontSize: 13, color: "#d1d5db" }}>Approving USDC TokenMessenger</span>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  background: status === "burning" ? "var(--accent)" : status === "attesting" ? "rgba(16, 185, 129, 0.2)" : "var(--border)",
-                  color: "#fff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
-                {status === "burning" ? <RefreshCw className="animate-spin" size={14} /> : status === "attesting" ? <Check size={14} /> : "3"}
+              <div style={{ width: 26, height: 26, borderRadius: "50%", background: status === "burning" ? "#10B981" : status === "attesting" ? "#10B981" : "#262830", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
+                {status === "burning" ? <RefreshCw className="animate-spin" size={13} /> : status === "attesting" ? <Check size={13} /> : "3"}
               </div>
-              <span className="small">3. EVM Transaction: depositForBurn on {selectedNetwork.name}</span>
+              <span style={{ fontSize: 13, color: "#d1d5db" }}>Executing depositForBurn</span>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  background: status === "attesting" ? "var(--accent)" : "var(--border)",
-                  color: "#fff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
-                {status === "attesting" ? <RefreshCw className="animate-spin" size={14} /> : "4"}
+              <div style={{ width: 26, height: 26, borderRadius: "50%", background: status === "attesting" ? "#10B981" : "#262830", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
+                {status === "attesting" ? <RefreshCw className="animate-spin" size={13} /> : "4"}
               </div>
-              <span className="small">4. Circle Iris API Verification & Mint on Arc Network</span>
+              <span style={{ fontSize: 13, color: "#d1d5db" }}>Circle Iris Attestation & Minting on Arc</span>
             </div>
           </div>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <label className="label" style={{ marginBottom: 6, display: "block" }}>
-              Source Testnet Chain
-            </label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 8 }}>
-              {CCTP_TESTNET_NETWORKS.map((net) => {
-                const isSelected = selectedNetwork.id === net.id;
-                return (
-                  <button
-                    key={net.id}
-                    type="button"
-                    onClick={() => setSelectedNetwork(net)}
-                    className={`button ghost small ${isSelected ? "primary" : ""}`}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* FROM CARD */}
+          <div style={{ background: "#1c1e24", borderRadius: 16, padding: 14, border: "1px solid rgba(255, 255, 255, 0.05)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              {/* Token & Chain Selector */}
+              <div style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  onClick={() => setIsChainDropdownOpen(!isChainDropdownOpen)}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.06)",
+                    border: "none",
+                    borderRadius: 20,
+                    padding: "4px 10px 4px 6px",
+                    color: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#2775CA", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, color: "#fff" }}>
+                    $
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", textAlign: "left", lineHeight: 1.1 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>USDC</span>
+                    <span style={{ fontSize: 10, color: "#9ca3af" }}>{selectedNetwork.name}</span>
+                  </div>
+                  <ChevronDown size={14} style={{ color: "#9ca3af" }} />
+                </button>
+
+                {/* Chain Dropdown Menu */}
+                {isChainDropdownOpen ? (
+                  <div
                     style={{
-                      justifyContent: "flex-start",
-                      border: isSelected ? "1px solid var(--accent)" : "1px solid var(--border)",
-                      background: isSelected ? "rgba(0, 102, 255, 0.08)" : "transparent",
+                      position: "absolute",
+                      top: "110%",
+                      left: 0,
+                      zIndex: 100,
+                      background: "#22252e",
+                      border: "1px solid rgba(255, 255, 255, 0.12)",
+                      borderRadius: 14,
+                      padding: 6,
+                      width: 200,
+                      boxShadow: "0 10px 25px rgba(0, 0, 0, 0.5)",
                     }}
                   >
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: "#0066FF",
-                        display: "inline-block",
-                      }}
-                    />
-                    {net.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                    <div style={{ fontSize: 10, color: "#6b7280", padding: "4px 8px", fontWeight: 600, textTransform: "uppercase" }}>Select Source Chain</div>
+                    {CCTP_TESTNET_NETWORKS.map((net) => (
+                      <button
+                        key={net.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedNetwork(net);
+                          setIsChainDropdownOpen(false);
+                        }}
+                        style={{
+                          width: "100%",
+                          background: selectedNetwork.id === net.id ? "rgba(16, 185, 129, 0.15)" : "transparent",
+                          border: "none",
+                          borderRadius: 8,
+                          padding: "8px 10px",
+                          color: selectedNetwork.id === net.id ? "#10B981" : "#ffffff",
+                          textAlign: "left",
+                          cursor: "pointer",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        {net.name}
+                        {selectedNetwork.id === net.id ? <Check size={12} /> : null}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center" }}>
-            <div>
-              <label className="label" style={{ marginBottom: 4, display: "block" }}>
-                USDC Amount
-              </label>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, border: "1px solid var(--border)", padding: "6px 10px", borderRadius: 6 }}>
-                <CircleDollarSign size={16} className="muted" />
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={amountInput}
-                  onChange={(e) => setAmountInput(e.target.value)}
-                  style={{ width: "100%", background: "transparent", border: "none", color: "inherit", outline: "none", fontSize: 14 }}
-                  placeholder="0.00"
-                />
-                <span className="small muted">USDC</span>
+              <span style={{ fontSize: 12, color: "#6b7280" }}>
+                Source Chain
+              </span>
+            </div>
+
+            {/* Input Amount Row */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 10 }}>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={amountInput}
+                onChange={(e) => setAmountInput(e.target.value)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  fontSize: 32,
+                  fontWeight: 700,
+                  color: "#ffffff",
+                  width: "60%",
+                  letterSpacing: "-0.02em",
+                }}
+                placeholder="0.00"
+              />
+
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => setAmountInput("100")}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.08)",
+                    border: "none",
+                    borderRadius: 12,
+                    padding: "3px 8px",
+                    color: "#d1d5db",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Max
+                </button>
               </div>
             </div>
 
-            <div style={{ paddingTop: 20, textAlign: "center" }}>
-              <ArrowRight size={18} className="muted" />
-            </div>
-
-            <div>
-              <label className="label" style={{ marginBottom: 4, display: "block" }}>
-                Destination Chain
-              </label>
-              <div style={{ border: "1px solid var(--border)", padding: "6px 10px", borderRadius: 6, background: "rgba(255, 255, 255, 0.03)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Sparkles size={14} style={{ color: "var(--accent)" }} />
-                  <span className="small" style={{ fontWeight: 600 }}>Arc Testnet</span>
-                </div>
-                <span className="micro muted">Chain ID {ARC_TESTNET_CHAIN_ID}</span>
-              </div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+              ~${parseFloat(amountInput || "0").toFixed(2)} USD
             </div>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255, 255, 255, 0.02)", padding: "8px 12px", borderRadius: 6, fontSize: 12 }}>
-            <span className="muted">Token Messenger Contract:</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10 }}>
-              {selectedNetwork.tokenMessengerAddress.slice(0, 10)}...{selectedNetwork.tokenMessengerAddress.slice(-6)}
-            </span>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-            <button
-              type="button"
-              className="button primary"
-              style={{ flex: 1 }}
-              onClick={handleRealOnchainBridge}
-              disabled={!amountInput || parseFloat(amountInput) <= 0}
+          {/* DIRECTION SWAP ARROW BUTTON */}
+          <div style={{ display: "flex", justifyContent: "center", margin: "-6px 0", zIndex: 2 }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                background: "#252830",
+                border: "3px solid #121316",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#9ca3af",
+              }}
             >
-              <ShieldCheck size={16} /> Execute Real CCTP Bridge ({selectedNetwork.name})
-            </button>
+              <ArrowDownUp size={14} />
+            </div>
+          </div>
 
-            {onrampUrl ? (
+          {/* TO CARD (Arc Network Target) */}
+          <div style={{ background: "#1c1e24", borderRadius: 16, padding: 14, border: "1px solid rgba(255, 255, 255, 0.05)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              {/* Destination Badge */}
+              <div
+                style={{
+                  background: "rgba(15, 122, 62, 0.15)",
+                  border: "1px solid rgba(16, 185, 129, 0.3)",
+                  borderRadius: 20,
+                  padding: "4px 10px 4px 6px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <img src="/img/worknet_logo.png" alt="Arc" style={{ width: 18, height: 18, objectFit: "contain" }} />
+                <div style={{ display: "flex", flexDirection: "column", textAlign: "left", lineHeight: 1.1 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#10B981" }}>USDC</span>
+                  <span style={{ fontSize: 10, color: "#a7f3d0" }}>Arc Network</span>
+                </div>
+              </div>
+
+              {/* Custom Address Toggle */}
+              <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: "#9ca3af" }}>
+                Custom Address
+                <input
+                  type="checkbox"
+                  checked={useCustomAddress}
+                  onChange={(e) => setUseCustomAddress(e.target.checked)}
+                  style={{ accentColor: "#10B981", cursor: "pointer" }}
+                />
+              </label>
+            </div>
+
+            {/* Output Amount Row */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 10 }}>
+              <div style={{ fontSize: 32, fontWeight: 700, color: "#ffffff", letterSpacing: "-0.02em" }}>
+                {amountInput && !isNaN(parseFloat(amountInput)) ? parseFloat(amountInput).toFixed(2) : "0.00"}
+              </div>
+              <span style={{ fontSize: 11, color: "#10B981", fontWeight: 600 }}>1:1 Instant Mint</span>
+            </div>
+
+            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+              Target Domain: {ARC_TESTNET_CHAIN_ID}
+            </div>
+
+            {useCustomAddress ? (
+              <div style={{ marginTop: 10 }}>
+                <input
+                  type="text"
+                  placeholder="0x... Recipient address on Arc"
+                  value={customAddress}
+                  onChange={(e) => setCustomAddress(e.target.value)}
+                  style={{
+                    width: "100%",
+                    background: "rgba(0, 0, 0, 0.3)",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: 8,
+                    padding: "6px 10px",
+                    color: "#fff",
+                    fontSize: 11,
+                    fontFamily: "var(--font-mono)",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            ) : null}
+          </div>
+
+          {/* PRIMARY ACTION BUTTON */}
+          <button
+            type="button"
+            onClick={handleRealOnchainBridge}
+            disabled={!amountInput || parseFloat(amountInput) <= 0}
+            style={{
+              width: "100%",
+              padding: "14px 0",
+              borderRadius: 30,
+              border: "none",
+              background: "#ffffff",
+              color: "#121316",
+              fontWeight: 700,
+              fontSize: 15,
+              cursor: "pointer",
+              marginTop: 4,
+              boxShadow: "0 4px 14px rgba(255, 255, 255, 0.15)",
+              transition: "transform 0.1s ease",
+            }}
+          >
+            Execute CCTP Bridge
+          </button>
+
+          {onrampUrl ? (
+            <div style={{ textAlign: "center", marginTop: 2 }}>
               <a
                 href={onrampUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="button ghost"
-                title="Circle Testnet Faucet"
+                style={{ fontSize: 11, color: "#6b7280", textDecoration: "none" }}
               >
-                <ExternalLink size={14} /> Testnet Faucet
+                Need testnet USDC? Get from <span style={{ color: "#3B82F6" }}>Circle Faucet ↗</span>
               </a>
-            ) : null}
-          </div>
-
-          <p className="micro muted" style={{ margin: 0, textAlign: "center" }}>
-            Triggers real EVM transactions via Viem/Metamask on {selectedNetwork.name} (Chain {selectedNetwork.chainId}).
-          </p>
+            </div>
+          ) : null}
         </div>
       )}
     </div>
