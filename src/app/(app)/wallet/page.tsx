@@ -3,6 +3,7 @@
 import { Activity, BriefcaseBusiness, CircleDollarSign, ShieldCheck, Wallet } from "lucide-react";
 import Link from "next/link";
 import { PageHeader, StatCard } from "@/components/app-shell";
+import { AddFundsButton } from "@/components/add-funds";
 import { useWorkNet, walletBalanceLabel } from "@/lib/store";
 import { formatUsdcUnits } from "@/lib/money";
 import { ARC_TESTNET_CHAIN_ID } from "@/lib/arc";
@@ -29,6 +30,7 @@ export default function WalletPage() {
         subtitle="Your balance, network, and escrow at a glance."
         actions={
           <>
+            <AddFundsButton />
             <button className="button primary" type="button" onClick={connectWallet}>
               <Wallet size={16} />
               {wallet.isConnected ? formatWalletAddress(wallet.address) : "Connect wallet"}
