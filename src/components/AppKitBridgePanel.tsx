@@ -33,38 +33,40 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
 
   const onrampUrl = process.env.NEXT_PUBLIC_CIRCLE_ONRAMP_URL;
 
-  // Fetch real USDC balance on selected source chain via public RPC
+  // Fetch real USDC balance on selected source chain
   const fetchSourceUsdcBalance = useCallback(async () => {
-    const userAddressHex = wallet.address ? getAddress(wallet.address) : null;
-    if (!userAddressHex) {
+    let userAddr = wallet.address ? getAddress(wallet.address) : null;
+
+    // Fallback: detect connected account from window.ethereum if store state isn't hydrated
+    if (!userAddr && typeof window !== "undefined") {
+      const provider = (window as unknown as { ethereum?: { request: (args: { method: string }) => Promise<unknown> } }).ethereum;
+      if (provider) {
+        try {
+          const accounts = (await provider.request({ method: "eth_accounts" })) as string[];
+          if (accounts && accounts[0]) {
+            userAddr = getAddress(accounts[0]);
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    if (!userAddr) {
       setSourceBalanceUnits(null);
       return;
     }
 
     setIsFetchingBalance(true);
     try {
-      const data = encodeFunctionData({
-        abi: erc20UsdcAbi,
-        functionName: "balanceOf",
-        args: [userAddressHex],
-      });
-
-      const res = await fetch(selectedNetwork.rpcUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "eth_call",
-          params: [{ to: selectedNetwork.usdcAddress, data }, "latest"],
-        }),
-      });
-
-      const json = await res.json();
-      const rawResult = json.result as string | undefined;
-
-      if (rawResult && rawResult !== "0x") {
-        setSourceBalanceUnits(BigInt(rawResult));
+      const res = await fetch(`/api/cctp/balance?chainId=${selectedNetwork.chainId}&userAddress=${userAddr}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.balanceUnits) {
+          setSourceBalanceUnits(BigInt(json.balanceUnits));
+        } else {
+          setSourceBalanceUnits(BigInt(0));
+        }
       } else {
         setSourceBalanceUnits(BigInt(0));
       }
@@ -514,7 +516,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
                   {/* USDC Token Icon with Chain Badge Overlay */}
                   <div style={{ position: "relative", width: 28, height: 28 }}>
                     <img
-                      src="https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/A0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png"
+                      src="https://assets.coingecko.com/coins/images/6319/standard/usdc.png"
                       alt="USDC"
                       style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
                     />

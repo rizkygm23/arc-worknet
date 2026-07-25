@@ -22,7 +22,7 @@ export const CCTP_TESTNET_NETWORKS: CctpNetworkConfig[] = [
     tokenMessengerAddress: getAddress("0x9f3B8679c73C2Fef8b59B4f3444d4d156fb70AA5"),
     explorerUrl: "https://sepolia.etherscan.io",
     rpcUrl: "https://ethereum-sepolia-rpc.publicnode.com",
-    iconUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png",
+    iconUrl: "https://assets.coingecko.com/coins/images/279/standard/ethereum.png",
   },
   {
     id: "arbitrum-sepolia",
@@ -33,7 +33,7 @@ export const CCTP_TESTNET_NETWORKS: CctpNetworkConfig[] = [
     tokenMessengerAddress: getAddress("0x9f3B8679c73C2Fef8b59B4f3444d4d156fb70AA5"),
     explorerUrl: "https://sepolia.arbiscan.io",
     rpcUrl: "https://sepolia-rollup.arbitrum.io/rpc",
-    iconUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png",
+    iconUrl: "https://assets.coingecko.com/coins/images/16547/standard/arbitrum.png",
   },
   {
     id: "base-sepolia",
@@ -44,7 +44,7 @@ export const CCTP_TESTNET_NETWORKS: CctpNetworkConfig[] = [
     tokenMessengerAddress: getAddress("0x9f3B8679c73C2Fef8b59B4f3444d4d156fb70AA5"),
     explorerUrl: "https://sepolia.basescan.org",
     rpcUrl: "https://sepolia.base.org",
-    iconUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png",
+    iconUrl: "https://assets.coingecko.com/coins/images/31164/standard/base.png",
   },
   {
     id: "avalanche-fuji",
@@ -55,7 +55,7 @@ export const CCTP_TESTNET_NETWORKS: CctpNetworkConfig[] = [
     tokenMessengerAddress: getAddress("0xeb08f243e5d32c326f768d85a078f77a7344911d"),
     explorerUrl: "https://testnet.snowtrace.io",
     rpcUrl: "https://api.avax-test.network/ext/bc/C/rpc",
-    iconUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png",
+    iconUrl: "https://assets.coingecko.com/coins/images/12559/standard/Avalanche_Circle_RedWhite_Trans.png",
   },
 ];
 
