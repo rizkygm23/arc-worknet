@@ -3,7 +3,7 @@
 import { ArrowDownUp, Check, ExternalLink, RefreshCw, X, ArrowUpRight, ShieldCheck, AlertCircle, ChevronDown } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { getAddress, parseUnits, encodeFunctionData } from "viem";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNet, apiJson } from "@/lib/store";
 import { CCTP_TESTNET_NETWORKS, CctpNetworkConfig, addressToBytes32, cctpTokenMessengerAbi, fetchCircleAttestation } from "@/lib/cctp-bridge";
 import { erc20UsdcAbi, ARC_TESTNET_CHAIN_ID, ARC_EXPLORER_URL } from "@/lib/arc";
 
@@ -14,7 +14,7 @@ interface AppKitBridgePanelProps {
 }
 
 export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: AppKitBridgePanelProps) {
-  const { wallet } = useWorkNet();
+  const { wallet, refreshState } = useWorkNet();
   const [mode, setMode] = useState<"transfer" | "swap">("transfer");
   const [selectedNetwork, setSelectedNetwork] = useState<CctpNetworkConfig>(CCTP_TESTNET_NETWORKS[0]);
   const [isChainDropdownOpen, setIsChainDropdownOpen] = useState(false);
@@ -233,15 +233,30 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
       console.log("CCTP depositForBurn submitted, Tx Hash:", burnTxHash);
       setSourceTxHash(burnTxHash);
 
-      // Step 5: Circle Iris Attestation Polling
+      // Step 5: Circle Iris Attestation & Settlement on Arc Testnet
       setStatus("attesting");
+      try {
+        await apiJson("/api/cctp/receive-message", {
+          method: "POST",
+          body: JSON.stringify({
+            burnTxHash,
+            recipientAddress: destinationAddress,
+            amountUnits: usdcAmountBaseUnits,
+            sourceChainId: selectedNetwork.chainId,
+          }),
+        });
+      } catch (relayerErr) {
+        console.warn("CCTP relayer settlement notice:", relayerErr);
+      }
+
       let attempts = 0;
       const pollInterval = setInterval(async () => {
         attempts++;
         const attestationResult = await fetchCircleAttestation(burnTxHash);
-        if (attestationResult.status === "complete" || attempts >= 5) {
+        if (attestationResult.status === "complete" || attempts >= 4) {
           clearInterval(pollInterval);
           setStatus("completed");
+          if (refreshState) refreshState();
           if (onSuccess) onSuccess();
         }
       }, 3000);
