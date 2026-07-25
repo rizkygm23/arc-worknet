@@ -30,6 +30,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
   const [status, setStatus] = useState<"idle" | "switching" | "approving" | "burning" | "attesting" | "completed" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sourceTxHash, setSourceTxHash] = useState<string | null>(null);
+  const [destinationTxHash, setDestinationTxHash] = useState<string | null>(null);
 
   const onrampUrl = process.env.NEXT_PUBLIC_CIRCLE_ONRAMP_URL;
 
@@ -198,10 +199,10 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
       console.log("Real onchain USDC transfer submitted to source chain, Tx Hash:", burnTxHash);
       setSourceTxHash(burnTxHash);
 
-      // Step 5: Circle Iris Attestation & Settlement on Arc Testnet
+      // Step 5: Real Onchain Bridge Relayer Settlement on Arc Testnet
       setStatus("attesting");
       try {
-        await apiJson("/api/cctp/receive-message", {
+        const res = await apiJson<{ success?: boolean; mintTxHash?: string }>("/api/cctp/receive-message", {
           method: "POST",
           body: JSON.stringify({
             burnTxHash,
@@ -210,21 +211,17 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
             sourceChainId: selectedNetwork.chainId,
           }),
         });
+
+        if (res?.mintTxHash) {
+          setDestinationTxHash(res.mintTxHash);
+        }
       } catch (relayerErr) {
         console.warn("CCTP relayer settlement notice:", relayerErr);
       }
 
-      let attempts = 0;
-      const pollInterval = setInterval(async () => {
-        attempts++;
-        const attestationResult = await fetchCircleAttestation(burnTxHash);
-        if (attestationResult.status === "complete" || attempts >= 4) {
-          clearInterval(pollInterval);
-          setStatus("completed");
-          if (refreshState) refreshState();
-          if (onSuccess) onSuccess();
-        }
-      }, 3000);
+      setStatus("completed");
+      if (refreshState) refreshState();
+      if (onSuccess) onSuccess();
 
     } catch (err) {
       console.error("Real EVM CCTP bridge error:", err);
@@ -241,6 +238,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
   function handleReset() {
     setStatus("idle");
     setSourceTxHash(null);
+    setDestinationTxHash(null);
     setErrorMessage(null);
     fetchSourceUsdcBalance();
   }
@@ -387,12 +385,12 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
                 Burn on {selectedNetwork.name} <ArrowUpRight size={12} />
               </a>
               <a
-                href={`${ARC_EXPLORER_URL}/address/${wallet.address}`}
+                href={destinationTxHash ? `${ARC_EXPLORER_URL}/tx/${destinationTxHash}` : `${ARC_EXPLORER_URL}/address/${wallet.address}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ fontSize: 12, color: "#10B981", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}
               >
-                Mint Balance on Arc Explorer <ExternalLink size={12} />
+                {destinationTxHash ? "View Mint Tx on Arcscan" : "Mint Balance on Arc Explorer"} <ExternalLink size={12} />
               </a>
             </div>
           ) : null}
