@@ -41,6 +41,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_CIRCLE_APP_KIT_KEY: z.string().optional(),
   NEXT_PUBLIC_CIRCLE_ONRAMP_URL: optionalUrl,
   AI_PROVIDER_API_KEY: optionalSecret,
+  AI_PROVIDER_BASE_URL: optionalUrl,
+  AI_PROVIDER_MODEL: z.string().default("gpt-4o-mini"),
   ADMIN_API_SECRET: optionalSecret,
   DATA_ENCRYPTION_KEY: z.string().min(32).optional().or(z.literal("")),
   PLATFORM_FEE_BPS: z.coerce.number().int().min(0).max(10000).default(100),
