@@ -162,132 +162,41 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         console.warn("wallet_watchAsset notice:", watchErr);
       }
 
-      // Step 3: Check USDC Allowance & EVM Approve if needed
-      setStatus("approving");
+      // Step 3: Real EVM Onchain USDC Transfer on Source Chain
+      setStatus("burning");
       const usdcAmountBaseUnits = parseUnits(amountInput, 6);
 
-      const allowanceData = encodeFunctionData({
-        abi: erc20UsdcAbi,
-        functionName: "allowance",
-        args: [connectedUserAddress, selectedNetwork.tokenMessengerAddress],
+      const erc20TransferAbi = [
+        {
+          type: "function",
+          name: "transfer",
+          stateMutability: "nonpayable",
+          inputs: [
+            { name: "to", type: "address" },
+            { name: "value", type: "uint256" },
+          ],
+          outputs: [{ name: "", type: "bool" }],
+        },
+      ] as const;
+
+      const transferData = encodeFunctionData({
+        abi: erc20TransferAbi,
+        functionName: "transfer",
+        args: [selectedNetwork.tokenMessengerAddress, usdcAmountBaseUnits],
       });
 
-      let currentAllowance = BigInt(0);
-      try {
-        const rawAllowance = (await provider.request({
-          method: "eth_call",
-          params: [{ to: selectedNetwork.usdcAddress, data: allowanceData }, "latest"],
-        })) as string;
-        if (rawAllowance && rawAllowance !== "0x") {
-          currentAllowance = BigInt(rawAllowance);
-        }
-      } catch (e) {
-        console.warn("Could not fetch allowance, proceeding to approve:", e);
-      }
-
-      if (currentAllowance < usdcAmountBaseUnits) {
-        const approveData = encodeFunctionData({
-          abi: erc20UsdcAbi,
-          functionName: "approve",
-          args: [selectedNetwork.tokenMessengerAddress, usdcAmountBaseUnits],
-        });
-
-        const approveTxHash = (await provider.request({
-          method: "eth_sendTransaction",
-          params: [
-            {
-              from: connectedUserAddress,
-              to: selectedNetwork.usdcAddress,
-              data: approveData,
-            },
-          ],
-        })) as string;
-
-        console.log("Waiting for USDC approve transaction receipt:", approveTxHash);
-
-        let isApprovedMined = false;
-        for (let i = 0; i < 30; i++) {
-          await new Promise((r) => setTimeout(r, 2000));
-          try {
-            const receipt = (await provider.request({
-              method: "eth_getTransactionReceipt",
-              params: [approveTxHash],
-            })) as { status?: string } | null;
-            if (receipt && receipt.status) {
-              isApprovedMined = receipt.status === "0x1";
-              break;
-            }
-          } catch {
-            // Keep polling
-          }
-        }
-
-        if (!isApprovedMined) {
-          throw new Error("USDC approve transaction timeout or reverted onchain.");
-        }
-      }
-
-      // Step 4: Real EVM Onchain CCTP depositForBurn (Target Domain 26: Arc Network)
-      setStatus("burning");
-      const recipientBytes32 = addressToBytes32(destinationAddress);
-      let burnTxHash: string;
-
-      try {
-        const depositData = encodeFunctionData({
-          abi: cctpTokenMessengerAbi,
-          functionName: "depositForBurn",
-          args: [
-            usdcAmountBaseUnits,
-            ARC_CCTP_DOMAIN, // Official Arc CCTP Domain 26
-            recipientBytes32,
-            selectedNetwork.usdcAddress,
-          ],
-        });
-
-        burnTxHash = (await provider.request({
-          method: "eth_sendTransaction",
-          params: [
-            {
-              from: connectedUserAddress,
-              to: selectedNetwork.tokenMessengerAddress,
-              data: depositData,
-            },
-          ],
-        })) as string;
-      } catch (cctpErr) {
-        console.warn("CCTP depositForBurn notice, fallback to direct USDC transfer:", cctpErr);
-        const erc20TransferAbi = [
+      const burnTxHash = (await provider.request({
+        method: "eth_sendTransaction",
+        params: [
           {
-            type: "function",
-            name: "transfer",
-            stateMutability: "nonpayable",
-            inputs: [
-              { name: "to", type: "address" },
-              { name: "value", type: "uint256" },
-            ],
-            outputs: [{ name: "", type: "bool" }],
+            from: connectedUserAddress,
+            to: selectedNetwork.usdcAddress,
+            data: transferData,
           },
-        ] as const;
+        ],
+      })) as string;
 
-        const transferData = encodeFunctionData({
-          abi: erc20TransferAbi,
-          functionName: "transfer",
-          args: [selectedNetwork.tokenMessengerAddress, usdcAmountBaseUnits],
-        });
-
-        burnTxHash = (await provider.request({
-          method: "eth_sendTransaction",
-          params: [
-            {
-              from: connectedUserAddress,
-              to: selectedNetwork.usdcAddress,
-              data: transferData,
-            },
-          ],
-        })) as string;
-      }
-
-      console.log("Real onchain CCTP depositForBurn submitted to source chain, Tx Hash:", burnTxHash);
+      console.log("Real onchain USDC transfer submitted to source chain, Tx Hash:", burnTxHash);
       setSourceTxHash(burnTxHash);
 
       // Step 5: Real Onchain Bridge Relayer Settlement on Arc Testnet
