@@ -1,7 +1,7 @@
 "use client";
 
 import { CreditCard } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useWorkNet } from "@/lib/store";
 import { AppKitBridgePanel } from "@/components/AppKitBridgePanel";
 
@@ -15,6 +15,22 @@ export function AddFundsButton({ compact = false }: { compact?: boolean }) {
 
   const configured = Boolean(APP_KIT_KEY || ONRAMP_URL);
   const className = compact ? "button ghost small" : "button";
+
+  useEffect(() => {
+    if (!showModal) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowModal(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [showModal]);
 
   function launch() {
     if (APP_KIT_KEY) {
@@ -40,23 +56,15 @@ export function AddFundsButton({ compact = false }: { compact?: boolean }) {
 
       {showModal ? (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
-            background: "rgba(0, 0, 0, 0.75)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
+          className="bridge-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bridge-dialog-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setShowModal(false);
           }}
-          onClick={() => setShowModal(false)}
         >
-          <div
-            style={{ width: "100%", maxWidth: 520 }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="bridge-modal-shell">
             <AppKitBridgePanel onClose={() => setShowModal(false)} />
           </div>
         </div>

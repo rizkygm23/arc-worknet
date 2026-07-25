@@ -1,11 +1,20 @@
 "use client";
 
-import { ArrowDownUp, Check, ExternalLink, RefreshCw, X, ArrowUpRight, ShieldCheck, AlertCircle, ChevronDown } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
-import { getAddress, parseUnits, encodeFunctionData } from "viem";
-import { useWorkNet, apiJson } from "@/lib/store";
-import { CCTP_TESTNET_NETWORKS, CctpNetworkConfig, addressToBytes32, cctpTokenMessengerAbi, fetchCircleAttestation, ARC_CCTP_DOMAIN } from "@/lib/cctp-bridge";
-import { erc20UsdcAbi, ARC_TESTNET_CHAIN_ID, ARC_EXPLORER_URL } from "@/lib/arc";
+import {
+  AlertCircle,
+  ArrowDown,
+  Check,
+  ChevronDown,
+  ExternalLink,
+  RefreshCw,
+  ShieldCheck,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { encodeFunctionData, getAddress, isAddress, parseUnits } from "viem";
+import { ARC_EXPLORER_URL } from "@/lib/arc";
+import { CCTP_TESTNET_NETWORKS, type CctpNetworkConfig } from "@/lib/cctp-bridge";
+import { apiJson, useWorkNet } from "@/lib/store";
 
 interface AppKitBridgePanelProps {
   requiredAmountUnits?: number;
@@ -13,226 +22,196 @@ interface AppKitBridgePanelProps {
   onSuccess?: () => void;
 }
 
+type TransferStatus = "idle" | "switching" | "submitting" | "settling" | "completed" | "error";
+
+const erc20TransferAbi = [
+  {
+    type: "function",
+    name: "transfer",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "value", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+] as const;
+
 export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: AppKitBridgePanelProps) {
   const { wallet, refreshState } = useWorkNet();
-  const [mode, setMode] = useState<"transfer" | "swap">("transfer");
   const [selectedNetwork, setSelectedNetwork] = useState<CctpNetworkConfig>(CCTP_TESTNET_NETWORKS[0]);
   const [isChainDropdownOpen, setIsChainDropdownOpen] = useState(false);
-  const [amountInput, setAmountInput] = useState<string>(
-    requiredAmountUnits ? (requiredAmountUnits / 1_000_000).toString() : "10"
+  const [amountInput, setAmountInput] = useState(
+    requiredAmountUnits ? (requiredAmountUnits / 1_000_000).toString() : "10",
   );
-  const [customAddress, setCustomAddress] = useState<string>("");
+  const [customAddress, setCustomAddress] = useState("");
   const [useCustomAddress, setUseCustomAddress] = useState(false);
-
   const [sourceBalanceUnits, setSourceBalanceUnits] = useState<bigint | null>(null);
-  const [isFetchingBalance, setIsFetchingBalance] = useState<boolean>(false);
-
-  const [status, setStatus] = useState<"idle" | "switching" | "approving" | "burning" | "attesting" | "completed" | "error">("idle");
+  const [isFetchingBalance, setIsFetchingBalance] = useState(false);
+  const [status, setStatus] = useState<TransferStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sourceTxHash, setSourceTxHash] = useState<string | null>(null);
   const [destinationTxHash, setDestinationTxHash] = useState<string | null>(null);
 
   const onrampUrl = process.env.NEXT_PUBLIC_CIRCLE_ONRAMP_URL;
+  const isBusy = ["switching", "submitting", "settling"].includes(status);
 
-  // Fetch real USDC balance on selected source chain
+  const amountUnits = useMemo(() => {
+    try {
+      return parseUnits(amountInput || "0", 6);
+    } catch {
+      return null;
+    }
+  }, [amountInput]);
+
+  const amountIsValid = amountUnits !== null && amountUnits > BigInt(0);
+  const exceedsBalance = amountUnits !== null && sourceBalanceUnits !== null && amountUnits > sourceBalanceUnits;
+  const recipientIsValid = !useCustomAddress || isAddress(customAddress);
+  const canSubmit = amountIsValid && !exceedsBalance && recipientIsValid && !isBusy;
+
   const fetchSourceUsdcBalance = useCallback(async () => {
-    let userAddr = wallet.address ? getAddress(wallet.address) : null;
+    const provider = typeof window !== "undefined"
+      ? (window as unknown as { ethereum?: { request: (args: { method: string }) => Promise<unknown> } }).ethereum
+      : undefined;
+    let userAddress: `0x${string}` | null = null;
 
-    // Fallback: detect connected account from window.ethereum if store state isn't hydrated
-    if (!userAddr && typeof window !== "undefined") {
-      const provider = (window as unknown as { ethereum?: { request: (args: { method: string }) => Promise<unknown> } }).ethereum;
-      if (provider) {
-        try {
-          const accounts = (await provider.request({ method: "eth_accounts" })) as string[];
-          if (accounts && accounts[0]) {
-            userAddr = getAddress(accounts[0]);
-          }
-        } catch {
-          // ignore
-        }
+    if (provider) {
+      try {
+        const accounts = (await provider.request({ method: "eth_accounts" })) as string[];
+        if (accounts?.[0] && isAddress(accounts[0])) userAddress = getAddress(accounts[0]);
+      } catch {
+        // Wallet may be locked; fall back to authenticated wallet address.
       }
     }
 
-    if (!userAddr) {
+    if (!userAddress && wallet.address && isAddress(wallet.address)) {
+      userAddress = getAddress(wallet.address);
+    }
+
+    if (!userAddress) {
       setSourceBalanceUnits(null);
       return;
     }
 
     setIsFetchingBalance(true);
     try {
-      const res = await fetch(`/api/cctp/balance?chainId=${selectedNetwork.chainId}&userAddress=${userAddr}`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.balanceUnits) {
-          setSourceBalanceUnits(BigInt(json.balanceUnits));
-        } else {
-          setSourceBalanceUnits(BigInt(0));
-        }
-      } else {
-        setSourceBalanceUnits(BigInt(0));
+      const response = await fetch(
+        `/api/cctp/balance?chainId=${selectedNetwork.chainId}&userAddress=${userAddress}`,
+        { cache: "no-store" },
+      );
+      const result = await response.json();
+      if (!response.ok || !result?.success || typeof result.balanceUnits !== "string") {
+        throw new Error(result?.error ?? "Source-chain balance request failed.");
       }
-    } catch (err) {
-      console.warn("Failed to fetch source chain USDC balance:", err);
+      setSourceBalanceUnits(BigInt(result.balanceUnits));
+    } catch (error) {
+      console.warn("Failed to fetch source USDC balance:", error);
       setSourceBalanceUnits(null);
     } finally {
       setIsFetchingBalance(false);
     }
-  }, [wallet.address, selectedNetwork]);
+  }, [selectedNetwork.chainId, wallet.address]);
 
   useEffect(() => {
     fetchSourceUsdcBalance();
   }, [fetchSourceUsdcBalance]);
 
   function handleSetMaxAmount() {
-    if (sourceBalanceUnits !== null) {
-      const maxVal = (Number(sourceBalanceUnits) / 1_000_000).toString();
-      setAmountInput(maxVal);
-    } else {
-      setAmountInput("0");
-    }
+    setAmountInput(sourceBalanceUnits === null ? "0" : (Number(sourceBalanceUnits) / 1_000_000).toString());
   }
 
-  async function handleRealOnchainBridge() {
+  async function handleTransfer() {
     setErrorMessage(null);
-    if (!amountInput || parseFloat(amountInput) <= 0) {
-      setErrorMessage("Please enter a valid USDC amount.");
+
+    if (!amountIsValid || amountUnits === null) {
+      setErrorMessage("Enter a valid USDC amount with up to 6 decimal places.");
+      return;
+    }
+    if (exceedsBalance) {
+      setErrorMessage("Amount exceeds your source-chain USDC balance.");
+      return;
+    }
+    if (!recipientIsValid) {
+      setErrorMessage("Enter a valid EVM recipient address.");
       return;
     }
 
-    const provider = typeof window !== "undefined" ? (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown }) => Promise<unknown> } }).ethereum : null;
+    const provider = typeof window !== "undefined"
+      ? (window as unknown as {
+          ethereum?: { request: (args: { method: string; params?: unknown }) => Promise<unknown> };
+        }).ethereum
+      : undefined;
 
     if (!provider) {
-      setErrorMessage("No EVM wallet detected (e.g. MetaMask / Rabby). Please connect an EVM wallet to bridge.");
+      setErrorMessage("No EVM wallet detected. Connect MetaMask, Rabby, or another EVM wallet.");
       return;
     }
 
     try {
-      // Step 1: Request wallet connection
       setStatus("switching");
       const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
-      if (!accounts || accounts.length === 0) {
-        setErrorMessage("Wallet connection failed or no account selected.");
-        setStatus("idle");
-        return;
-      }
+      if (!accounts?.[0] || !isAddress(accounts[0])) throw new Error("No valid wallet account selected.");
 
-      const connectedUserAddress = getAddress(accounts[0]);
-      const destinationAddress = useCustomAddress && customAddress ? getAddress(customAddress) : connectedUserAddress;
-      const targetChainHex = `0x${selectedNetwork.chainId.toString(16)}`;
+      const connectedAddress = getAddress(accounts[0]);
+      const recipientAddress = useCustomAddress ? getAddress(customAddress) : connectedAddress;
+      const chainId = `0x${selectedNetwork.chainId.toString(16)}`;
 
-      // Step 2: Switch Network to target testnet
       try {
+        await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId }] });
+      } catch (switchError) {
+        if ((switchError as { code?: number }).code !== 4902) throw switchError;
         await provider.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: targetChainHex }],
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId,
+            chainName: selectedNetwork.name,
+            rpcUrls: [selectedNetwork.rpcUrl],
+            nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+            blockExplorerUrls: [selectedNetwork.explorerUrl],
+          }],
         });
-      } catch (switchErr) {
-        const error = switchErr as { code?: number };
-        if (error.code === 4902) {
-          await provider.request({
-            method: "wallet_addEthereumChain",
-            params: [
-              {
-                chainId: targetChainHex,
-                chainName: selectedNetwork.name,
-                rpcUrls: [selectedNetwork.explorerUrl.replace("https://", "https://rpc.")],
-                nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-                blockExplorerUrls: [selectedNetwork.explorerUrl],
-              },
-            ],
-          });
-        }
       }
 
-      // Step 2b: Register USDC 6 decimals metadata in MetaMask so MetaMask displays "1 USDC" instead of raw base units ("1 jt")
-      try {
-        await provider.request({
-          method: "wallet_watchAsset",
-          params: {
-            type: "ERC20",
-            options: {
-              address: selectedNetwork.usdcAddress,
-              symbol: "USDC",
-              decimals: 6,
-              image: "https://assets.coingecko.com/coins/images/6319/standard/usdc.png",
-            },
-          },
-        });
-      } catch (watchErr) {
-        console.warn("wallet_watchAsset notice:", watchErr);
-      }
-
-      // Step 3: Real EVM Onchain USDC Transfer on Source Chain
-      setStatus("burning");
-      const usdcAmountBaseUnits = parseUnits(amountInput, 6);
-
-      const erc20TransferAbi = [
-        {
-          type: "function",
-          name: "transfer",
-          stateMutability: "nonpayable",
-          inputs: [
-            { name: "to", type: "address" },
-            { name: "value", type: "uint256" },
-          ],
-          outputs: [{ name: "", type: "bool" }],
-        },
-      ] as const;
-
-      const transferData = encodeFunctionData({
+      setStatus("submitting");
+      const data = encodeFunctionData({
         abi: erc20TransferAbi,
         functionName: "transfer",
-        args: [selectedNetwork.tokenMessengerAddress, usdcAmountBaseUnits],
+        args: [selectedNetwork.tokenMessengerAddress, amountUnits],
+      });
+      const transferTxHash = (await provider.request({
+        method: "eth_sendTransaction",
+        params: [{ from: connectedAddress, to: selectedNetwork.usdcAddress, data }],
+      })) as string;
+      setSourceTxHash(transferTxHash);
+
+      setStatus("settling");
+      const result = await apiJson<{ success?: boolean; mintTxHash?: string }>("/api/cctp/receive-message", {
+        method: "POST",
+        body: JSON.stringify({
+          burnTxHash: transferTxHash,
+          recipientAddress,
+          amountUnits: Number(amountUnits),
+          sourceChainId: selectedNetwork.chainId,
+        }),
       });
 
-      const burnTxHash = (await provider.request({
-        method: "eth_sendTransaction",
-        params: [
-          {
-            from: connectedUserAddress,
-            to: selectedNetwork.usdcAddress,
-            data: transferData,
-          },
-        ],
-      })) as string;
-
-      console.log("Real onchain USDC transfer submitted to source chain, Tx Hash:", burnTxHash);
-      setSourceTxHash(burnTxHash);
-
-      // Step 5: Real Onchain Bridge Relayer Settlement on Arc Testnet
-      setStatus("attesting");
-      try {
-        const numericUnits = Number(usdcAmountBaseUnits);
-        const res = await apiJson<{ success?: boolean; mintTxHash?: string }>("/api/cctp/receive-message", {
-          method: "POST",
-          body: JSON.stringify({
-            burnTxHash,
-            recipientAddress: destinationAddress,
-            amountUnits: numericUnits,
-            sourceChainId: selectedNetwork.chainId,
-          }),
-        });
-
-        if (res?.mintTxHash) {
-          setDestinationTxHash(res.mintTxHash);
-        }
-      } catch (relayerErr) {
-        console.warn("CCTP relayer settlement notice:", relayerErr);
+      if (!result?.success || !result.mintTxHash) {
+        throw new Error("Source transfer succeeded, but Arc settlement did not return a transaction hash.");
       }
 
+      setDestinationTxHash(result.mintTxHash);
       setStatus("completed");
-      if (refreshState) refreshState();
-      if (onSuccess) onSuccess();
-
-    } catch (err) {
-      console.error("Real EVM CCTP bridge error:", err);
-      const error = err as { code?: number; message?: string };
+      await refreshState?.();
+      onSuccess?.();
+    } catch (error) {
+      console.error("Transfer to Arc failed:", error);
+      const walletError = error as { code?: number; message?: string };
       setStatus("error");
-      if (error.code === 4001 || error.message?.includes("user rejected") || error.message?.includes("User denied")) {
-        setErrorMessage("Transaction was cancelled in wallet.");
-      } else {
-        setErrorMessage(error.message || "Failed to execute EVM transaction on wallet.");
-      }
+      setErrorMessage(
+        walletError.code === 4001 || /user rejected|user denied/i.test(walletError.message ?? "")
+          ? "Transaction cancelled in wallet."
+          : walletError.message ?? "Transfer failed.",
+      );
     }
   }
 
@@ -244,496 +223,193 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
     fetchSourceUsdcBalance();
   }
 
-  const formattedSourceBalance = sourceBalanceUnits !== null
-    ? (Number(sourceBalanceUnits) / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })
-    : "0.00";
+  const formattedBalance = sourceBalanceUnits === null
+    ? "—"
+    : (Number(sourceBalanceUnits) / 1_000_000).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 6,
+      });
+  const formattedAmount = amountIsValid && amountUnits !== null
+    ? (Number(amountUnits) / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 6 })
+    : "0";
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: 480,
-        background: "#121316",
-        color: "#ffffff",
-        borderRadius: 24,
-        padding: 20,
-        boxShadow: "0 20px 40px rgba(0, 0, 0, 0.6)",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
-        fontFamily: "var(--font-body, sans-serif)",
-        position: "relative",
-      }}
-    >
-      {/* Top Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <img src="/img/worknet_logo.png" alt="WorkNet" style={{ width: 22, height: 22, objectFit: "contain" }} />
-          <span style={{ fontWeight: 700, fontSize: 15, letterSpacing: "-0.01em" }}>WorkNet Bridge</span>
-          <span style={{ fontSize: 10, background: "rgba(15, 122, 62, 0.2)", color: "#10B981", padding: "2px 8px", borderRadius: 12, fontWeight: 600 }}>
-            Arc CCTP
-          </span>
+    <section className="bridge-panel" aria-labelledby="bridge-dialog-title">
+      <header className="bridge-header">
+        <div className="bridge-brand">
+          <span className="bridge-brand-mark"><img src="/img/worknet_logo.png" alt="" /></span>
+          <div>
+            <span className="bridge-kicker">WorkNet settlement</span>
+            <h2 id="bridge-dialog-title">Transfer USDC to Arc</h2>
+          </div>
         </div>
         {onClose ? (
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: "rgba(255, 255, 255, 0.06)",
-              border: "none",
-              color: "#a0a5b5",
-              borderRadius: "50%",
-              width: 30,
-              height: 30,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >
-            <X size={16} />
+          <button id="bridge-close-button" type="button" className="bridge-icon-button" onClick={onClose} aria-label="Close transfer dialog">
+            <X size={18} />
           </button>
         ) : null}
-      </div>
+      </header>
 
-      {/* Mode Switcher */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          background: "rgba(255, 255, 255, 0.04)",
-          borderRadius: 14,
-          padding: 4,
-          marginBottom: 16,
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setMode("transfer")}
-          style={{
-            border: "none",
-            borderRadius: 10,
-            padding: "8px 0",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-            background: mode === "transfer" ? "rgba(16, 185, 129, 0.15)" : "transparent",
-            color: mode === "transfer" ? "#10B981" : "#808595",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-          }}
-        >
-          <ShieldCheck size={15} /> Transfer
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("swap")}
-          style={{
-            border: "none",
-            borderRadius: 10,
-            padding: "8px 0",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-            background: mode === "swap" ? "rgba(255, 255, 255, 0.08)" : "transparent",
-            color: mode === "swap" ? "#ffffff" : "#808595",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-          }}
-        >
-          <ArrowDownUp size={15} /> Swap
-        </button>
+      <div className="bridge-notice">
+        <ShieldCheck size={17} />
+        <p>Source transfer settles through WorkNet relayer. Recipient gets same USDC amount on Arc Testnet.</p>
       </div>
 
       {errorMessage ? (
-        <div style={{ background: "rgba(220, 38, 38, 0.15)", border: "1px solid rgba(220, 38, 38, 0.3)", borderRadius: 12, padding: 10, marginBottom: 14, display: "flex", alignItems: "center", gap: 8, color: "#ef4444", fontSize: 12 }}>
-          <AlertCircle size={16} /> {errorMessage}
+        <div className="bridge-error" role="alert">
+          <AlertCircle size={17} />
+          <span>{errorMessage}</span>
         </div>
       ) : null}
 
       {status === "completed" ? (
-        <div style={{ padding: "20px 0", textAlign: "center" }}>
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: "50%",
-              background: "rgba(16, 185, 129, 0.15)",
-              color: "#10B981",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 12px",
-            }}
-          >
-            <Check size={28} />
+        <div className="bridge-result" aria-live="polite">
+          <span className="bridge-result-icon"><Check size={25} /></span>
+          <span className="bridge-kicker">Settlement confirmed</span>
+          <h3>{formattedAmount} USDC arrived on Arc</h3>
+          <p>Destination transaction returned by WorkNet relayer.</p>
+          <div className="bridge-tx-links">
+            {sourceTxHash ? (
+              <a href={`${selectedNetwork.explorerUrl}/tx/${sourceTxHash}`} target="_blank" rel="noopener noreferrer">
+                Source transaction <ExternalLink size={13} />
+              </a>
+            ) : null}
+            {destinationTxHash ? (
+              <a href={`${ARC_EXPLORER_URL}/tx/${destinationTxHash}`} target="_blank" rel="noopener noreferrer">
+                Arc transaction <ExternalLink size={13} />
+              </a>
+            ) : null}
           </div>
-          <h4 style={{ margin: "0 0 4px", fontSize: 17, fontWeight: 700 }}>Cross-Chain Mint Complete!</h4>
-          <p style={{ fontSize: 13, color: "#808595", margin: "0 0 16px" }}>
-            USDC has been burned on {selectedNetwork.name} and minted 1:1 on Arc Network.
-          </p>
-
-          {sourceTxHash ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-              <a
-                href={`${selectedNetwork.explorerUrl}/tx/${sourceTxHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontSize: 12, color: "#3B82F6", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}
-              >
-                Burn on {selectedNetwork.name} <ArrowUpRight size={12} />
-              </a>
-              <a
-                href={destinationTxHash ? `${ARC_EXPLORER_URL}/tx/${destinationTxHash}` : `${ARC_EXPLORER_URL}/address/${wallet.address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontSize: 12, color: "#10B981", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}
-              >
-                {destinationTxHash ? "View Mint Tx on Arcscan" : "Mint Balance on Arc Explorer"} <ExternalLink size={12} />
-              </a>
-            </div>
-          ) : null}
-
-          <button
-            type="button"
-            onClick={handleReset}
-            style={{
-              width: "100%",
-              padding: 12,
-              borderRadius: 30,
-              border: "none",
-              background: "#ffffff",
-              color: "#121316",
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: "pointer",
-            }}
-          >
-            Done
-          </button>
+          <button id="bridge-done-button" type="button" className="bridge-primary-button" onClick={handleReset}>Done</button>
         </div>
-      ) : status !== "idle" ? (
-        <div style={{ padding: "20px 0" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 26, height: 26, borderRadius: "50%", background: status === "switching" ? "#10B981" : "#262830", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
-                {status === "switching" ? <RefreshCw className="animate-spin" size={13} /> : <Check size={13} />}
-              </div>
-              <span style={{ fontSize: 13, color: "#d1d5db" }}>Connecting to {selectedNetwork.name}</span>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 26, height: 26, borderRadius: "50%", background: status === "approving" ? "#10B981" : ["burning", "attesting"].includes(status) ? "#10B981" : "#262830", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
-                {status === "approving" ? <RefreshCw className="animate-spin" size={13} /> : ["burning", "attesting"].includes(status) ? <Check size={13} /> : "2"}
-              </div>
-              <span style={{ fontSize: 13, color: "#d1d5db" }}>Approving USDC TokenMessenger</span>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 26, height: 26, borderRadius: "50%", background: status === "burning" ? "#10B981" : status === "attesting" ? "#10B981" : "#262830", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
-                {status === "burning" ? <RefreshCw className="animate-spin" size={13} /> : status === "attesting" ? <Check size={13} /> : "3"}
-              </div>
-              <span style={{ fontSize: 13, color: "#d1d5db" }}>Executing depositForBurn</span>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 26, height: 26, borderRadius: "50%", background: status === "attesting" ? "#10B981" : "#262830", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
-                {status === "attesting" ? <RefreshCw className="animate-spin" size={13} /> : "4"}
-              </div>
-              <span style={{ fontSize: 13, color: "#d1d5db" }}>Circle Iris Attestation & Minting on Arc</span>
-            </div>
+      ) : isBusy ? (
+        <div className="bridge-progress" aria-live="polite" aria-busy="true">
+          <span className="bridge-kicker">Transfer in progress</span>
+          <h3>Keep this window open</h3>
+          <div className="bridge-steps">
+            {[
+              ["switching", "Connect and switch source network"],
+              ["submitting", "Confirm source USDC transfer"],
+              ["settling", "Settle USDC on Arc"],
+            ].map(([step, label], index) => {
+              const order = ["switching", "submitting", "settling"];
+              const activeIndex = order.indexOf(status);
+              const stepIndex = order.indexOf(step);
+              return (
+                <div className={`bridge-step ${stepIndex <= activeIndex ? "active" : ""}`} key={step}>
+                  <span>{stepIndex < activeIndex ? <Check size={14} /> : stepIndex === activeIndex ? <RefreshCw className="spin" size={14} /> : index + 1}</span>
+                  <p>{label}</p>
+                </div>
+              );
+            })}
           </div>
+          {sourceTxHash ? (
+            <a className="bridge-inline-link" href={`${selectedNetwork.explorerUrl}/tx/${sourceTxHash}`} target="_blank" rel="noopener noreferrer">
+              View source transaction <ExternalLink size={13} />
+            </a>
+          ) : null}
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* FROM CARD */}
-          <div style={{ background: "#1c1e24", borderRadius: 16, padding: 14, border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              {/* Token & Chain Selector */}
-              <div style={{ position: "relative" }}>
+        <div className="bridge-form">
+          <div className="bridge-transfer-stack">
+            <div className="bridge-asset-card">
+              <div className="bridge-card-label-row">
+                <span>From</span>
+                <span>Balance {isFetchingBalance ? "loading…" : `${formattedBalance} USDC`}</span>
+              </div>
+              <div className="bridge-amount-row">
+                <input
+                  id="bridge-amount-input"
+                  type="number"
+                  min="0"
+                  step="0.000001"
+                  inputMode="decimal"
+                  value={amountInput}
+                  onChange={(event) => setAmountInput(event.target.value)}
+                  placeholder="0.00"
+                  aria-label="USDC amount"
+                  aria-invalid={!amountIsValid || exceedsBalance}
+                />
+                <button id="bridge-max-button" type="button" className="bridge-max-button" onClick={handleSetMaxAmount}>Max</button>
+              </div>
+              <div className="bridge-network-select">
                 <button
+                  id="bridge-source-network-button"
                   type="button"
-                  onClick={() => setIsChainDropdownOpen(!isChainDropdownOpen)}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.06)",
-                    border: "none",
-                    borderRadius: 20,
-                    padding: "4px 10px 4px 6px",
-                    color: "#ffffff",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    cursor: "pointer",
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
+                  className="bridge-network-button"
+                  onClick={() => setIsChainDropdownOpen((open) => !open)}
+                  aria-expanded={isChainDropdownOpen}
                 >
-                  {/* USDC Token Icon with Chain Badge Overlay */}
-                  <div style={{ position: "relative", width: 28, height: 28 }}>
-                    <img
-                      src="https://assets.coingecko.com/coins/images/6319/standard/usdc.png"
-                      alt="USDC"
-                      style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
-                    />
-                    <img
-                      src={selectedNetwork.iconUrl}
-                      alt={selectedNetwork.name}
-                      style={{
-                        position: "absolute",
-                        bottom: -2,
-                        right: -2,
-                        width: 14,
-                        height: 14,
-                        borderRadius: "50%",
-                        border: "2px solid #121316",
-                        background: "#121316",
-                        objectFit: "cover",
-                      }}
-                    />
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", textAlign: "left", lineHeight: 1.1 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700 }}>USDC</span>
-                    <span style={{ fontSize: 10, color: "#9ca3af" }}>{selectedNetwork.name}</span>
-                  </div>
-                  <ChevronDown size={14} style={{ color: "#9ca3af" }} />
+                  <img src={selectedNetwork.iconUrl} alt="" />
+                  <span><strong>{selectedNetwork.name}</strong><small>USDC</small></span>
+                  <ChevronDown size={15} />
                 </button>
-
-                {/* Chain Dropdown Menu */}
                 {isChainDropdownOpen ? (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "110%",
-                      left: 0,
-                      zIndex: 100,
-                      background: "#22252e",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: 14,
-                      padding: 6,
-                      width: 210,
-                      boxShadow: "0 10px 25px rgba(0, 0, 0, 0.5)",
-                    }}
-                  >
-                    <div style={{ fontSize: 10, color: "#6b7280", padding: "4px 8px", fontWeight: 600, textTransform: "uppercase" }}>Select Source Chain</div>
-                    {CCTP_TESTNET_NETWORKS.map((net) => (
+                  <div className="bridge-network-menu" role="listbox" aria-label="Source network">
+                    {CCTP_TESTNET_NETWORKS.map((network) => (
                       <button
-                        key={net.id}
+                        id={`bridge-network-${network.id}`}
+                        key={network.id}
                         type="button"
-                        onClick={() => {
-                          setSelectedNetwork(net);
-                          setIsChainDropdownOpen(false);
-                        }}
-                        style={{
-                          width: "100%",
-                          background: selectedNetwork.id === net.id ? "rgba(16, 185, 129, 0.15)" : "transparent",
-                          border: "none",
-                          borderRadius: 8,
-                          padding: "8px 10px",
-                          color: selectedNetwork.id === net.id ? "#10B981" : "#ffffff",
-                          textAlign: "left",
-                          cursor: "pointer",
-                          fontSize: 12,
-                          fontWeight: 600,
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
+                        className={network.id === selectedNetwork.id ? "selected" : ""}
+                        onClick={() => { setSelectedNetwork(network); setIsChainDropdownOpen(false); }}
+                        role="option"
+                        aria-selected={network.id === selectedNetwork.id}
                       >
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <img src={net.iconUrl} alt={net.name} style={{ width: 18, height: 18, borderRadius: "50%", objectFit: "cover" }} />
-                          <span>{net.name}</span>
-                        </div>
-                        {selectedNetwork.id === net.id ? <Check size={12} /> : null}
+                        <img src={network.iconUrl} alt="" />
+                        <span>{network.name}</span>
+                        {network.id === selectedNetwork.id ? <Check size={14} /> : null}
                       </button>
                     ))}
                   </div>
                 ) : null}
               </div>
-
-              {/* Real Balance Display */}
-              <div style={{ textAlign: "right" }}>
-                <span style={{ fontSize: 11, color: "#9ca3af", display: "block" }}>
-                  Balance: {isFetchingBalance ? "Loading..." : `${formattedSourceBalance} USDC`}
-                </span>
-              </div>
             </div>
 
-            {/* Input Amount Row */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 10 }}>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                value={amountInput}
-                onChange={(e) => setAmountInput(e.target.value)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  outline: "none",
-                  fontSize: 32,
-                  fontWeight: 700,
-                  color: "#ffffff",
-                  width: "65%",
-                  letterSpacing: "-0.02em",
-                }}
-                placeholder="0.00"
-              />
+            <span className="bridge-direction"><ArrowDown size={16} /></span>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <button
-                  type="button"
-                  onClick={handleSetMaxAmount}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.1)",
-                    border: "none",
-                    borderRadius: 12,
-                    padding: "4px 10px",
-                    color: "#ffffff",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    transition: "background 0.15s ease",
-                  }}
-                  title="Fill max available balance"
-                >
-                  MAX
-                </button>
-              </div>
-            </div>
-
-            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
-              ~${parseFloat(amountInput || "0").toFixed(2)} USD
-            </div>
-          </div>
-
-          {/* DIRECTION SWAP ARROW BUTTON */}
-          <div style={{ display: "flex", justifyContent: "center", margin: "-6px 0", zIndex: 2 }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                background: "#252830",
-                border: "3px solid #121316",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#9ca3af",
-              }}
-            >
-              <ArrowDownUp size={14} />
-            </div>
-          </div>
-
-          {/* TO CARD (Arc Network Target) */}
-          <div style={{ background: "#1c1e24", borderRadius: 16, padding: 14, border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              {/* Destination Badge */}
-              <div
-                style={{
-                  background: "rgba(15, 122, 62, 0.15)",
-                  border: "1px solid rgba(16, 185, 129, 0.3)",
-                  borderRadius: 20,
-                  padding: "4px 10px 4px 6px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <img src="/img/worknet_logo.png" alt="Arc" style={{ width: 18, height: 18, objectFit: "contain" }} />
-                <div style={{ display: "flex", flexDirection: "column", textAlign: "left", lineHeight: 1.1 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#10B981" }}>USDC</span>
-                  <span style={{ fontSize: 10, color: "#a7f3d0" }}>Arc Network</span>
-                </div>
-              </div>
-
-              {/* Custom Address Toggle */}
-              <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: "#9ca3af" }}>
-                Custom Address
-                <input
-                  type="checkbox"
-                  checked={useCustomAddress}
-                  onChange={(e) => setUseCustomAddress(e.target.checked)}
-                  style={{ accentColor: "#10B981", cursor: "pointer" }}
-                />
+            <div className="bridge-asset-card bridge-destination-card">
+              <div className="bridge-card-label-row"><span>To</span><span>Arc Testnet</span></div>
+              <div className="bridge-output-row"><strong>{formattedAmount}</strong><span>USDC</span></div>
+              <label className="bridge-address-toggle">
+                <input type="checkbox" checked={useCustomAddress} onChange={(event) => setUseCustomAddress(event.target.checked)} />
+                Send to another wallet
               </label>
-            </div>
-
-            {/* Output Amount Row */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 10 }}>
-              <div style={{ fontSize: 32, fontWeight: 700, color: "#ffffff", letterSpacing: "-0.02em" }}>
-                {amountInput && !isNaN(parseFloat(amountInput)) ? parseFloat(amountInput).toFixed(2) : "0.00"}
-              </div>
-              <span style={{ fontSize: 11, color: "#10B981", fontWeight: 600 }}>1:1 Instant Mint</span>
-            </div>
-
-            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
-              Target Domain: {ARC_TESTNET_CHAIN_ID}
-            </div>
-
-            {useCustomAddress ? (
-              <div style={{ marginTop: 10 }}>
+              {useCustomAddress ? (
                 <input
-                  type="text"
-                  placeholder="0x... Recipient address on Arc"
+                  id="bridge-recipient-input"
+                  className="bridge-address-input"
                   value={customAddress}
-                  onChange={(e) => setCustomAddress(e.target.value)}
-                  style={{
-                    width: "100%",
-                    background: "rgba(0, 0, 0, 0.3)",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: 8,
-                    padding: "6px 10px",
-                    color: "#fff",
-                    fontSize: 11,
-                    fontFamily: "var(--font-mono)",
-                    outline: "none",
-                  }}
+                  onChange={(event) => setCustomAddress(event.target.value)}
+                  placeholder="0x… recipient on Arc"
+                  aria-label="Recipient wallet address"
+                  aria-invalid={!recipientIsValid}
                 />
-              </div>
-            ) : null}
+              ) : (
+                <p className="bridge-wallet-destination">Connected wallet · {wallet.address ? `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}` : "resolved at confirmation"}</p>
+              )}
+            </div>
           </div>
 
-          {/* PRIMARY ACTION BUTTON */}
-          <button
-            type="button"
-            onClick={handleRealOnchainBridge}
-            disabled={!amountInput || parseFloat(amountInput) <= 0}
-            style={{
-              width: "100%",
-              padding: "14px 0",
-              borderRadius: 30,
-              border: "none",
-              background: "#ffffff",
-              color: "#121316",
-              fontWeight: 700,
-              fontSize: 15,
-              cursor: "pointer",
-              marginTop: 4,
-              boxShadow: "0 4px 14px rgba(255, 255, 255, 0.15)",
-              transition: "transform 0.1s ease",
-            }}
-          >
-            Execute CCTP Bridge
+          <dl className="bridge-review">
+            <div><dt>Recipient receives</dt><dd>{formattedAmount} USDC</dd></div>
+            <div><dt>Transfer fee</dt><dd>0 USDC</dd></div>
+            <div><dt>Network gas</dt><dd>Paid on {selectedNetwork.name}</dd></div>
+            <div><dt>Estimated time</dt><dd>Usually under 2 min</dd></div>
+            <div><dt>Settlement</dt><dd>WorkNet relayer</dd></div>
+          </dl>
+
+          <p className="bridge-estimate-note">Estimate starts after wallet confirmation. Network congestion or relayer availability can take longer.</p>
+
+          <button id="bridge-submit-button" type="button" className="bridge-primary-button" onClick={handleTransfer} disabled={!canSubmit}>
+            {exceedsBalance ? "Insufficient USDC balance" : !recipientIsValid ? "Check recipient address" : "Transfer to Arc"}
           </button>
 
           {onrampUrl ? (
-            <div style={{ textAlign: "center", marginTop: 2 }}>
-              <a
-                href={onrampUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontSize: 11, color: "#6b7280", textDecoration: "none" }}
-              >
-                Need testnet USDC? Get from Circle Faucet
-              </a>
-            </div>
+            <a className="bridge-faucet-link" href={onrampUrl} target="_blank" rel="noopener noreferrer">Need testnet USDC? Open Circle faucet <ExternalLink size={12} /></a>
           ) : null}
         </div>
       )}
-    </div>
+    </section>
   );
 }

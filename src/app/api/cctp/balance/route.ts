@@ -45,13 +45,14 @@ export async function GET(request: Request) {
       userAddress,
       balanceUnits: balanceBigInt.toString(),
       formatted,
+    }, {
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
-    console.warn("API CCTP balance fetch notice:", error);
+    console.warn("API CCTP balance fetch failed:", error);
     return NextResponse.json({
       success: false,
-      balanceUnits: "0",
-      formatted: "0.00",
-    });
+      error: error instanceof Error ? error.message : "Could not read source-chain USDC balance.",
+    }, { status: 502 });
   }
 }
