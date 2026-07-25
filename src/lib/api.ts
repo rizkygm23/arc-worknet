@@ -184,5 +184,8 @@ export function requireAdminSecret(request: Request) {
 }
 
 export function requireCircleWebhookSecret(request: Request) {
+  if (!env.CIRCLE_WEBHOOK_SECRET) {
+    return undefined;
+  }
   return requireSecret(request, env.CIRCLE_WEBHOOK_SECRET, "CIRCLE_WEBHOOK_SECRET");
 }

@@ -31,6 +31,18 @@ const circleEventSchema = z.object({
     .default([]),
 });
 
+export async function GET() {
+  return NextResponse.json({ status: "ok", message: "Circle webhook endpoint active" });
+}
+
+export async function HEAD() {
+  return new Response(null, { status: 200 });
+}
+
+export async function OPTIONS() {
+  return new Response(null, { status: 200 });
+}
+
 export async function POST(request: Request) {
   const secretResponse = requireCircleWebhookSecret(request);
   if (secretResponse) return secretResponse;
