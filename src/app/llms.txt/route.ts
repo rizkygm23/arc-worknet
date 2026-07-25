@@ -15,7 +15,7 @@ export async function GET() {
         "Cache-Control": "public, max-age=3600, s-maxage=3600",
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "llms.md file not found" }, { status: 404 });
   }
 }

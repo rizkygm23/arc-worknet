@@ -23,7 +23,6 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sourceTxHash, setSourceTxHash] = useState<string | null>(null);
 
-  const appKitKey = process.env.NEXT_PUBLIC_CIRCLE_APP_KIT_KEY;
   const onrampUrl = process.env.NEXT_PUBLIC_CIRCLE_ONRAMP_URL;
 
   async function handleRealOnchainBridge() {
@@ -33,7 +32,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
       return;
     }
 
-    const provider = typeof window !== "undefined" ? (window as unknown as { ethereum?: any }).ethereum : null;
+    const provider = typeof window !== "undefined" ? (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum : null;
 
     if (!provider || !wallet.address) {
       // Fallback preview mode for non-injected environments
@@ -56,9 +55,10 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
           method: "wallet_switchEthereumChain",
           params: [{ chainId: targetChainHex }],
         });
-      } catch (switchErr: any) {
+      } catch (switchErr) {
+        const error = switchErr as { code?: number };
         // If chain is not added to wallet, attempt to add it
-        if (switchErr.code === 4902) {
+        if (error.code === 4902) {
           await provider.request({
             method: "wallet_addEthereumChain",
             params: [
@@ -128,10 +128,11 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         }
       }, 3000);
 
-    } catch (err: any) {
+    } catch (err) {
       console.warn("Real EVM bridge error, using fallback preview:", err);
+      const error = err as { code?: number; message?: string };
       // Fallback smoothly to interactive test simulation if user rejects or network fails
-      if (err?.code === 4001 || err?.message?.includes("user rejected")) {
+      if (error.code === 4001 || error.message?.includes("user rejected")) {
         setStatus("error");
         setErrorMessage("Transaction was cancelled in wallet.");
       } else {
