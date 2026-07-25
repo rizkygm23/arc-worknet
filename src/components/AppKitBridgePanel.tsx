@@ -2,7 +2,7 @@
 
 import { ArrowRight, Check, CircleDollarSign, ExternalLink, Globe, RefreshCw, ShieldCheck, Sparkles, AlertCircle, X } from "lucide-react";
 import { useState } from "react";
-import { createWalletClient, custom, parseUnits, encodeFunctionData } from "viem";
+import { parseUnits, encodeFunctionData } from "viem";
 import { useWorkNet } from "@/lib/store";
 import { CCTP_TESTNET_NETWORKS, CctpNetworkConfig, addressToBytes32, cctpTokenMessengerAbi, fetchCircleAttestation } from "@/lib/cctp-bridge";
 import { erc20UsdcAbi, ARC_TESTNET_CHAIN_ID, ARC_EXPLORER_URL } from "@/lib/arc";
@@ -34,22 +34,25 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
 
     const provider = typeof window !== "undefined" ? (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum : null;
 
-    if (!provider || !wallet.address) {
-      // Fallback preview mode for non-injected environments
-      simulateBridgeFlow();
+    if (!provider) {
+      setErrorMessage("No EVM wallet detected (e.g. MetaMask / Rabby). Please connect an EVM wallet to bridge.");
       return;
     }
 
     try {
-      const walletClient = createWalletClient({
-        transport: custom(provider),
-      });
+      // Step 1: Request wallet connection & accounts popup
+      setStatus("switching");
+      const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
+      if (!accounts || accounts.length === 0) {
+        setErrorMessage("Wallet connection failed or no account selected.");
+        setStatus("idle");
+        return;
+      }
 
-      const [userAddress] = await walletClient.getAddresses();
+      const userAddress = accounts[0] as `0x${string}`;
       const targetChainHex = `0x${selectedNetwork.chainId.toString(16)}`;
 
-      // Step 1: Switch Network if necessary
-      setStatus("switching");
+      // Step 2: Switch Network to target testnet
       try {
         await provider.request({
           method: "wallet_switchEthereumChain",
@@ -57,7 +60,6 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         });
       } catch (switchErr) {
         const error = switchErr as { code?: number };
-        // If chain is not added to wallet, attempt to add it
         if (error.code === 4902) {
           await provider.request({
             method: "wallet_addEthereumChain",
@@ -76,7 +78,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         }
       }
 
-      // Step 2: Approve USDC on Source Chain
+      // Step 3: Real EVM Transaction 1 - Approve USDC to TokenMessenger
       setStatus("approving");
       const usdcAmountBaseUnits = parseUnits(amountInput, 6);
       const approveData = encodeFunctionData({
@@ -85,14 +87,20 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         args: [selectedNetwork.tokenMessengerAddress, usdcAmountBaseUnits],
       });
 
-      await walletClient.sendTransaction({
-        account: userAddress,
-        to: selectedNetwork.usdcAddress,
-        data: approveData,
-        chain: null,
-      });
+      const approveTxHash = (await provider.request({
+        method: "eth_sendTransaction",
+        params: [
+          {
+            from: userAddress,
+            to: selectedNetwork.usdcAddress,
+            data: approveData,
+          },
+        ],
+      })) as string;
 
-      // Step 3: Deposit for Burn on Source Chain via CCTP TokenMessenger
+      console.log("Real USDC approve tx hash:", approveTxHash);
+
+      // Step 4: Real EVM Transaction 2 - depositForBurn via CCTP TokenMessenger
       setStatus("burning");
       const recipientBytes32 = addressToBytes32(userAddress);
       const depositData = encodeFunctionData({
@@ -106,22 +114,27 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         ],
       });
 
-      const burnTxHash = await walletClient.sendTransaction({
-        account: userAddress,
-        to: selectedNetwork.tokenMessengerAddress,
-        data: depositData,
-        chain: null,
-      });
+      const burnTxHash = (await provider.request({
+        method: "eth_sendTransaction",
+        params: [
+          {
+            from: userAddress,
+            to: selectedNetwork.tokenMessengerAddress,
+            data: depositData,
+          },
+        ],
+      })) as string;
 
+      console.log("Real CCTP depositForBurn tx hash:", burnTxHash);
       setSourceTxHash(burnTxHash);
 
-      // Step 4: Circle Iris Attestation Polling
+      // Step 5: Circle Iris Attestation Polling
       setStatus("attesting");
       let attempts = 0;
       const pollInterval = setInterval(async () => {
         attempts++;
         const attestationResult = await fetchCircleAttestation(burnTxHash);
-        if (attestationResult.status === "complete" || attempts >= 4) {
+        if (attestationResult.status === "complete" || attempts >= 5) {
           clearInterval(pollInterval);
           setStatus("completed");
           if (onSuccess) onSuccess();
@@ -129,29 +142,15 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
       }, 3000);
 
     } catch (err) {
-      console.warn("Real EVM bridge error, using fallback preview:", err);
+      console.error("Real EVM CCTP bridge error:", err);
       const error = err as { code?: number; message?: string };
-      // Fallback smoothly to interactive test simulation if user rejects or network fails
-      if (error.code === 4001 || error.message?.includes("user rejected")) {
-        setStatus("error");
-        setErrorMessage("Transaction was cancelled in wallet.");
+      setStatus("error");
+      if (error.code === 4001 || error.message?.includes("user rejected") || error.message?.includes("User denied")) {
+        setErrorMessage("Transaction was cancelled by user in wallet.");
       } else {
-        simulateBridgeFlow();
+        setErrorMessage(error.message || "Failed to execute EVM transaction on wallet.");
       }
     }
-  }
-
-  function simulateBridgeFlow() {
-    setStatus("burning");
-    setTimeout(() => {
-      setStatus("attesting");
-      const mockHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-      setSourceTxHash(mockHash);
-      setTimeout(() => {
-        setStatus("completed");
-        if (onSuccess) onSuccess();
-      }, 3000);
-    }, 2000);
   }
 
   function handleReset() {
