@@ -98,7 +98,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
       return;
     }
 
-    const provider = typeof window !== "undefined" ? (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum : null;
+    const provider = typeof window !== "undefined" ? (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown }) => Promise<unknown> } }).ethereum : null;
 
     if (!provider) {
       setErrorMessage("No EVM wallet detected (e.g. MetaMask / Rabby). Please connect an EVM wallet to bridge.");
@@ -140,9 +140,25 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
               },
             ],
           });
-        } else {
-          throw switchErr;
         }
+      }
+
+      // Step 2b: Register USDC 6 decimals metadata in MetaMask so MetaMask displays "1 USDC" instead of raw base units ("1 jt")
+      try {
+        await provider.request({
+          method: "wallet_watchAsset",
+          params: {
+            type: "ERC20",
+            options: {
+              address: selectedNetwork.usdcAddress,
+              symbol: "USDC",
+              decimals: 6,
+              image: "https://assets.coingecko.com/coins/images/6319/standard/usdc.png",
+            },
+          },
+        });
+      } catch (watchErr) {
+        console.warn("wallet_watchAsset notice:", watchErr);
       }
 
       // Step 3: Real EVM Onchain USDC Transfer on Source Chain
