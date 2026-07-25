@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDownUp, Check, ExternalLink, RefreshCw, X, ArrowUpRight, ShieldCheck, AlertCircle, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getAddress, parseUnits, encodeFunctionData } from "viem";
 import { useWorkNet } from "@/lib/store";
 import { CCTP_TESTNET_NETWORKS, CctpNetworkConfig, addressToBytes32, cctpTokenMessengerAbi, fetchCircleAttestation } from "@/lib/cctp-bridge";
@@ -24,11 +24,65 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
   const [customAddress, setCustomAddress] = useState<string>("");
   const [useCustomAddress, setUseCustomAddress] = useState(false);
 
+  const [sourceBalanceUnits, setSourceBalanceUnits] = useState<bigint | null>(null);
+  const [isFetchingBalance, setIsFetchingBalance] = useState<boolean>(false);
+
   const [status, setStatus] = useState<"idle" | "switching" | "approving" | "burning" | "attesting" | "completed" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sourceTxHash, setSourceTxHash] = useState<string | null>(null);
 
   const onrampUrl = process.env.NEXT_PUBLIC_CIRCLE_ONRAMP_URL;
+
+  // Fetch real USDC balance on selected source chain
+  const fetchSourceUsdcBalance = useCallback(async () => {
+    const provider = typeof window !== "undefined" ? (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum : null;
+    if (!provider || !wallet.address) {
+      setSourceBalanceUnits(null);
+      return;
+    }
+
+    setIsFetchingBalance(true);
+    try {
+      const userAddr = getAddress(wallet.address);
+      const data = encodeFunctionData({
+        abi: erc20UsdcAbi,
+        functionName: "balanceOf",
+        args: [userAddr],
+      });
+
+      const rawResult = (await provider.request({
+        method: "eth_call",
+        params: [{ to: selectedNetwork.usdcAddress, data }, "latest"],
+      })) as string;
+
+      if (rawResult && rawResult !== "0x") {
+        setSourceBalanceUnits(BigInt(rawResult));
+      } else {
+        setSourceBalanceUnits(BigInt(0));
+      }
+    } catch {
+      // Fallback balance display if RPC call is restricted
+      setSourceBalanceUnits(null);
+    } finally {
+      setIsFetchingBalance(false);
+    }
+  }, [wallet.address, selectedNetwork]);
+
+  useEffect(() => {
+    fetchSourceUsdcBalance();
+  }, [fetchSourceUsdcBalance]);
+
+  function handleSetMaxAmount() {
+    if (sourceBalanceUnits !== null && sourceBalanceUnits > BigInt(0)) {
+      const maxVal = (Number(sourceBalanceUnits) / 1_000_000).toString();
+      setAmountInput(maxVal);
+    } else if (wallet.usdcBalanceUnits !== undefined && wallet.usdcBalanceUnits > 0) {
+      const maxVal = (wallet.usdcBalanceUnits / 1_000_000).toString();
+      setAmountInput(maxVal);
+    } else {
+      setAmountInput("0");
+    }
+  }
 
   async function handleRealOnchainBridge() {
     setErrorMessage(null);
@@ -84,25 +138,72 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         }
       }
 
-      // Step 3: EVM Approve USDC to TokenMessenger
+      // Step 3: Check existing allowance & EVM Approve if needed
       setStatus("approving");
       const usdcAmountBaseUnits = parseUnits(amountInput, 6);
-      const approveData = encodeFunctionData({
+
+      // Check current allowance on source chain
+      const allowanceData = encodeFunctionData({
         abi: erc20UsdcAbi,
-        functionName: "approve",
-        args: [selectedNetwork.tokenMessengerAddress, usdcAmountBaseUnits],
+        functionName: "allowance",
+        args: [connectedUserAddress, selectedNetwork.tokenMessengerAddress],
       });
 
-      await provider.request({
-        method: "eth_sendTransaction",
-        params: [
-          {
-            from: connectedUserAddress,
-            to: selectedNetwork.usdcAddress,
-            data: approveData,
-          },
-        ],
-      });
+      let currentAllowance = BigInt(0);
+      try {
+        const rawAllowance = (await provider.request({
+          method: "eth_call",
+          params: [{ to: selectedNetwork.usdcAddress, data: allowanceData }, "latest"],
+        })) as string;
+        if (rawAllowance && rawAllowance !== "0x") {
+          currentAllowance = BigInt(rawAllowance);
+        }
+      } catch (e) {
+        console.warn("Could not fetch allowance, proceeding to approve:", e);
+      }
+
+      if (currentAllowance < usdcAmountBaseUnits) {
+        const approveData = encodeFunctionData({
+          abi: erc20UsdcAbi,
+          functionName: "approve",
+          args: [selectedNetwork.tokenMessengerAddress, usdcAmountBaseUnits],
+        });
+
+        const approveTxHash = (await provider.request({
+          method: "eth_sendTransaction",
+          params: [
+            {
+              from: connectedUserAddress,
+              to: selectedNetwork.usdcAddress,
+              data: approveData,
+            },
+          ],
+        })) as string;
+
+        console.log("Waiting for USDC approve transaction receipt:", approveTxHash);
+
+        // Wait for approve transaction to be mined onchain
+        let isApprovedMined = false;
+        for (let i = 0; i < 30; i++) {
+          await new Promise((r) => setTimeout(r, 2000));
+          try {
+            const receipt = (await provider.request({
+              method: "eth_getTransactionReceipt",
+              params: [approveTxHash],
+            })) as { status?: string } | null;
+            if (receipt && receipt.status) {
+              isApprovedMined = receipt.status === "0x1";
+              break;
+            }
+          } catch {
+            // Keep polling
+          }
+        }
+
+        if (!isApprovedMined) {
+          throw new Error("Approve transaction timeout or reverted onchain. Please try again.");
+        }
+      }
 
       // Step 4: EVM depositForBurn via CCTP TokenMessenger
       setStatus("burning");
@@ -129,6 +230,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         ],
       })) as string;
 
+      console.log("CCTP depositForBurn submitted, Tx Hash:", burnTxHash);
       setSourceTxHash(burnTxHash);
 
       // Step 5: Circle Iris Attestation Polling
@@ -160,7 +262,14 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
     setStatus("idle");
     setSourceTxHash(null);
     setErrorMessage(null);
+    fetchSourceUsdcBalance();
   }
+
+  const formattedSourceBalance = sourceBalanceUnits !== null
+    ? (Number(sourceBalanceUnits) / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })
+    : wallet.usdcBalanceUnits !== undefined
+    ? (wallet.usdcBalanceUnits / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })
+    : "0.00";
 
   return (
     <div
@@ -384,8 +493,8 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
                     fontWeight: 600,
                   }}
                 >
-                  <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#2775CA", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, color: "#fff" }}>
-                    $
+                  <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#2775CA", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 11, color: "#fff" }}>
+                    USDC
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", textAlign: "left", lineHeight: 1.1 }}>
                     <span style={{ fontSize: 13, fontWeight: 700 }}>USDC</span>
@@ -443,17 +552,20 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
                 ) : null}
               </div>
 
-              <span style={{ fontSize: 12, color: "#6b7280" }}>
-                Source Chain
-              </span>
+              {/* Real Balance Display */}
+              <div style={{ textAlign: "right" }}>
+                <span style={{ fontSize: 11, color: "#9ca3af", display: "block" }}>
+                  Balance: {isFetchingBalance ? "Loading..." : `${formattedSourceBalance} USDC`}
+                </span>
+              </div>
             </div>
 
             {/* Input Amount Row */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 10 }}>
               <input
                 type="number"
-                min="1"
-                step="1"
+                min="0"
+                step="any"
                 value={amountInput}
                 onChange={(e) => setAmountInput(e.target.value)}
                 style={{
@@ -463,7 +575,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
                   fontSize: 32,
                   fontWeight: 700,
                   color: "#ffffff",
-                  width: "60%",
+                  width: "65%",
                   letterSpacing: "-0.02em",
                 }}
                 placeholder="0.00"
@@ -472,19 +584,21 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <button
                   type="button"
-                  onClick={() => setAmountInput("100")}
+                  onClick={handleSetMaxAmount}
                   style={{
-                    background: "rgba(255, 255, 255, 0.08)",
+                    background: "rgba(255, 255, 255, 0.1)",
                     border: "none",
                     borderRadius: 12,
-                    padding: "3px 8px",
-                    color: "#d1d5db",
+                    padding: "4px 10px",
+                    color: "#ffffff",
                     fontSize: 11,
-                    fontWeight: 600,
+                    fontWeight: 700,
                     cursor: "pointer",
+                    transition: "background 0.15s ease",
                   }}
+                  title="Fill max available balance"
                 >
-                  Max
+                  MAX
                 </button>
               </div>
             </div>
@@ -613,7 +727,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
                 rel="noopener noreferrer"
                 style={{ fontSize: 11, color: "#6b7280", textDecoration: "none" }}
               >
-                Need testnet USDC? Get from <span style={{ color: "#3B82F6" }}>Circle Faucet ↗</span>
+                Need testnet USDC? Get from Circle Faucet
               </a>
             </div>
           ) : null}
