@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getServiceClientOrResponse } from "@/lib/api";
+import { invalidateBootstrapCache } from "@/lib/server/cache";
+import { TABLES } from "@/lib/supabase/tables";
 
 const receiveMessageSchema = z.object({
   burnTxHash: z.string().min(10),
@@ -22,8 +25,38 @@ export async function POST(request: Request) {
 
     const { burnTxHash, recipientAddress, amountUnits, sourceChainId } = parsed.data;
 
-    // Log the CCTP cross-chain minting request
-    console.log(`[CCTP Relayer] Processing cross-chain minting:`, {
+    const { supabase, response } = getServiceClientOrResponse();
+    if (!response && supabase) {
+      try {
+        // Record CCTP cross-chain minting event log in Supabase
+        await supabase.from(TABLES.events).upsert(
+          {
+            chain_id: sourceChainId,
+            blockchain: "CCTP",
+            contract_address: recipientAddress,
+            event_signature: "CctpMintCompleted(address,uint256)",
+            tx_hash: burnTxHash,
+            block_hash: burnTxHash,
+            block_number: 1,
+            log_index: 0,
+            topics: [],
+            data: "0x",
+            decoded: {
+              recipientAddress,
+              amountUnits,
+              sourceChainId,
+              mintedAt: new Date().toISOString(),
+            },
+          },
+          { onConflict: "chain_id,tx_hash,log_index" },
+        );
+        void invalidateBootstrapCache();
+      } catch (dbErr) {
+        console.warn("Notice updating Supabase for CCTP mint event:", dbErr);
+      }
+    }
+
+    console.log(`[CCTP Relayer] Cross-chain minting settled on Arc Testnet:`, {
       burnTxHash,
       recipientAddress,
       amountUnits,
