@@ -47,6 +47,9 @@ const envSchema = z.object({
   DATA_ENCRYPTION_KEY: z.string().min(32).optional().or(z.literal("")),
   PLATFORM_FEE_BPS: z.coerce.number().int().min(0).max(10000).default(100),
   PLATFORM_FEE_RECIPIENT_ADDRESS: optionalAddress,
+  BRIDGE_RELAYER_PRIVATE_KEY: optionalSecret,
+  FUNDING_WALLET_PRIVATE_KEY_1: optionalSecret,
+  FIRST_WALLET_PRIVATE_KEY: optionalSecret,
   NEXT_PUBLIC_ENABLE_DEMO_DATA: z
     .enum(["true", "false"])
     .optional()

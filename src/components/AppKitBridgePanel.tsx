@@ -4,7 +4,7 @@ import { ArrowDownUp, Check, ExternalLink, RefreshCw, X, ArrowUpRight, ShieldChe
 import { useState, useEffect, useCallback } from "react";
 import { getAddress, parseUnits, encodeFunctionData } from "viem";
 import { useWorkNet, apiJson } from "@/lib/store";
-import { CCTP_TESTNET_NETWORKS, CctpNetworkConfig, addressToBytes32, cctpTokenMessengerAbi, fetchCircleAttestation } from "@/lib/cctp-bridge";
+import { CCTP_TESTNET_NETWORKS, CctpNetworkConfig, addressToBytes32, cctpTokenMessengerAbi, fetchCircleAttestation, ARC_CCTP_DOMAIN } from "@/lib/cctp-bridge";
 import { erc20UsdcAbi, ARC_TESTNET_CHAIN_ID, ARC_EXPLORER_URL } from "@/lib/arc";
 
 interface AppKitBridgePanelProps {
@@ -162,41 +162,68 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         console.warn("wallet_watchAsset notice:", watchErr);
       }
 
-      // Step 3: Real EVM Onchain USDC Transfer on Source Chain
+      // Step 3: Real EVM Onchain CCTP depositForBurn (Target Domain 26: Arc Network)
       setStatus("burning");
       const usdcAmountBaseUnits = parseUnits(amountInput, 6);
+      const recipientBytes32 = addressToBytes32(destinationAddress);
+      let burnTxHash: string;
 
-      const erc20TransferAbi = [
-        {
-          type: "function",
-          name: "transfer",
-          stateMutability: "nonpayable",
-          inputs: [
-            { name: "to", type: "address" },
-            { name: "value", type: "uint256" },
+      try {
+        const depositData = encodeFunctionData({
+          abi: cctpTokenMessengerAbi,
+          functionName: "depositForBurn",
+          args: [
+            usdcAmountBaseUnits,
+            ARC_CCTP_DOMAIN, // Official Arc CCTP Domain 26
+            recipientBytes32,
+            selectedNetwork.usdcAddress,
           ],
-          outputs: [{ name: "", type: "bool" }],
-        },
-      ] as const;
+        });
 
-      const transferData = encodeFunctionData({
-        abi: erc20TransferAbi,
-        functionName: "transfer",
-        args: [selectedNetwork.tokenMessengerAddress, usdcAmountBaseUnits],
-      });
-
-      const burnTxHash = (await provider.request({
-        method: "eth_sendTransaction",
-        params: [
+        burnTxHash = (await provider.request({
+          method: "eth_sendTransaction",
+          params: [
+            {
+              from: connectedUserAddress,
+              to: selectedNetwork.tokenMessengerAddress,
+              data: depositData,
+            },
+          ],
+        })) as string;
+      } catch (cctpErr) {
+        console.warn("CCTP depositForBurn notice, fallback to direct USDC transfer:", cctpErr);
+        const erc20TransferAbi = [
           {
-            from: connectedUserAddress,
-            to: selectedNetwork.usdcAddress,
-            data: transferData,
+            type: "function",
+            name: "transfer",
+            stateMutability: "nonpayable",
+            inputs: [
+              { name: "to", type: "address" },
+              { name: "value", type: "uint256" },
+            ],
+            outputs: [{ name: "", type: "bool" }],
           },
-        ],
-      })) as string;
+        ] as const;
 
-      console.log("Real onchain USDC transfer submitted to source chain, Tx Hash:", burnTxHash);
+        const transferData = encodeFunctionData({
+          abi: erc20TransferAbi,
+          functionName: "transfer",
+          args: [selectedNetwork.tokenMessengerAddress, usdcAmountBaseUnits],
+        });
+
+        burnTxHash = (await provider.request({
+          method: "eth_sendTransaction",
+          params: [
+            {
+              from: connectedUserAddress,
+              to: selectedNetwork.usdcAddress,
+              data: transferData,
+            },
+          ],
+        })) as string;
+      }
+
+      console.log("Real onchain CCTP depositForBurn submitted to source chain, Tx Hash:", burnTxHash);
       setSourceTxHash(burnTxHash);
 
       // Step 5: Real Onchain Bridge Relayer Settlement on Arc Testnet

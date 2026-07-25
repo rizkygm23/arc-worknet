@@ -12,6 +12,10 @@ export interface CctpNetworkConfig {
   iconUrl: string;
 }
 
+export const ARC_CCTP_DOMAIN = 26;
+export const ARC_TOKEN_MESSENGER_ADDRESS = getAddress("0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA");
+export const ARC_MESSAGE_TRANSMITTER_ADDRESS = getAddress("0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275");
+
 export const CCTP_TESTNET_NETWORKS: CctpNetworkConfig[] = [
   {
     id: "ethereum-sepolia",
@@ -71,6 +75,19 @@ export const cctpTokenMessengerAbi = [
       { name: "burnToken", type: "address" },
     ],
     outputs: [{ name: "_nonce", type: "uint64" }],
+  },
+] as const satisfies Abi;
+
+export const cctpMessageTransmitterAbi = [
+  {
+    type: "function",
+    name: "receiveMessage",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "message", type: "bytes" },
+      { name: "attestation", type: "bytes" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
   },
 ] as const satisfies Abi;
 
