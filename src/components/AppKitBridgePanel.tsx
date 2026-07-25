@@ -2,7 +2,7 @@
 
 import { ArrowRight, Check, CircleDollarSign, ExternalLink, Globe, RefreshCw, ShieldCheck, Sparkles, AlertCircle, X } from "lucide-react";
 import { useState } from "react";
-import { parseUnits, encodeFunctionData } from "viem";
+import { getAddress, parseUnits, encodeFunctionData } from "viem";
 import { useWorkNet } from "@/lib/store";
 import { CCTP_TESTNET_NETWORKS, CctpNetworkConfig, addressToBytes32, cctpTokenMessengerAbi, fetchCircleAttestation } from "@/lib/cctp-bridge";
 import { erc20UsdcAbi, ARC_TESTNET_CHAIN_ID, ARC_EXPLORER_URL } from "@/lib/arc";
@@ -49,7 +49,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         return;
       }
 
-      const userAddress = accounts[0] as `0x${string}`;
+      const userAddress = getAddress(accounts[0]);
       const targetChainHex = `0x${selectedNetwork.chainId.toString(16)}`;
 
       // Step 2: Switch Network to target testnet

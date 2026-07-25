@@ -1,4 +1,4 @@
-import type { Abi, Address } from "viem";
+import { getAddress, type Abi, type Address } from "viem";
 
 export interface CctpNetworkConfig {
   id: string;
@@ -16,8 +16,8 @@ export const CCTP_TESTNET_NETWORKS: CctpNetworkConfig[] = [
     name: "Arbitrum Sepolia",
     chainId: 421614,
     domain: 3,
-    usdcAddress: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",
-    tokenMessengerAddress: "0x9f3B8679c73C2Fef8b59B4f3444d4d156fb70AA5",
+    usdcAddress: getAddress("0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d"),
+    tokenMessengerAddress: getAddress("0x9f3B8679c73C2Fef8b59B4f3444d4d156fb70AA5"),
     explorerUrl: "https://sepolia.arbiscan.io",
   },
   {
@@ -25,8 +25,8 @@ export const CCTP_TESTNET_NETWORKS: CctpNetworkConfig[] = [
     name: "Base Sepolia",
     chainId: 84532,
     domain: 6,
-    usdcAddress: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-    tokenMessengerAddress: "0x9f3B8679c73C2Fef8b59B4f3444d4d156fb70AA5",
+    usdcAddress: getAddress("0x036CbD53842c5426634e7929541eC2318f3dCF7e"),
+    tokenMessengerAddress: getAddress("0x9f3B8679c73C2Fef8b59B4f3444d4d156fb70AA5"),
     explorerUrl: "https://sepolia.basescan.org",
   },
   {
@@ -34,8 +34,8 @@ export const CCTP_TESTNET_NETWORKS: CctpNetworkConfig[] = [
     name: "Ethereum Sepolia",
     chainId: 11155111,
     domain: 0,
-    usdcAddress: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
-    tokenMessengerAddress: "0x9f3B8679c73C2Fef8b59B4f3444d4d156fb70AA5",
+    usdcAddress: getAddress("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"),
+    tokenMessengerAddress: getAddress("0x9f3B8679c73C2Fef8b59B4f3444d4d156fb70AA5"),
     explorerUrl: "https://sepolia.etherscan.io",
   },
   {
@@ -43,8 +43,8 @@ export const CCTP_TESTNET_NETWORKS: CctpNetworkConfig[] = [
     name: "Avalanche Fuji",
     chainId: 43113,
     domain: 1,
-    usdcAddress: "0x5425890298aed601595a70AB815c96711a31Bc65",
-    tokenMessengerAddress: "0xeb08f243e5d32c326f768d85a078f77a7344911d",
+    usdcAddress: getAddress("0x5425890298aed601595a70AB815c96711a31Bc65"),
+    tokenMessengerAddress: getAddress("0xeb08f243e5d32c326f768d85a078f77a7344911d"),
     explorerUrl: "https://testnet.snowtrace.io",
   },
 ];
