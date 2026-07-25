@@ -33,35 +33,43 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
 
   const onrampUrl = process.env.NEXT_PUBLIC_CIRCLE_ONRAMP_URL;
 
-  // Fetch real USDC balance on selected source chain
+  // Fetch real USDC balance on selected source chain via public RPC
   const fetchSourceUsdcBalance = useCallback(async () => {
-    const provider = typeof window !== "undefined" ? (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum : null;
-    if (!provider || !wallet.address) {
+    const userAddressHex = wallet.address ? getAddress(wallet.address) : null;
+    if (!userAddressHex) {
       setSourceBalanceUnits(null);
       return;
     }
 
     setIsFetchingBalance(true);
     try {
-      const userAddr = getAddress(wallet.address);
       const data = encodeFunctionData({
         abi: erc20UsdcAbi,
         functionName: "balanceOf",
-        args: [userAddr],
+        args: [userAddressHex],
       });
 
-      const rawResult = (await provider.request({
-        method: "eth_call",
-        params: [{ to: selectedNetwork.usdcAddress, data }, "latest"],
-      })) as string;
+      const res = await fetch(selectedNetwork.rpcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "eth_call",
+          params: [{ to: selectedNetwork.usdcAddress, data }, "latest"],
+        }),
+      });
+
+      const json = await res.json();
+      const rawResult = json.result as string | undefined;
 
       if (rawResult && rawResult !== "0x") {
         setSourceBalanceUnits(BigInt(rawResult));
       } else {
         setSourceBalanceUnits(BigInt(0));
       }
-    } catch {
-      // Fallback balance display if RPC call is restricted
+    } catch (err) {
+      console.warn("Failed to fetch source chain USDC balance:", err);
       setSourceBalanceUnits(null);
     } finally {
       setIsFetchingBalance(false);
@@ -73,11 +81,8 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
   }, [fetchSourceUsdcBalance]);
 
   function handleSetMaxAmount() {
-    if (sourceBalanceUnits !== null && sourceBalanceUnits > BigInt(0)) {
+    if (sourceBalanceUnits !== null) {
       const maxVal = (Number(sourceBalanceUnits) / 1_000_000).toString();
-      setAmountInput(maxVal);
-    } else if (wallet.usdcBalanceUnits !== undefined && wallet.usdcBalanceUnits > 0) {
-      const maxVal = (wallet.usdcBalanceUnits / 1_000_000).toString();
       setAmountInput(maxVal);
     } else {
       setAmountInput("0");
@@ -282,8 +287,6 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
 
   const formattedSourceBalance = sourceBalanceUnits !== null
     ? (Number(sourceBalanceUnits) / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })
-    : wallet.usdcBalanceUnits !== undefined
-    ? (wallet.usdcBalanceUnits / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })
     : "0.00";
 
   return (
@@ -508,8 +511,28 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
                     fontWeight: 600,
                   }}
                 >
-                  <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#2775CA", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 11, color: "#fff" }}>
-                    USDC
+                  {/* USDC Token Icon with Chain Badge Overlay */}
+                  <div style={{ position: "relative", width: 28, height: 28 }}>
+                    <img
+                      src="https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/A0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png"
+                      alt="USDC"
+                      style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
+                    />
+                    <img
+                      src={selectedNetwork.iconUrl}
+                      alt={selectedNetwork.name}
+                      style={{
+                        position: "absolute",
+                        bottom: -2,
+                        right: -2,
+                        width: 14,
+                        height: 14,
+                        borderRadius: "50%",
+                        border: "2px solid #121316",
+                        background: "#121316",
+                        objectFit: "cover",
+                      }}
+                    />
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", textAlign: "left", lineHeight: 1.1 }}>
                     <span style={{ fontSize: 13, fontWeight: 700 }}>USDC</span>
@@ -530,7 +553,7 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
                       border: "1px solid rgba(255, 255, 255, 0.12)",
                       borderRadius: 14,
                       padding: 6,
-                      width: 200,
+                      width: 210,
                       boxShadow: "0 10px 25px rgba(0, 0, 0, 0.5)",
                     }}
                   >
@@ -557,9 +580,13 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
+                          gap: 8,
                         }}
                       >
-                        {net.name}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <img src={net.iconUrl} alt={net.name} style={{ width: 18, height: 18, borderRadius: "50%", objectFit: "cover" }} />
+                          <span>{net.name}</span>
+                        </div>
                         {selectedNetwork.id === net.id ? <Check size={12} /> : null}
                       </button>
                     ))}

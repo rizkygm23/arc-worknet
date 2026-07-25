@@ -8,9 +8,22 @@ export interface CctpNetworkConfig {
   usdcAddress: Address;
   tokenMessengerAddress: Address;
   explorerUrl: string;
+  rpcUrl: string;
+  iconUrl: string;
 }
 
 export const CCTP_TESTNET_NETWORKS: CctpNetworkConfig[] = [
+  {
+    id: "ethereum-sepolia",
+    name: "Ethereum Sepolia",
+    chainId: 11155111,
+    domain: 0,
+    usdcAddress: getAddress("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"),
+    tokenMessengerAddress: getAddress("0x9f3B8679c73C2Fef8b59B4f3444d4d156fb70AA5"),
+    explorerUrl: "https://sepolia.etherscan.io",
+    rpcUrl: "https://ethereum-sepolia-rpc.publicnode.com",
+    iconUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png",
+  },
   {
     id: "arbitrum-sepolia",
     name: "Arbitrum Sepolia",
@@ -19,6 +32,8 @@ export const CCTP_TESTNET_NETWORKS: CctpNetworkConfig[] = [
     usdcAddress: getAddress("0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d"),
     tokenMessengerAddress: getAddress("0x9f3B8679c73C2Fef8b59B4f3444d4d156fb70AA5"),
     explorerUrl: "https://sepolia.arbiscan.io",
+    rpcUrl: "https://sepolia-rollup.arbitrum.io/rpc",
+    iconUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png",
   },
   {
     id: "base-sepolia",
@@ -28,15 +43,8 @@ export const CCTP_TESTNET_NETWORKS: CctpNetworkConfig[] = [
     usdcAddress: getAddress("0x036CbD53842c5426634e7929541eC2318f3dCF7e"),
     tokenMessengerAddress: getAddress("0x9f3B8679c73C2Fef8b59B4f3444d4d156fb70AA5"),
     explorerUrl: "https://sepolia.basescan.org",
-  },
-  {
-    id: "ethereum-sepolia",
-    name: "Ethereum Sepolia",
-    chainId: 11155111,
-    domain: 0,
-    usdcAddress: getAddress("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"),
-    tokenMessengerAddress: getAddress("0x9f3B8679c73C2Fef8b59B4f3444d4d156fb70AA5"),
-    explorerUrl: "https://sepolia.etherscan.io",
+    rpcUrl: "https://sepolia.base.org",
+    iconUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png",
   },
   {
     id: "avalanche-fuji",
@@ -46,6 +54,8 @@ export const CCTP_TESTNET_NETWORKS: CctpNetworkConfig[] = [
     usdcAddress: getAddress("0x5425890298aed601595a70AB815c96711a31Bc65"),
     tokenMessengerAddress: getAddress("0xeb08f243e5d32c326f768d85a078f77a7344911d"),
     explorerUrl: "https://testnet.snowtrace.io",
+    rpcUrl: "https://api.avax-test.network/ext/bc/C/rpc",
+    iconUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png",
   },
 ];
 
