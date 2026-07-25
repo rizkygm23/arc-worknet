@@ -202,12 +202,13 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
       // Step 5: Real Onchain Bridge Relayer Settlement on Arc Testnet
       setStatus("attesting");
       try {
+        const numericUnits = Number(usdcAmountBaseUnits);
         const res = await apiJson<{ success?: boolean; mintTxHash?: string }>("/api/cctp/receive-message", {
           method: "POST",
           body: JSON.stringify({
             burnTxHash,
             recipientAddress: destinationAddress,
-            amountUnits: usdcAmountBaseUnits,
+            amountUnits: numericUnits,
             sourceChainId: selectedNetwork.chainId,
           }),
         });
