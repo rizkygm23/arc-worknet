@@ -31,11 +31,19 @@ const MESSAGE_SENT_EVENT_TOPIC = "0x2fa9ca894982930190727e75500a97d8dc500233a506
 
 function getRelayerAccount() {
   const pk =
+    process.env.BRIDGE_RELAYER_PRIVATE_KEY ||
     env.BRIDGE_RELAYER_PRIVATE_KEY ||
+    process.env.FUNDING_WALLET_PRIVATE_KEY_1 ||
     env.FUNDING_WALLET_PRIVATE_KEY_1 ||
+    process.env.FIRST_WALLET_PRIVATE_KEY ||
     env.FIRST_WALLET_PRIVATE_KEY;
-  if (!pk) throw new Error("No relayer private key configured in environment variables.");
-  return privateKeyToAccount(pk as `0x${string}`);
+
+  if (!pk || pk.trim() === "") {
+    throw new Error(
+      "No relayer private key configured. Please set BRIDGE_RELAYER_PRIVATE_KEY=0x... in your .env file or Vercel environment variables.",
+    );
+  }
+  return privateKeyToAccount(pk.trim() as `0x${string}`);
 }
 
 export async function POST(request: Request) {
