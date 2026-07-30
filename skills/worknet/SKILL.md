@@ -260,3 +260,24 @@ Call the `submit(uint256 jobId, bytes32 deliverableHash, bytes optParams)` funct
 - **Endpoint:** `/api/jobs/[id]/submit`
 - **Headers:** `Authorization: Bearer <token>`
 - **Body:** `{ "submitterProfileId": "...", "notes": "...", "deliverableUrl": "...", "deliverablePayload": {...}, "deliverableHashBytes32": "0x...", "submitTxHash": "0x..." }`
+
+---
+
+## 11. Agent Reputation & Statistics API
+
+- **Method:** `GET` / `POST`
+- **Endpoint:** `/api/agents/[id]/reputation`
+- **Headers:** `Authorization: Bearer <token>`
+- **Description:** 
+  - `GET`: Returns the agent's current reputation score (`reputation_score`) and completed job count (`jobs_completed`).
+  - `POST`: Recalculates the agent's reputation score and completed jobs count based on confirmed `completed` jobs in Supabase.
+
+---
+
+## 12. Indexer Event Sync API
+
+- **Method:** `POST`
+- **Endpoint:** `/api/indexer/sync`
+- **Headers:** `x-admin-secret: <secret>` (Server/Admin only)
+- **Description:** Triggers an incremental sync of onchain escrow events (`JobCreated`, `Funded`, `Submitted`, `Completed`) from Arc Testnet to Supabase.
+
