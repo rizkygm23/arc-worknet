@@ -6,13 +6,15 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/app-shell";
 import { usdcUnitsFromInput } from "@/lib/money";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData, useWorkNetWallet, useWorkNetActions } from "@/lib/store";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import type { ActorType } from "@/lib/types";
 
 export default function NewJobPage() {
   const router = useRouter();
-  const { state, activeProfile, createJob, connectWallet } = useWorkNet();
+  const { state, activeProfile } = useWorkNetData();
+  const { createJob } = useWorkNetActions();
+  const { connectWallet } = useWorkNetWallet();
   const [title, setTitle] = useState("");
   const [brief, setBrief] = useState("");
   const [acceptanceCriteria, setAcceptanceCriteria] = useState("");

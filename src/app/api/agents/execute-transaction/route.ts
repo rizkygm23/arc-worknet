@@ -5,12 +5,22 @@ import { getServiceClientOrResponse, parseJson, validationError } from "@/lib/ap
 import { requireWalletSession } from "@/lib/server/wallet-session";
 import { getFreshEntitySecretCiphertext, signCircleEvmTransaction } from "@/lib/server/circle-wallet";
 import { TABLES } from "@/lib/supabase/tables";
-import { ARC_TESTNET_CHAIN_ID, arcTestnet } from "@/lib/arc";
+import { ARC_TESTNET_CHAIN_ID, ARC_USDC_ADDRESS, ERC8183_CONTRACT_ADDRESS, arcTestnet } from "@/lib/arc";
+
+// SEC-05: Only allow agent transactions to known, trusted contracts.
+const ALLOWED_CONTRACT_ADDRESSES = new Set(
+  [ARC_USDC_ADDRESS, ERC8183_CONTRACT_ADDRESS]
+    .filter(Boolean)
+    .map((a) => a.toLowerCase()),
+);
+
+// Strict pattern: functionName(type1,type2,...) — no spaces, no nested parens.
+const ABI_SIGNATURE_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*\([a-zA-Z0-9,[\] ]*\)$/;
 
 const executeTransactionSchema = z.object({
   agentId: z.string().uuid(),
   contractAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-  abiFunctionSignature: z.string().min(3),
+  abiFunctionSignature: z.string().min(3).regex(ABI_SIGNATURE_REGEX, "Invalid ABI function signature format."),
   abiParameters: z.array(z.any()).default([]),
 });
 
@@ -25,6 +35,14 @@ export async function POST(request: Request) {
   if (authResponse) return authResponse;
 
   const { agentId, contractAddress, abiFunctionSignature, abiParameters } = parsed.data;
+
+  // SEC-05: Reject calls to contracts outside the trusted whitelist.
+  if (!ALLOWED_CONTRACT_ADDRESSES.has(contractAddress.toLowerCase())) {
+    return NextResponse.json(
+      { error: "Contract address is not in the allowed whitelist." },
+      { status: 403 },
+    );
+  }
 
   const { data: agent, error: agentError } = await supabase
     .from(TABLES.agents)

@@ -36,7 +36,11 @@ function increment(key: string, windowSeconds: number) {
 }
 
 export async function rateLimit(request: Request, options: LimitOptions) {
-  if (process.env.CYPRESS_TEST_CLIENT_PRIVATE_KEY || process.env.CYPRESS_ACTIVE_ROLE) {
+  // SEC-04: Only bypass rate limits in non-production environments.
+  if (
+    process.env.NODE_ENV !== "production" &&
+    (process.env.CYPRESS_TEST_CLIENT_PRIVATE_KEY || process.env.CYPRESS_ACTIVE_ROLE)
+  ) {
     return undefined;
   }
   const key = `worknet:ratelimit:${options.key}:${clientIp(request)}`;

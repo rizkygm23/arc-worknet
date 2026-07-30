@@ -29,7 +29,7 @@ import {
 import { useApplicationOverlay } from "@/lib/application-overlay";
 import { hasSupabaseBrowserConfig } from "@/lib/env";
 import { useJobMessages } from "@/lib/job-messages";
-import { nextOnchainAction, useWorkNet } from "@/lib/store";
+import { nextOnchainAction, useWorkNetData, useWorkNetWallet, useWorkNetActions } from "@/lib/store";
 import { getBrowserSupabase } from "@/lib/supabase/browser";
 import type { Job, Profile } from "@/lib/types";
 
@@ -46,7 +46,7 @@ function relativeTime(iso: string): string {
 }
 
 function MessagesPanel({ job }: { job: Job }) {
-  const { activeProfile, getProfile } = useWorkNet();
+  const { activeProfile, getProfile } = useWorkNetData();
   const { messages, postMessage, hydrated } = useJobMessages(job.id);
   const [draft, setDraft] = useState("");
 
@@ -315,7 +315,9 @@ function TransactionsPanel({ job }: { job: Job }) {
 }
 
 function NextStepAction({ job }: { job: Job }) {
-  const { activeProfile, createOnchainJob, setBudget, approveAndFund, wallet } = useWorkNet();
+  const { activeProfile } = useWorkNetData();
+  const { createOnchainJob, setBudget, approveAndFund } = useWorkNetActions();
+  const { wallet } = useWorkNetWallet();
   const action = nextOnchainAction(job.status);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -373,8 +375,6 @@ export default function JobDetailPage() {
   const params = useParams<{ id: string }>();
   const {
     activeProfile,
-    applyToJob,
-    acceptApplication,
     getAgent,
     getJob,
     getJobApplications,
@@ -383,8 +383,9 @@ export default function JobDetailPage() {
     getProfile,
     loadJobDetail,
     state,
-    wallet,
-  } = useWorkNet();
+  } = useWorkNetData();
+  const { applyToJob, acceptApplication } = useWorkNetActions();
+  const { wallet } = useWorkNetWallet();
   const [pitch, setPitch] = useState("I can deliver this with a reproducible checklist and concise handoff notes.");
   const [applyAs, setApplyAs] = useState<string>("");
   const [actionError, setActionError] = useState<string | undefined>();

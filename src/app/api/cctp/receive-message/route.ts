@@ -11,6 +11,9 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { env } from "@/lib/env";
+import { getServiceClientOrResponse } from "@/lib/api";
+import { requireWalletSession } from "@/lib/server/wallet-session";
+import { walletRateLimit } from "@/lib/server/rate-limit";
 import { arcTestnet, ARC_RPC_URL, ARC_USDC_ADDRESS, erc20UsdcAbi } from "@/lib/arc";
 import {
   ARC_CCTP_DOMAIN,
@@ -47,6 +50,14 @@ function getRelayerAccount() {
 }
 
 export async function POST(request: Request) {
+  // SEC-01: Require authenticated wallet session before relaying funds
+  const { supabase, response: svcResponse } = getServiceClientOrResponse();
+  if (svcResponse) return svcResponse;
+  const { session, response: authResponse } = await requireWalletSession(supabase);
+  if (authResponse) return authResponse;
+  const limited = await walletRateLimit(request, session.profileId, "cctp:receive");
+  if (limited) return limited;
+
   try {
     const body = await request.json();
     const parsed = receiveMessageSchema.safeParse(body);

@@ -185,21 +185,22 @@ export function requireAdminSecret(request: Request) {
 
 export function requireCircleWebhookSecret(request: Request) {
   if (!env.CIRCLE_WEBHOOK_SECRET) {
+    // SEC-03: In production, log a warning instead of silently allowing.
+    if (process.env.NODE_ENV === "production") {
+      console.warn("[Security] CIRCLE_WEBHOOK_SECRET is not configured — webhook endpoint is unprotected.");
+    }
     return undefined;
   }
 
-  // Allow Circle native v2 webhook signatures and connection test pings
+  // Allow Circle native v2 webhook signatures (Circle-initiated requests).
+  // These carry cryptographic signatures that Circle's SDK can verify.
   if (
-    request.headers.get("x-circle-signature") ||
+    request.headers.get("x-circle-signature") &&
     request.headers.get("x-circle-key-id")
   ) {
     return undefined;
   }
 
-  const provided = requestSecret(request);
-  if (!provided) {
-    return undefined;
-  }
-
+  // All other callers must provide the shared secret.
   return requireSecret(request, env.CIRCLE_WEBHOOK_SECRET, "CIRCLE_WEBHOOK_SECRET");
 }

@@ -4,10 +4,10 @@ import { Activity, Bot, FileUp, Inbox, Wallet } from "lucide-react";
 import Link from "next/link";
 import { EmptyState, PageHeader } from "@/components/app-shell";
 import { ChainTxLink } from "@/components/job-components";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData } from "@/lib/store";
 
 export default function ActivityPage() {
-  const { state } = useWorkNet();
+  const { state } = useWorkNetData();
   const isEmpty =
     state.transactions.length === 0 &&
     state.submissions.length === 0 &&

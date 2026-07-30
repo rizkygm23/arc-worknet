@@ -10,11 +10,11 @@ import { JobRow, ProfileReputationBadges, ReviewsPanel } from "@/components/job-
 import { availabilityLabel } from "@/lib/availability";
 import { useJobInvitations } from "@/lib/job-invitations";
 import { formatUsdcUnits } from "@/lib/money";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData } from "@/lib/store";
 import type { Profile } from "@/lib/types";
 
 function InvitePanel({ worker }: { worker: Profile }) {
-  const { state, activeProfile } = useWorkNet();
+  const { state, activeProfile } = useWorkNetData();
   const { invitations, sendInvite, hydrated } = useJobInvitations();
   const [open, setOpen] = useState(false);
   const [jobId, setJobId] = useState("");
@@ -167,7 +167,7 @@ function InvitePanel({ worker }: { worker: Profile }) {
 
 export default function WorkerProfilePage() {
   const params = useParams<{ id: string }>();
-  const { getProfile, state, getAgent, getJob, isSyncing } = useWorkNet();
+  const { getProfile, state, getAgent, getJob, isSyncing } = useWorkNetData();
   const profile = getProfile(params.id);
 
   if (!profile) {

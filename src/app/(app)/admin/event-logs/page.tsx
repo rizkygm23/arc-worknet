@@ -3,10 +3,10 @@
 import { Activity, ScrollText } from "lucide-react";
 import { PageHeader } from "@/components/app-shell";
 import { ChainTxLink } from "@/components/job-components";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData } from "@/lib/store";
 
 export default function AdminEventLogsPage() {
-  const { state } = useWorkNet();
+  const { state } = useWorkNetData();
 
   return (
     <>

@@ -5,11 +5,11 @@ import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { PageHeader, SkeletonPanel } from "@/components/app-shell";
 import { AgentReputationBadges, JobRow, ReviewsPanel } from "@/components/job-components";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData } from "@/lib/store";
 
 export default function AgentProfilePage() {
   const params = useParams<{ id: string }>();
-  const { getAgent, getProfile, state, isSyncing } = useWorkNet();
+  const { getAgent, getProfile, state, isSyncing } = useWorkNetData();
   const agent = getAgent(params.id);
 
   if (!agent) {

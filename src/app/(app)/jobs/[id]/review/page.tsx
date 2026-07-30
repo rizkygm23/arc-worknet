@@ -7,23 +7,15 @@ import { useState } from "react";
 import { PageHeader, SkeletonPanel } from "@/components/app-shell";
 import { ChainTxLink, DeliverableViewer, JobStatusBadge } from "@/components/job-components";
 import { formatUsdcUnits } from "@/lib/money";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData, useWorkNetWallet, useWorkNetActions } from "@/lib/store";
 import type { Job } from "@/lib/types";
 
 export default function ReviewJobPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const {
-    activeProfile,
-    completeJob,
-    getJob,
-    getJobEvaluation,
-    getJobSubmissions,
-    rejectSubmission,
-    requestRevision,
-    isSyncing,
-    wallet,
-  } = useWorkNet();
+  const { activeProfile, getJob, getJobEvaluation, getJobSubmissions, isSyncing } = useWorkNetData();
+  const { completeJob, rejectSubmission, requestRevision } = useWorkNetActions();
+  const { wallet } = useWorkNetWallet();
   const job = getJob(params.id);
   const submission = getJobSubmissions(params.id)[0];
   const evaluation = getJobEvaluation(submission?.id);

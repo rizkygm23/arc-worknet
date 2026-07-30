@@ -6,13 +6,15 @@ import { notFound, useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageHeader, SkeletonPanel } from "@/components/app-shell";
 import { ChainTxLink, JobStatusBadge } from "@/components/job-components";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData, useWorkNetWallet, useWorkNetActions } from "@/lib/store";
 import type { Job } from "@/lib/types";
 
 export default function SubmitDeliverablePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { activeProfile, getJob, getJobSubmissions, getAgent, submitDeliverable, isSyncing, wallet } = useWorkNet();
+  const { activeProfile, getJob, getJobSubmissions, getAgent, isSyncing } = useWorkNetData();
+  const { submitDeliverable } = useWorkNetActions();
+  const { wallet } = useWorkNetWallet();
   const job = getJob(params.id);
   const submissions = getJobSubmissions(params.id);
   const [file, setFile] = useState<File | null>(null);

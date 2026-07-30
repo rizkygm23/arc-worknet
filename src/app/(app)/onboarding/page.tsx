@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Check, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { dismissOnboarding, needsOnboarding } from "@/lib/onboarding";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData, useWorkNetActions } from "@/lib/store";
 import type { Availability } from "@/lib/types";
 
 type EditableRole = "client" | "worker";
@@ -35,7 +35,8 @@ const STEPS = ["You", "Your craft", "Availability"] as const;
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { state, activeProfile, updateProfile } = useWorkNet();
+  const { state, activeProfile } = useWorkNetData();
+  const { updateProfile } = useWorkNetActions();
 
   const [step, setStep] = useState(0);
   const [skillInput, setSkillInput] = useState("");

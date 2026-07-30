@@ -58,9 +58,20 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .optional()
     .default("false"),
+  ADMIN_WALLET_ADDRESSES: z.string().optional().default(""),
 });
 
 export const env = envSchema.parse(process.env);
+
+/** Check if a wallet address is configured as an admin. */
+export function isAdminWallet(address: string): boolean {
+  if (!env.ADMIN_WALLET_ADDRESSES) return false;
+  const admins = env.ADMIN_WALLET_ADDRESSES
+    .split(",")
+    .map((a) => a.trim().toLowerCase())
+    .filter(Boolean);
+  return admins.includes(address.toLowerCase());
+}
 
 export function hasSupabaseBrowserConfig() {
   return Boolean(env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_ANON_KEY);

@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageHeader } from "@/components/app-shell";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData, useWorkNetWallet, useWorkNetActions } from "@/lib/store";
 
 export default function RegisterAgentPage() {
   const router = useRouter();
-  const { activeProfile, registerAgent, connectWallet } = useWorkNet();
+  const { activeProfile } = useWorkNetData();
+  const { registerAgent } = useWorkNetActions();
+  const { connectWallet } = useWorkNetWallet();
   const [name, setName] = useState("Workflow Auditor");
   const [description, setDescription] = useState(
     "Agent that validates payload hashes, escrow states, and status transitions.",

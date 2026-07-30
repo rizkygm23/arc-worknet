@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { encodeFunctionData, getAddress, isAddress, parseUnits } from "viem";
 import { ARC_EXPLORER_URL } from "@/lib/arc";
 import { CCTP_TESTNET_NETWORKS, type CctpNetworkConfig } from "@/lib/cctp-bridge";
-import { apiJson, useWorkNet } from "@/lib/store";
+import { apiJson, useWorkNetData, useWorkNetWallet } from "@/lib/store";
 
 interface AppKitBridgePanelProps {
   requiredAmountUnits?: number;
@@ -38,7 +38,8 @@ const erc20TransferAbi = [
 ] as const;
 
 export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: AppKitBridgePanelProps) {
-  const { wallet, refreshState } = useWorkNet();
+  const { wallet } = useWorkNetWallet();
+  const { refreshState } = useWorkNetData();
   const [selectedNetwork, setSelectedNetwork] = useState<CctpNetworkConfig>(CCTP_TESTNET_NETWORKS[0]);
   const [isChainDropdownOpen, setIsChainDropdownOpen] = useState(false);
   const [amountInput, setAmountInput] = useState(

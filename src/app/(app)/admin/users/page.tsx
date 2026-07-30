@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { Users } from "lucide-react";
 import { PageHeader } from "@/components/app-shell";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData } from "@/lib/store";
 
 export default function AdminUsersPage() {
-  const { state } = useWorkNet();
+  const { state } = useWorkNetData();
 
   return (
     <>

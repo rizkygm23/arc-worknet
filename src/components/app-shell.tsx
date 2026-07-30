@@ -7,18 +7,22 @@ import { Activity, AlertTriangle, Bell, Briefcase, Bot, Check, Copy, ExternalLin
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useWorkNet, walletBalanceLabel } from "@/lib/store";
+import { useWorkNetData, useWorkNetWallet, walletBalanceLabel } from "@/lib/store";
 import { formatUsdcUnits } from "@/lib/money";
 import { ARC_TESTNET_CHAIN_ID } from "@/lib/arc";
 import { formatWalletAddress } from "@/lib/wallet";
 import { useReadNotifications } from "@/lib/notifications-read";
 import { needsOnboarding, readOnboardingDismissed } from "@/lib/onboarding";
 import { readTourDone } from "@/lib/tour";
-import { TourOverlay } from "@/components/tour";
+import dynamic from "next/dynamic";
+const TourOverlay = dynamic(
+  () => import("@/components/tour").then((mod) => mod.TourOverlay),
+  { ssr: false }
+);
 import { AddFundsButton } from "@/components/add-funds";
 import CountUp from "./CountUp";
-import { Sidebar as AceternitySidebar, SidebarBody, SidebarLink, SidebarGroupTitle, useSidebar } from "@/components/ui/sidebar";
-import { motion } from "motion/react";
+import { Sidebar as AceternitySidebar, SidebarBody, SidebarLink, SidebarGroupTitle } from "@/components/ui/sidebar";
+
 
 const ARC_EXPLORER_URL = process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app";
 
@@ -56,7 +60,7 @@ const navGroups = [
 ];
 
 function useFilteredNavGroups() {
-  const { activeProfile } = useWorkNet();
+  const { activeProfile } = useWorkNetData();
 
   return useMemo(() => {
     const role = activeProfile?.role ?? "worker"; // default to worker if not logged in
@@ -86,15 +90,14 @@ function useFilteredNavGroups() {
 
 function WalletPanel() {
   const {
-    state,
     wallet,
     walletError,
     isWalletPending,
-    isSyncing,
     connectWallet,
     disconnectWallet,
     switchWalletToArc,
-  } = useWorkNet();
+  } = useWorkNetWallet();
+  const { state, isSyncing } = useWorkNetData();
 
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
@@ -247,7 +250,7 @@ function relativeTime(iso: string): string {
 }
 
 function NotificationsBell() {
-  const { state, activeProfile } = useWorkNet();
+  const { state, activeProfile } = useWorkNetData();
   const { isRead, markRead, markAllRead, hydrated } = useReadNotifications();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -366,7 +369,6 @@ function NotificationsBell() {
 }
 
 function SidebarLogo() {
-  const { open, animate } = useSidebar();
   return (
     <Link href="/jobs" className="flex items-center gap-2 py-1 no-underline" style={{ color: 'var(--ink)' }}>
       <img
@@ -375,16 +377,10 @@ function SidebarLogo() {
         className="shrink-0"
         style={{ width: 28, height: 28, objectFit: 'contain' }}
       />
-      <motion.div
-        animate={{
-          display: animate ? (open ? 'flex' : 'none') : 'flex',
-          opacity: animate ? (open ? 1 : 0) : 1,
-        }}
-        className="flex flex-col min-w-0"
-      >
+      <div className="flex flex-col min-w-0">
         <strong style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-md)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--ink)', whiteSpace: 'nowrap' }}>WorkNet</strong>
         <span style={{ marginTop: 2, color: 'var(--muted)', fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Paid outcomes on Arc</span>
-      </motion.div>
+      </div>
     </Link>
   );
 }
@@ -417,17 +413,12 @@ function MobileSidebarLogo() {
 }
 
 function SidebarWalletCompact() {
-  const { open, animate } = useSidebar();
   return (
-    <motion.div
-      animate={{
-        opacity: animate ? (open ? 1 : 0) : 1,
-        display: animate ? (open ? 'block' : 'none') : 'block',
-      }}
+    <div
       style={{ borderTop: 'var(--rule-thin) solid var(--hairline)', paddingTop: 'var(--space-4)' }}
     >
       <WalletPanel />
-    </motion.div>
+    </div>
   );
 }
 
@@ -445,8 +436,8 @@ function AppSidebar() {
       >
         <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
           <div className="flex items-center justify-between" style={{ paddingBottom: 'var(--space-4)', borderBottom: 'var(--rule-thin) solid var(--hairline)' }}>
-            {open ? <SidebarLogo /> : <SidebarLogoIcon />}
-            {open ? <NotificationsBell /> : null}
+            <SidebarLogo />
+            <NotificationsBell />
           </div>
 
           <nav className="mt-4 flex flex-col gap-1" aria-label="Main navigation" data-tour="nav">
@@ -483,7 +474,8 @@ function AppSidebar() {
 }
 
 function ErrorToast() {
-  const { walletError, backendError } = useWorkNet();
+  const { walletError } = useWorkNetWallet();
+  const { backendError } = useWorkNetData();
   const [dismissed, setDismissed] = useState<string | undefined>(undefined);
   const message = walletError ?? backendError;
 
@@ -512,7 +504,7 @@ function ErrorToast() {
 }
 
 function OnboardingGuard() {
-  const { activeProfile } = useWorkNet();
+  const { activeProfile } = useWorkNetData();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -528,7 +520,7 @@ function OnboardingGuard() {
 }
 
 function TourGate() {
-  const { activeProfile } = useWorkNet();
+  const { activeProfile } = useWorkNetData();
   const pathname = usePathname();
   const [show, setShow] = useState(false);
 
@@ -548,7 +540,7 @@ function TourGate() {
 function RoleGuard() {
   const pathname = usePathname();
   const router = useRouter();
-  const { activeProfile, isSyncing } = useWorkNet();
+  const { activeProfile, isSyncing } = useWorkNetData();
 
   useEffect(() => {
     if (isSyncing || !activeProfile) return;
@@ -587,7 +579,7 @@ function RoleGuard() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { clockError } = useWorkNet();
+  const { clockError } = useWorkNetData();
 
   return (
     <div className="app-shell">
@@ -684,7 +676,8 @@ export function StatCard({
 }
 
 export function WalletPill() {
-  const { activeProfile, wallet } = useWorkNet();
+  const { activeProfile } = useWorkNetData();
+  const { wallet } = useWorkNetWallet();
   return (
     <span className="chip hide-mobile">
       <Wallet size={12} />

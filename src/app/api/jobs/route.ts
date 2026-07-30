@@ -78,7 +78,11 @@ export async function GET(request: Request) {
   const category = params.get("category");
   if (category && category !== "all") query = query.eq("category", category.slice(0, 80));
   const search = params.get("q")?.trim();
-  if (search) query = query.ilike("title", `%${search.slice(0, 100)}%`);
+  if (search) {
+    // SEC-06: Escape LIKE wildcards from user input to prevent pattern injection.
+    const escaped = search.slice(0, 100).replace(/[%_\\]/g, "\\$&");
+    query = query.ilike("title", `%${escaped}%`);
+  }
   if (cursor) {
     query = query.or(`created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`);
   }

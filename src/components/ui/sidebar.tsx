@@ -77,7 +77,7 @@ export const SidebarBody = ({
   className,
   style,
   ...props
-}: React.ComponentProps<typeof motion.div> & {
+}: React.ComponentProps<"div"> & {
   brand?: React.ReactNode;
   actions?: React.ReactNode;
 }) => {
@@ -95,35 +95,26 @@ export const DesktopSidebar = ({
   className,
   children,
   style,
-  ...props
-}: React.ComponentProps<typeof motion.div>) => {
-  const { open, setOpen, animate } = useSidebar();
+}: React.ComponentProps<"div">) => {
   return (
-    <>
-      <motion.div
-        className={cn(
-          "h-full px-4 py-4 hidden md:flex md:flex-col w-[300px] shrink-0",
-          className
-        )}
-        style={{
-          background: "var(--bg)",
-          borderRight: "var(--rule-thin) solid var(--hairline)",
-          position: "sticky",
-          top: 0,
-          height: "100vh",
-          zIndex: 40,
-          ...style,
-        }}
-        animate={{
-          width: animate ? (open ? "300px" : "60px") : "300px",
-        }}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        {...props}
-      >
-        {children}
-      </motion.div>
-    </>
+    <div
+      className={cn(
+        "h-full px-4 py-4 hidden md:flex md:flex-col w-[300px] shrink-0",
+        className
+      )}
+      style={{
+        background: "var(--bg)",
+        borderRight: "var(--rule-thin) solid var(--hairline)",
+        position: "sticky",
+        top: 0,
+        height: "100vh",
+        zIndex: 40,
+        width: "300px",
+        ...style,
+      }}
+    >
+      {children}
+    </div>
   );
 };
 
@@ -208,7 +199,6 @@ export const SidebarLink = ({
   className?: string;
   active?: boolean;
 }) => {
-  const { open, animate } = useSidebar();
   return (
     <Link
       href={link.href}
@@ -241,28 +231,19 @@ export const SidebarLink = ({
     >
       {link.icon}
 
-      <motion.span
-        animate={{
-          display: animate ? (open ? "inline-block" : "none") : "inline-block",
-          opacity: animate ? (open ? 1 : 0) : 1,
-        }}
+      <span
         className="whitespace-pre inline-block !p-0 !m-0"
         style={{ color: "inherit" }}
       >
         {link.label}
-      </motion.span>
+      </span>
     </Link>
   );
 };
 
 export const SidebarGroupTitle = ({ children }: { children: React.ReactNode }) => {
-  const { open, animate } = useSidebar();
   return (
-    <motion.div
-      animate={{
-        display: animate ? (open ? "block" : "none") : "block",
-        opacity: animate ? (open ? 0.65 : 0) : 0.65,
-      }}
+    <div
       style={{
         fontFamily: "var(--font-mono)",
         fontSize: "9px",
@@ -273,9 +254,10 @@ export const SidebarGroupTitle = ({ children }: { children: React.ReactNode }) =
         padding: "0 8px",
         marginBottom: "4px",
         marginTop: "8px",
+        opacity: 0.65,
       }}
     >
       {children}
-    </motion.div>
+    </div>
   );
 };

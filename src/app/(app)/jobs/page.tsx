@@ -8,7 +8,7 @@ import { EmptyState, PageHeader, SkeletonPanel, StatCard, WalletPill } from "@/c
 import { JobRow } from "@/components/job-components";
 import { useSavedJobs } from "@/lib/saved-jobs";
 import { formatUsdcUnits } from "@/lib/money";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData } from "@/lib/store";
 import { useStatistics } from "@/lib/use-statistics";
 import type { ActorType, Agent, Job, JobStatus, Profile } from "@/lib/types";
 
@@ -34,7 +34,7 @@ const budgetBuckets = [
 type BudgetBucketId = (typeof budgetBuckets)[number]["id"];
 
 export default function JobsPage() {
-  const { state } = useWorkNet();
+  const { state } = useWorkNetData();
   const statistics = useStatistics(state.activeProfileId);
   const { savedIds, isSaved, toggleSaved, hydrated } = useSavedJobs();
   const loadMoreRef = useRef<HTMLDivElement>(null);

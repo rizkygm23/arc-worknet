@@ -21,7 +21,7 @@ import {
   CheckCheck,
   BookOpen,
 } from "lucide-react";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData, useWorkNetWallet } from "@/lib/store";
 import { useStatistics } from "@/lib/use-statistics";
 import DotField from "./DotField";
 import BorderGlow from "./BorderGlow";
@@ -65,7 +65,7 @@ function useScrollReveal() {
 
 /** Connect-aware primary action. Connects, then routes into the app. */
 function useEnterApp() {
-  const { wallet, connectWallet, isWalletPending } = useWorkNet();
+  const { wallet, connectWallet, isWalletPending } = useWorkNetWallet();
   const router = useRouter();
   const pendingEnter = useRef(false);
 
@@ -135,7 +135,7 @@ function LandingNav() {
 
 function Hero() {
   const { enter, isWalletPending } = useEnterApp();
-  const { state } = useWorkNet();
+  const { state } = useWorkNetData();
   const stats = useStatistics();
   const publicStats = stats?.public;
 

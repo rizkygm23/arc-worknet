@@ -3,6 +3,7 @@ import { verifyMessage } from "viem";
 import { z } from "zod";
 import { ARC_TESTNET_CHAIN_ID } from "@/lib/arc";
 import { getServiceClientOrResponse, parseJson, validationError } from "@/lib/api";
+import { isAdminWallet } from "@/lib/env";
 import {
   createOpaqueToken,
   sessionExpiresAt,
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
   if (!profile) {
     const displayName = `Wallet ${input.address.slice(0, 6)}`;
     const handle = `wallet-${input.address.slice(2, 8).toLowerCase()}`;
-    const initialRole = address.toLowerCase() === "0xe27f8bad54cdfc3f81fb47531e853c9517ce035b".toLowerCase() ? "admin" : "client";
+    const initialRole = isAdminWallet(address) ? "admin" : "client";
     const { data: created, error: createError } = await supabase
       .from(TABLES.profiles)
       .insert({
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
     if (createError) return NextResponse.json({ error: createError.message }, { status: 500 });
     profile = created;
   } else {
-    if (address.toLowerCase() === "0xe27f8bad54cdfc3f81fb47531e853c9517ce035b".toLowerCase() && profile.role !== "admin") {
+    if (isAdminWallet(address) && profile.role !== "admin") {
       const { data: touched } = await supabase
         .from(TABLES.profiles)
         .update({ role: "admin", updated_at: new Date().toISOString() })

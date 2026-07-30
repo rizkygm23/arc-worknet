@@ -4,7 +4,7 @@ import { Activity, BriefcaseBusiness, CircleDollarSign, ShieldCheck, Wallet } fr
 import Link from "next/link";
 import { PageHeader, StatCard } from "@/components/app-shell";
 import { AddFundsButton } from "@/components/add-funds";
-import { useWorkNet, walletBalanceLabel } from "@/lib/store";
+import { useWorkNetData, useWorkNetWallet, walletBalanceLabel } from "@/lib/store";
 import { formatUsdcUnits } from "@/lib/money";
 import { ARC_TESTNET_CHAIN_ID } from "@/lib/arc";
 import { formatWalletAddress } from "@/lib/wallet";
@@ -16,7 +16,8 @@ const operationalChecks = [
 ];
 
 export default function WalletPage() {
-  const { activeProfile, state, wallet, connectWallet, switchWalletToArc } = useWorkNet();
+  const { activeProfile, state } = useWorkNetData();
+  const { wallet, connectWallet, switchWalletToArc } = useWorkNetWallet();
   const escrowed = state.jobs
     .filter((job) => ["funded", "submitted", "revision_requested"].includes(job.status))
     .reduce((sum, job) => sum + job.budgetUsdcUnits, 0);

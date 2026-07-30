@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/app-shell";
 import { profileCompleteness } from "@/lib/completeness";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData, useWorkNetActions } from "@/lib/store";
 import type { Availability, PortfolioItem } from "@/lib/types";
 
 type EditableRole = "client" | "worker" | "agent_owner";
@@ -37,7 +37,7 @@ const AVAILABILITY_OPTIONS: { value: Availability | ""; label: string }[] = [
   { value: "unavailable", label: "Unavailable" },
 ];
 
-function toFormState(profile: NonNullable<ReturnType<typeof useWorkNet>["activeProfile"]>): FormState {
+function toFormState(profile: NonNullable<ReturnType<typeof useWorkNetData>["activeProfile"]>): FormState {
   return {
     displayName: profile.displayName,
     handle: profile.handle,
@@ -54,7 +54,8 @@ function toFormState(profile: NonNullable<ReturnType<typeof useWorkNet>["activeP
 }
 
 export default function ProfilePage() {
-  const { state, activeProfile, updateProfile } = useWorkNet();
+  const { state, activeProfile } = useWorkNetData();
+  const { updateProfile } = useWorkNetActions();
   const [form, setForm] = useState<FormState | null>(() =>
     activeProfile ? toFormState(activeProfile) : null,
   );

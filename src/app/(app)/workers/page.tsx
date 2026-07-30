@@ -9,7 +9,7 @@ import CountUp from "@/components/CountUp";
 import { ProfileReputationBadges } from "@/components/job-components";
 import { availabilityLabel } from "@/lib/availability";
 import { formatUsdcUnits } from "@/lib/money";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData } from "@/lib/store";
 import { useStatistics } from "@/lib/use-statistics";
 import type { Availability } from "@/lib/types";
 
@@ -20,7 +20,7 @@ const roles: RoleFilter[] = ["all", "worker", "agent_owner"];
 const availabilityOptions: Array<"all" | Availability> = ["all", "open", "limited", "unavailable"];
 
 export default function WorkersDirectoryPage() {
-  const { state, isSyncing } = useWorkNet();
+  const { state, isSyncing } = useWorkNetData();
   const statistics = useStatistics(state.activeProfileId);
   const [query, setQuery] = useState("");
   const [role, setRole] = useState<RoleFilter>("all");

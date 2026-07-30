@@ -4,14 +4,21 @@ import { ArrowLeft, Check, CircleDollarSign, Handshake } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { PageHeader, SkeletonPanel } from "@/components/app-shell";
-import { AppKitBridgePanel } from "@/components/AppKitBridgePanel";
+import dynamic from "next/dynamic";
 import { ChainTxLink, EscrowTimeline, JobStatusBadge } from "@/components/job-components";
 import { ARC_USDC_GAS_BUFFER_UNITS, formatUsdcUnits } from "@/lib/money";
-import { nextOnchainAction, useWorkNet } from "@/lib/store";
+import { nextOnchainAction, useWorkNetData, useWorkNetWallet, useWorkNetActions } from "@/lib/store";
+
+const AppKitBridgePanel = dynamic(
+  () => import("@/components/AppKitBridgePanel").then((mod) => mod.AppKitBridgePanel),
+  { ssr: false, loading: () => <div className="panel" style={{ padding: "24px", textAlign: "center" }}>Loading Bridge...</div> }
+);
 
 export default function FundJobPage() {
   const params = useParams<{ id: string }>();
-  const { activeProfile, approveAndFund, createOnchainJob, getJob, setBudget, wallet, isSyncing } = useWorkNet();
+  const { activeProfile, getJob, isSyncing } = useWorkNetData();
+  const { approveAndFund, createOnchainJob, setBudget } = useWorkNetActions();
+  const { wallet } = useWorkNetWallet();
   const job = getJob(params.id);
 
   if (!job) {

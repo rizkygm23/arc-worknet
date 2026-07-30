@@ -7,7 +7,7 @@ import { PageHeader, SkeletonPanel } from "@/components/app-shell";
 import { JobStatusBadge } from "@/components/job-components";
 import { useApplicationOverlay } from "@/lib/application-overlay";
 import { useJobInvitations } from "@/lib/job-invitations";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData } from "@/lib/store";
 import type { ApplicationStatus } from "@/lib/types";
 
 function statusBadge(status: ApplicationStatus) {
@@ -23,7 +23,7 @@ function statusBadge(status: ApplicationStatus) {
 }
 
 export default function ApplicationsPage() {
-  const { state, activeProfile, getJob, getProfile, getAgent, isSyncing } = useWorkNet();
+  const { state, activeProfile, getJob, getProfile, getAgent, isSyncing } = useWorkNetData();
   const { withdraw, getEffectiveStatus, getDeclineReason } = useApplicationOverlay();
   const { invitations, respondInvite, hydrated: invitesHydrated } = useJobInvitations();
 

@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useState } from "react";
 import { PageHeader } from "@/components/app-shell";
 import { AgentReputationBadges, JobStatusBadge } from "@/components/job-components";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData } from "@/lib/store";
 import type { Agent } from "@/lib/types";
 
 export default function AgentsPage() {
-  const { state, getProfile, activeProfile } = useWorkNet();
+  const { state, getProfile, activeProfile } = useWorkNetData();
   const [activeModalAgent, setActiveModalAgent] = useState<Agent | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);

@@ -1,15 +1,20 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { CreditCard } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useWorkNet } from "@/lib/store";
-import { AppKitBridgePanel } from "@/components/AppKitBridgePanel";
+import { useWorkNetWallet } from "@/lib/store";
+
+const AppKitBridgePanel = dynamic(
+  () => import("@/components/AppKitBridgePanel").then((mod) => mod.AppKitBridgePanel),
+  { ssr: false, loading: () => <div className="panel" style={{ padding: "24px", textAlign: "center" }}>Loading Bridge...</div> }
+);
 
 const APP_KIT_KEY = process.env.NEXT_PUBLIC_CIRCLE_APP_KIT_KEY;
 const ONRAMP_URL = process.env.NEXT_PUBLIC_CIRCLE_ONRAMP_URL;
 
 export function AddFundsButton({ compact = false }: { compact?: boolean }) {
-  const { wallet } = useWorkNet();
+  const { wallet } = useWorkNetWallet();
   const [open, setOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
 

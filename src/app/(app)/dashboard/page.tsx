@@ -7,11 +7,11 @@ import { PageHeader, SkeletonPanel, StatCard, WalletPill } from "@/components/ap
 import { ChainTxLink, JobRow } from "@/components/job-components";
 import { formatUsdcUnits } from "@/lib/money";
 import { recommendJobs } from "@/lib/recommendations";
-import { useWorkNet } from "@/lib/store";
+import { useWorkNetData } from "@/lib/store";
 import { useStatistics } from "@/lib/use-statistics";
 
 export default function DashboardPage() {
-  const { state, activeProfile, getProfile, getAgent, isSyncing } = useWorkNet();
+  const { state, activeProfile, getProfile, getAgent, isSyncing } = useWorkNetData();
   const statistics = useStatistics(state.activeProfileId);
   const myJobs = useMemo(() => {
     if (!activeProfile) return [];
