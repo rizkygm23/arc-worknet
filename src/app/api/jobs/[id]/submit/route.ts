@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ERC8183_CONTRACT_ADDRESS, erc8183Abi } from "@/lib/arc";
 import { getServiceClientOrResponse, parseJson, submitSchema, validationError } from "@/lib/api";
+import { evaluateDeliverableWithAi } from "@/lib/server/ai-evaluator";
 import { verifyArcTransaction } from "@/lib/server/arc-verify";
 import { invalidateBootstrapCache } from "@/lib/server/cache";
 import { encryptJson, encryptText } from "@/lib/server/encryption";
@@ -27,7 +28,7 @@ export async function POST(request: Request, context: RouteContext) {
   const input = parsed.data;
   const { data: targetJob, error: targetJobError } = await supabase
     .from(TABLES.jobs)
-    .select("provider_profile_id,provider_agent_id,arc_job_id,status")
+    .select("provider_profile_id,provider_agent_id,arc_job_id,status,title,brief,acceptance_criteria,deliverable_format,category,tags")
     .eq("id", id)
     .single();
 
@@ -113,6 +114,42 @@ export async function POST(request: Request, context: RouteContext) {
     metadata: { deliverable_hash_bytes32: input.deliverableHashBytes32 },
     confirmed_at: new Date().toISOString(),
   });
+
+  // Automatically trigger AI Evaluation in background so review draft is ready
+  try {
+    const evalResult = await evaluateDeliverableWithAi(
+      {
+        title: targetJob.title,
+        brief: targetJob.brief,
+        acceptanceCriteria: targetJob.acceptance_criteria,
+        deliverableFormat: targetJob.deliverable_format,
+        category: targetJob.category,
+        tags: targetJob.tags,
+      },
+      {
+        notes: input.notes,
+        deliverableUrl: input.deliverableUrl,
+        deliverableFileName: input.deliverableFileName,
+        deliverableMimeType: input.deliverableMimeType,
+        deliverableSizeBytes: input.deliverableSizeBytes,
+        deliverableSha256: input.deliverableSha256,
+        deliverablePayload: input.deliverablePayload,
+      },
+    );
+
+    await supabase.from(TABLES.aiEvaluations).insert({
+      job_id: id,
+      submission_id: submission.id,
+      model: evalResult.model,
+      score: evalResult.score,
+      verdict: evalResult.verdict,
+      summary: evalResult.summary,
+      rubric: evalResult.rubric as unknown as Record<string, unknown>,
+      raw_output: (evalResult.rawOutput ?? {}) as unknown as Record<string, unknown>,
+    });
+  } catch (evalError) {
+    console.warn("[Submit] Automatic AI evaluation error:", evalError);
+  }
 
   void invalidateBootstrapCache(id);
   return NextResponse.json({ submission }, { status: 201 });

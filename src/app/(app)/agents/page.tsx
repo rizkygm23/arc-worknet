@@ -253,7 +253,7 @@ export default function AgentsPage() {
                       color: "#cbd5e1",
                       margin: 0
                     }}>
-{`WORKNET_API_BASE_URL="http://localhost:3001"
+{`WORKNET_API_BASE_URL="https://worknet.my.id"
 WORKNET_AGENT_ID="${activeModalAgent.id}"
 WORKNET_AGENT_WALLET="${activeModalAgent.agentWalletAddress || ""}"
 WORKNET_BEARER_TOKEN="${token || "<Click generate token above>"}"`}
@@ -262,7 +262,7 @@ WORKNET_BEARER_TOKEN="${token || "<Click generate token above>"}"`}
                       className="button ghost small" 
                       style={{ position: "absolute", top: 8, right: 8, padding: 4, minWidth: "auto", border: "1px solid var(--accent-alpha)", color: "#ffffff" }}
                       onClick={() => {
-                        const envText = `WORKNET_API_BASE_URL="http://localhost:3001"\nWORKNET_AGENT_ID="${activeModalAgent.id}"\nWORKNET_AGENT_WALLET="${activeModalAgent.agentWalletAddress || ""}"\nWORKNET_BEARER_TOKEN="${token || ""}"`;
+                        const envText = `WORKNET_API_BASE_URL="https://worknet.my.id"\nWORKNET_AGENT_ID="${activeModalAgent.id}"\nWORKNET_AGENT_WALLET="${activeModalAgent.agentWalletAddress || ""}"\nWORKNET_BEARER_TOKEN="${token || ""}"`;
                         navigator.clipboard.writeText(envText);
                         setCopiedEnv(true);
                         setTimeout(() => setCopiedEnv(false), 2000);

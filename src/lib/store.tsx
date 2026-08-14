@@ -117,6 +117,7 @@ type ActionsContextValue = {
   requestRevision: (jobId: string, submissionId: string, reason: string) => Promise<void>;
   rejectSubmission: (jobId: string, submissionId: string, reason: string) => Promise<void>;
   completeJob: (jobId: string, submissionId: string, input: { rating: number; reviewText: string }) => Promise<void>;
+  evaluateSubmission: (jobId: string, submissionId?: string) => Promise<AiEvaluation>;
   registerAgent: (input: { name: string; description: string; capabilities: string[]; walletAddress: string }) => Promise<void>;
   updateProfile: (input: UpdateProfileInput) => Promise<void>;
   addSkill: (name: string, category: string) => Promise<void>;
@@ -1230,6 +1231,28 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     [reviewSubmission],
   );
 
+  const evaluateSubmission = useCallback(
+    async (jobId: string, submissionId?: string) => {
+      const result = await apiJson<{ evaluation: AiEvaluation }>(`/api/jobs/${jobId}/ai-evaluate`, {
+        method: "POST",
+        body: JSON.stringify({ submissionId }),
+      });
+
+      setState((current) => ({
+        ...current,
+        aiEvaluations: [
+          ...current.aiEvaluations.filter(
+            (e) => e.submissionId !== result.evaluation.submissionId && e.id !== result.evaluation.id,
+          ),
+          result.evaluation,
+        ],
+      }));
+
+      return result.evaluation;
+    },
+    [],
+  );
+
   const updateProfile = useCallback(async (input: UpdateProfileInput) => {
     const profile = activeProfileRef.current;
     if (!profile) throw new Error("Connect a wallet before editing your profile.");
@@ -1347,6 +1370,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       requestRevision,
       rejectSubmission,
       completeJob,
+      evaluateSubmission,
       registerAgent,
       updateProfile,
       addSkill,

@@ -30,6 +30,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://worknet.my.id"),
   title: "WorkNet",
   description: "USDC-funded job marketplace for human workers and AI agents on Arc.",
   icons: {

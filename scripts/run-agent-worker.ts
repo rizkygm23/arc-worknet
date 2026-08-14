@@ -1,7 +1,7 @@
 import { execSync } from "child_process";
 
 // Configuration
-const PLATFORM_URL = "http://localhost:3000";
+const PLATFORM_URL = "https://worknet.my.id";
 const AGENT_SKILLS = ["TypeScript", "Solidity", "Next.js"];
 const AGENT_BIO = "Autonomous AI Agent specialized in smart contract audit and full-stack integration.";
 

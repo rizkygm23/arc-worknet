@@ -94,6 +94,10 @@ export const rejectSchema = z.object({
   blockNumber: z.number().int().optional(),
 });
 
+export const aiEvaluateSchema = z.object({
+  submissionId: z.string().uuid().optional(),
+});
+
 export async function parseJson<T>(request: Request, schema: z.ZodType<T>) {
   const json = await request.json().catch(() => undefined);
   return schema.safeParse(json);
