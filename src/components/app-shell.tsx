@@ -385,6 +385,7 @@ function SidebarLogo() {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SidebarLogoIcon() {
   return (
     <Link href="/jobs" className="flex items-center gap-2 py-1 no-underline">

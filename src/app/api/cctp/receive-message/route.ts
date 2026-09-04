@@ -22,10 +22,11 @@ import {
   cctpMessageTransmitterAbi,
   fetchCircleAttestation,
 } from "@/lib/cctp-bridge";
+import { TABLES } from "@/lib/supabase/tables";
 
 const receiveMessageSchema = z.object({
-  burnTxHash: z.string().min(10),
-  recipientAddress: z.string().min(10),
+  burnTxHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Must be a valid 32-byte transaction hash"),
+  recipientAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Must be a valid EVM address"),
   amountUnits: z.coerce.number().positive(),
   sourceChainId: z.coerce.number().positive(),
 });
@@ -72,6 +73,60 @@ export async function POST(request: Request) {
     const { burnTxHash, recipientAddress, amountUnits, sourceChainId } = parsed.data;
     const recipient = getAddress(recipientAddress);
 
+    // SEC-01: Verify source network is recognized
+    const sourceNetwork = CCTP_TESTNET_NETWORKS.find((n) => n.chainId === sourceChainId);
+    if (!sourceNetwork) {
+      return NextResponse.json(
+        { error: `Unsupported source chain ID ${sourceChainId}` },
+        { status: 400 },
+      );
+    }
+
+    // SEC-01: Replay attack prevention — check if this burnTxHash was already relayed
+    const { data: existingTx } = await supabase
+      .from(TABLES.transactions)
+      .select("id, tx_hash, status")
+      .eq("user_op_hash", burnTxHash.toLowerCase())
+      .maybeSingle();
+
+    if (existingTx) {
+      return NextResponse.json(
+        { error: "This deposit transaction has already been processed or is pending settlement." },
+        { status: 409 },
+      );
+    }
+
+    // SEC-01: Validate source transaction exists and was initiated by the authenticated user
+    const sourcePublicClient = createPublicClient({
+      transport: http(sourceNetwork.rpcUrl),
+    });
+
+    let sourceReceipt;
+    try {
+      sourceReceipt = await sourcePublicClient.getTransactionReceipt({
+        hash: burnTxHash as Hash,
+      });
+    } catch {
+      return NextResponse.json(
+        { error: "Deposit transaction not found on the source network. Confirm the transaction succeeded first." },
+        { status: 400 },
+      );
+    }
+
+    if (!sourceReceipt || sourceReceipt.status !== "success") {
+      return NextResponse.json(
+        { error: "Deposit transaction failed or is unconfirmed on the source network." },
+        { status: 400 },
+      );
+    }
+
+    if (sourceReceipt.from.toLowerCase() !== session.walletAddress.toLowerCase()) {
+      return NextResponse.json(
+        { error: "Transaction sender does not match your authenticated wallet session." },
+        { status: 403 },
+      );
+    }
+
     console.log(`[Bridge Relayer] Processing CCTP transfer for ${amountUnits / 1_000_000} USDC from chain ${sourceChainId} (Tx: ${burnTxHash}) to ${recipient}`);
 
     const relayerAccount = getRelayerAccount();
@@ -85,37 +140,26 @@ export async function POST(request: Request) {
     let methodUsed = "CCTP_RECEIVE_MESSAGE";
 
     // Step A: Attempt CCTP receiveMessage on Arc's MessageTransmitterV2 contract if burn tx is indexed
-    const sourceNetwork = CCTP_TESTNET_NETWORKS.find((n) => n.chainId === sourceChainId);
-    if (sourceNetwork) {
+    if (sourceReceipt.logs && sourceReceipt.logs.length > 0) {
       try {
-        const sourcePublicClient = createPublicClient({
-          transport: http(sourceNetwork.rpcUrl),
-        });
+        const messageLog = sourceReceipt.logs.find(
+          (log) => log.topics[0]?.toLowerCase() === MESSAGE_SENT_EVENT_TOPIC.toLowerCase(),
+        );
 
-        const receipt = await sourcePublicClient.getTransactionReceipt({
-          hash: burnTxHash as Hash,
-        });
+        if (messageLog && messageLog.data) {
+          const messageBytes = messageLog.data as Hex;
+          const messageHash = keccak256(messageBytes);
+          const attestationResult = await fetchCircleAttestation(messageHash);
 
-        if (receipt && receipt.logs) {
-          const messageLog = receipt.logs.find(
-            (log) => log.topics[0]?.toLowerCase() === MESSAGE_SENT_EVENT_TOPIC.toLowerCase(),
-          );
-
-          if (messageLog && messageLog.data) {
-            const messageBytes = messageLog.data as Hex;
-            const messageHash = keccak256(messageBytes);
-            const attestationResult = await fetchCircleAttestation(messageHash);
-
-            if (attestationResult.status === "complete" && attestationResult.attestation) {
-              console.log("[Bridge Relayer] Circle attestation acquired! Executing receiveMessage on Arc MessageTransmitterV2...");
-              mintTxHash = await arcWalletClient.writeContract({
-                chain: arcTestnet,
-                address: ARC_MESSAGE_TRANSMITTER_ADDRESS,
-                abi: cctpMessageTransmitterAbi,
-                functionName: "receiveMessage",
-                args: [messageBytes, attestationResult.attestation as Hex],
-              });
-            }
+          if (attestationResult.status === "complete" && attestationResult.attestation) {
+            console.log("[Bridge Relayer] Circle attestation acquired! Executing receiveMessage on Arc MessageTransmitterV2...");
+            mintTxHash = await arcWalletClient.writeContract({
+              chain: arcTestnet,
+              address: ARC_MESSAGE_TRANSMITTER_ADDRESS,
+              abi: cctpMessageTransmitterAbi,
+              functionName: "receiveMessage",
+              args: [messageBytes, attestationResult.attestation as Hex],
+            });
           }
         }
       } catch (cctpErr) {
@@ -150,6 +194,24 @@ export async function POST(request: Request) {
     }
 
     console.log(`[Bridge Relayer] Arc Testnet mint/transfer tx finished: ${mintTxHash} -> ${recipient} via ${methodUsed}`);
+
+    // SEC-01: Record transaction in Supabase to permanently prevent replay attacks
+    await supabase.from(TABLES.transactions).insert({
+      profile_id: session.profileId,
+      chain_id: sourceChainId,
+      blockchain: sourceNetwork.name,
+      tx_hash: mintTxHash,
+      user_op_hash: burnTxHash.toLowerCase(),
+      status: "confirmed",
+      method: methodUsed,
+      metadata: {
+        recipientAddress: recipient,
+        amountUnits,
+        sourceChainId,
+        sourceTxHash: burnTxHash,
+        settledAt: new Date().toISOString(),
+      },
+    });
 
     return NextResponse.json({
       success: true,

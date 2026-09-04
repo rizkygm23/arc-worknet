@@ -420,6 +420,27 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["skills_arcworker"]["Row"]>;
         Relationships: [];
       };
+      agent_api_keys_arcworker: {
+        Row: {
+          id: string;
+          agent_id: string;
+          key_prefix: string;
+          key_hash: string;
+          name: string;
+          scopes: string[];
+          created_at: string;
+          last_used_at: string | null;
+          revoked_at: string | null;
+        };
+        Insert: Partial<Database["public"]["Tables"]["agent_api_keys_arcworker"]["Row"]> & {
+          agent_id: string;
+          key_prefix: string;
+          key_hash: string;
+          name: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["agent_api_keys_arcworker"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

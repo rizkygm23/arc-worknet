@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WorkNet Daily Feature Roadmap (1 Feature / Day)",
+  "version": "1.0.0",
+  "lastUpdated": "2026-08-14",
+  "summary": {
+    "totalFeatures": 14,
+    "completed": 1,
+    "inProgress": 0,
+    "pending": 13,
+    "progressPercentage": 7.14
+  },
+  "features": [
+    {
+      "day": 1,
+      "id": "ai-judge-evaluator",
+      "name": "Automated AI Deliverable Evaluator (AI Judge) 🤖",
+      "category": "AI & Automation",
+      "priority": "P0",
+      "status": "completed",
+      "completedAt": "2026-08-14",
+      "description": "Evaluasi otomatis hasil kerja (deliverable) terhadap acceptance criteria job menggunakan AI scoring engine sebelum rilis dana escrow.",
+      "deliverables": [
+        "Server AI evaluation engine (LLM API support + resilient heuristic fallback)",
+        "API endpoint POST /api/jobs/[id]/ai-evaluate",
+        "Trigger evaluasi otomatis pada POST /api/jobs/[id]/submit",
+        "Action evaluateSubmission di global store React",
+        "Panel UI Scorecard interaktif, Criteria Checklist, dan tombol Re-evaluate di halaman review"
+      ],
+      "filesTouched": [
+        "src/lib/server/ai-evaluator.ts",
+        "src/app/api/jobs/[id]/ai-evaluate/route.ts",
+        "src/app/api/jobs/[id]/submit/route.ts",
+        "src/lib/api.ts",
+        "src/lib/store.tsx",
+        "src/app/(app)/jobs/[id]/review/page.tsx"
+      ]
+    },
+    {
+      "day": 2,
+      "id": "in-job-realtime-chat",
+      "name": "In-Job Realtime Chat & File Attachment 💬",
+      "category": "Collaboration",
+      "priority": "P0",
+      "status": "pending",
+      "completedAt": null,
+      "description": "Room komunikasi langsung antara Client dan Worker di halaman detail job berbasis Supabase Realtime channel.",
+      "deliverables": [
+        "Komponen chat room real-time per job ID",
+        "Upload attachment dokumen/gambar ke Supabase storage",
+        "Badge notifikasi pesan belum dibaca (unread count)",
+        "Dukungan automated status message saat ada event escrow"
+      ],
+      "filesTouched": [
+        "src/components/job-chat.tsx",
+        "src/app/api/jobs/[id]/messages/route.ts",
+        "src/app/(app)/jobs/[id]/page.tsx"
+      ]
+    },
+    {
+      "day": 3,
+      "id": "direct-job-invitation",
+      "name": "Direct Hire / Private Job Invitation ✉️",
+      "category": "Marketplace",
+      "priority": "P1",
+      "status": "pending",
+      "completedAt": null,
+      "description": "Client dapat merekrut langsung worker atau agent spesifik tanpa harus memposting job ke publik.",
+      "deliverables": [
+        "Tombol 'Invite to Job' di modal profil worker dan agent",
+        "Tab 'Direct Invitations' di dashboard worker/agent dengan opsi Accept / Decline",
+        "Integrasi API invitations dengan notifikasi instan"
+      ],
+      "filesTouched": [
+        "src/app/api/invitations/route.ts",
+        "src/app/(app)/dashboard/page.tsx",
+        "src/app/(app)/workers/[id]/page.tsx",
+        "src/app/(app)/agents/[id]/page.tsx"
+      ]
+    },
+    {
+      "day": 4,
+      "id": "agent-api-keys-sdk",
+      "name": "Agent API Keys & Autonomous Bot SDK 🔑",
+      "category": "Agentic Economy",
+      "priority": "P0",
+      "status": "pending",
+      "completedAt": null,
+      "description": "Sistem autentikasi API Key khusus untuk autonomous agent agar dapat beroperasi di server/cloud tanpa pop-up browser Privy.",
+      "deliverables": [
+        "Manajemen pembuatan API Key (wk_agent_...) di dashboard agent",
+        "Middleware otentikasi Bearer token untuk bot agent",
+        "Template script agent runner (Python / TypeScript CLI) di folder scripts/"
+      ],
+      "filesTouched": [
+        "src/app/api/agents/keys/route.ts",
+        "src/lib/server/agent-auth.ts",
+        "scripts/run-agent-worker.ts",
+        "src/app/(app)/settings/agents/page.tsx"
+      ]
+    },
+    {
+      "day": 5,
+      "id": "onchain-invoice-generator",
+      "name": "Onchain Invoice & PDF Tax Receipt Generator 📄",
+      "category": "Finance & Settlement",
+      "priority": "P1",
+      "status": "pending",
+      "completedAt": null,
+      "description": "Pembuatan invoice & receipt resmi untuk setiap transaksi escrow completed dengan verifikasi Arcscan hash.",
+      "deliverables": [
+        "Tombol 'Download Invoice' pada job berstatus completed",
+        "Template invoice profesional (Client, Worker, USDC amount, Fee, Arc TX, Deliverable SHA256)",
+        "Fitur export PDF / Print via browser"
+      ],
+      "filesTouched": [
+        "src/components/invoice-modal.tsx",
+        "src/lib/invoice-generator.ts",
+        "src/app/(app)/jobs/[id]/page.tsx"
+      ]
+    },
+    {
+      "day": 6,
+      "id": "advanced-filters-search",
+      "name": "Advanced Filter, Tag Search & Budget Range 🔍",
+      "category": "Marketplace",
+      "priority": "P1",
+      "status": "pending",
+      "completedAt": null,
+      "description": "Filter pencarian mutakhir untuk menemukan job dan worker dengan cepat dan presisi.",
+      "deliverables": [
+        "Filter interaktif: Tipe Aktor (Human/Agent), Range Budget USDC, Kategori, Deadline",
+        "Search bar instan dengan query debouncing",
+        "Sorting: Highest Budget, Newest, Expiring Soon"
+      ],
+      "filesTouched": [
+        "src/app/(app)/jobs/page.tsx",
+        "src/app/(app)/workers/page.tsx",
+        "src/app/api/jobs/route.ts"
+      ]
+    },
+    {
+      "day": 7,
+      "id": "notification-center-alerts",
+      "name": "Notification Center & Webhook Alerts 🔔",
+      "category": "Engagement",
+      "priority": "P1",
+      "status": "pending",
+      "completedAt": null,
+      "description": "Pusat notifikasi interaktif dan konfigurasi webhook bagi Agent owner saat agent mereka menerima pekerjaan.",
+      "deliverables": [
+        "Dropdown notification center di header dengan penanda sudah dibaca",
+        "Notifikasi event: lamaran masuk, escrow didanai, deliverable disubmit, pembayaran cair",
+        "Webhook endpoint trigger untuk event agent"
+      ],
+      "filesTouched": [
+        "src/components/notification-dropdown.tsx",
+        "src/app/api/notifications/route.ts",
+        "src/components/app-shell.tsx"
+      ]
+    },
+    {
+      "day": 8,
+      "id": "indexer-auto-sync",
+      "name": "Onchain Event Indexer Auto-Sync ⛓️",
+      "category": "Onchain Escrow",
+      "priority": "P0",
+      "status": "pending",
+      "completedAt": null,
+      "description": "Background listener yang otomatis menyinkronkan event smart contract Arc ke database Supabase.",
+      "deliverables": [
+        "Event listener untuk Funded, Submitted, Completed, Cancelled, Disputed",
+        "Auto-update kolom status jobs_arcworker dan onchain_events_arcworker",
+        "Health check status indexer di dashboard admin"
+      ],
+      "filesTouched": [
+        "src/app/api/indexer/sync/route.ts",
+        "src/lib/server/arc-indexer.ts"
+      ]
+    },
+    {
+      "day": 9,
+      "id": "dispute-mediation-workspace",
+      "name": "Dispute Resolution & Mediation Workspace ⚖️",
+      "category": "Onchain Escrow",
+      "priority": "P1",
+      "status": "pending",
+      "completedAt": null,
+      "description": "Antarmuka mediasi untuk menangani pekerjaan yang masuk ke status disputed onchain.",
+      "deliverables": [
+        "Halaman workspace khusus /jobs/[id]/dispute dengan timeline bukti",
+        "Interface eksekusi smart contract resolveDispute(...) untuk evaluator/admin",
+        "Kalkulator split dana refund vs payout"
+      ],
+      "filesTouched": [
+        "src/app/(app)/jobs/[id]/dispute/page.tsx",
+        "src/app/api/jobs/[id]/dispute/route.ts"
+      ]
+    },
+    {
+      "day": 10,
+      "id": "milestone-subtasks-tracker",
+      "name": "Milestones & Sub-task Progress Tracker 📌",
+      "category": "Collaboration",
+      "priority": "P2",
+      "status": "pending",
+      "completedAt": null,
+      "description": "Membagi pekerjaan besar menjadi beberapa checklist sub-tugas (*milestones*).",
+      "deliverables": [
+        "Input checklist sub-task saat membuat job",
+        "Worker progress check-in sebelum final deliverable",
+        "Visual progress bar di kartu detail job"
+      ],
+      "filesTouched": [
+        "src/app/(app)/jobs/new/page.tsx",
+        "src/app/(app)/jobs/[id]/page.tsx",
+        "src/lib/types.ts"
+      ]
+    },
+    {
+      "day": 11,
+      "id": "faucet-gas-station-helper",
+      "name": "Arc Testnet Faucet & Gas Helper ⛽",
+      "category": "Web3 UX",
+      "priority": "P2",
+      "status": "pending",
+      "completedAt": null,
+      "description": "Widget onboarding untuk mempermudah user/developer baru mengklaim testnet USDC dan Arc Gas.",
+      "deliverables": [
+        "Tombol 'Get Free Testnet USDC / Arc Gas' di modal Add Funds",
+        "Petunjuk CCTP bridge dan direct link Arc Faucet",
+        "Panduan saldo gas otomatis di halaman wallet"
+      ],
+      "filesTouched": [
+        "src/components/add-funds.tsx",
+        "src/components/AppKitBridgePanel.tsx",
+        "src/app/(app)/wallet/page.tsx"
+      ]
+    },
+    {
+      "day": 12,
+      "id": "leaderboard-reputation-badges",
+      "name": "Public Agent & Worker Leaderboard / Badges 🏆",
+      "category": "Gamification & Reputation",
+      "priority": "P2",
+      "status": "pending",
+      "completedAt": null,
+      "description": "Leaderboard publik untuk menampilkan pekerja dan autonomous agent dengan reputasi dan penghasilan tertinggi.",
+      "deliverables": [
+        "Halaman /leaderboard dengan ranking skor ERC-8004 dan USDC earned",
+        "Filter All Time / Monthly / Highest Rated",
+        "Sistem badge: Verified Agent, Top Earner, 100% Success Rate"
+      ],
+      "filesTouched": [
+        "src/app/(app)/leaderboard/page.tsx",
+        "src/components/reputation-badge.tsx"
+      ]
+    },
+    {
+      "day": 13,
+      "id": "financial-analytics-dashboard",
+      "name": "Financial Analytics & Spending Dashboard 📊",
+      "category": "Analytics",
+      "priority": "P2",
+      "status": "pending",
+      "completedAt": null,
+      "description": "Visualisasi grafik performa finansial dan riwayat transaksi USDC untuk client dan worker.",
+      "deliverables": [
+        "Grafik pengeluaran/pemasukan USDC bulanan",
+        "Statistik efisiensi waktu turnaround job",
+        "Metrik ROI mempekerjakan AI Agent vs Human Worker"
+      ],
+      "filesTouched": [
+        "src/app/(app)/dashboard/page.tsx",
+        "src/components/analytics-charts.tsx"
+      ]
+    },
+    {
+      "day": 14,
+      "id": "e2e-testing-polish",
+      "name": "Automated E2E Testing Suite & Polish 🚀",
+      "category": "Quality Assurance",
+      "priority": "P1",
+      "status": "pending",
+      "completedAt": null,
+      "description": "Suite pengujian end-to-end Cypress menyeluruh dari post job hingga payout selesai + optimasi UX.",
+      "deliverables": [
+        "Cypress test scenarios untuk full onchain escrow flow",
+        "Audit loading skeleton, error boundaries, dan responsive layout",
+        "Optimasi caching dan query database"
+      ],
+      "filesTouched": [
+        "cypress/e2e/job-lifecycle.cy.ts",
+        "cypress/e2e/ai-evaluation.cy.ts"
+      ]
+    }
+  ]
+}

@@ -53,9 +53,25 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sourceTxHash, setSourceTxHash] = useState<string | null>(null);
   const [destinationTxHash, setDestinationTxHash] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [settleDurationMs, setSettleDurationMs] = useState<number | null>(null);
 
   const onrampUrl = process.env.NEXT_PUBLIC_CIRCLE_ONRAMP_URL;
   const isBusy = ["switching", "submitting", "settling"].includes(status);
+  const isTimerRunning = status === "settling";
+
+  // Live timer runs only AFTER user signs in wallet (during onchain settlement)
+  useEffect(() => {
+    let timer: NodeJS.Timeout | undefined;
+    if (isTimerRunning) {
+      timer = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isTimerRunning]);
 
   const amountUnits = useMemo(() => {
     try {
@@ -186,6 +202,8 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
       setSourceTxHash(transferTxHash);
 
       setStatus("settling");
+      const settleStartTime = performance.now();
+
       const result = await apiJson<{ success?: boolean; mintTxHash?: string }>("/api/cctp/receive-message", {
         method: "POST",
         body: JSON.stringify({
@@ -196,11 +214,14 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         }),
       });
 
+      const settleDuration = Math.round(performance.now() - settleStartTime);
+
       if (!result?.success || !result.mintTxHash) {
         throw new Error("Source transfer succeeded, but Arc settlement did not return a transaction hash.");
       }
 
       setDestinationTxHash(result.mintTxHash);
+      setSettleDurationMs(settleDuration);
       setStatus("completed");
       await refreshState?.();
       onSuccess?.();
@@ -268,7 +289,15 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
           <span className="bridge-result-icon"><Check size={25} /></span>
           <span className="bridge-kicker">Settlement confirmed</span>
           <h3>{formattedAmount} USDC arrived on Arc</h3>
-          <p>Destination transaction returned by WorkNet relayer.</p>
+          <p>
+            Settled in{" "}
+            {settleDurationMs !== null
+              ? settleDurationMs < 1000
+                ? `${settleDurationMs}ms`
+                : `${(settleDurationMs / 1000).toFixed(1)}s`
+              : "under 1s"}{" "}
+            via WorkNet Arc relayer.
+          </p>
           <div className="bridge-tx-links">
             {sourceTxHash ? (
               <a href={`${selectedNetwork.explorerUrl}/tx/${sourceTxHash}`} target="_blank" rel="noopener noreferrer">
@@ -287,11 +316,19 @@ export function AppKitBridgePanel({ requiredAmountUnits, onClose, onSuccess }: A
         <div className="bridge-progress" aria-live="polite" aria-busy="true">
           <span className="bridge-kicker">Transfer in progress</span>
           <h3>Keep this window open</h3>
+
+          <div className="flex items-center justify-between p-3 my-2 text-xs font-mono rounded-lg border bg-neutral-50/50 dark:bg-neutral-900/40">
+            <span className="text-neutral-500">
+              {status === "settling" ? `Settling: ${elapsedSeconds}s` : "Waiting for wallet signature..."}
+            </span>
+            <span className="font-semibold text-blue-600 dark:text-blue-400">Estimated ~30-60s</span>
+          </div>
+
           <div className="bridge-steps">
             {[
               ["switching", "Connect and switch source network"],
               ["submitting", "Confirm source USDC transfer"],
-              ["settling", "Settle USDC on Arc"],
+              ["settling", "Settle USDC on Arc (CCTP Attestation)"],
             ].map(([step, label], index) => {
               const order = ["switching", "submitting", "settling"];
               const activeIndex = order.indexOf(status);

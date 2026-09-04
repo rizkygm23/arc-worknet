@@ -17,4 +17,5 @@ export const TABLES = {
   jobInvitations: "job_invitations_arcworker",
   savedJobs: "saved_jobs_arcworker",
   skills: "skills_arcworker",
+  agentApiKeys: "agent_api_keys_arcworker",
 } as const;

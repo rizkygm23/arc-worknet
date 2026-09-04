@@ -14,6 +14,21 @@ const ALLOWED_CONTRACT_ADDRESSES = new Set(
     .map((a) => a.toLowerCase()),
 );
 
+// SEC-06: Strict function whitelist per contract to prevent arbitrary function execution.
+const ALLOWED_FUNCTIONS_BY_CONTRACT: Record<string, Set<string>> = {
+  [ARC_USDC_ADDRESS.toLowerCase()]: new Set([
+    "approve(address,uint256)",
+    "transfer(address,uint256)",
+  ]),
+  [ERC8183_CONTRACT_ADDRESS.toLowerCase()]: new Set([
+    "submit(uint256,bytes32,bytes)",
+    "complete(uint256,bytes32,bytes)",
+    "requestRevision(uint256,bytes32,bytes)",
+    "rejectWithPenalty(uint256,bytes32)",
+    "setBudget(uint256,uint256)",
+  ]),
+};
+
 // Strict pattern: functionName(type1,type2,...) — no spaces, no nested parens.
 const ABI_SIGNATURE_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*\([a-zA-Z0-9,[\] ]*\)$/;
 
@@ -37,9 +52,20 @@ export async function POST(request: Request) {
   const { agentId, contractAddress, abiFunctionSignature, abiParameters } = parsed.data;
 
   // SEC-05: Reject calls to contracts outside the trusted whitelist.
-  if (!ALLOWED_CONTRACT_ADDRESSES.has(contractAddress.toLowerCase())) {
+  const normalizedContract = contractAddress.toLowerCase();
+  if (!ALLOWED_CONTRACT_ADDRESSES.has(normalizedContract)) {
     return NextResponse.json(
       { error: "Contract address is not in the allowed whitelist." },
+      { status: 403 },
+    );
+  }
+
+  // SEC-06: Reject function signatures outside contract's strict whitelist.
+  const allowedFunctions = ALLOWED_FUNCTIONS_BY_CONTRACT[normalizedContract];
+  const normalizedSignature = abiFunctionSignature.replace(/\s+/g, "");
+  if (!allowedFunctions || !allowedFunctions.has(normalizedSignature)) {
+    return NextResponse.json(
+      { error: `Function signature '${abiFunctionSignature}' is not authorized for execution on this contract.` },
       { status: 403 },
     );
   }
