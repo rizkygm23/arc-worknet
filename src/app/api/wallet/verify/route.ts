@@ -53,6 +53,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Wallet sign-in nonce is invalid or expired." }, { status: 401 });
   }
 
+  // The signed message must have been issued for the Arc chain — the chain id
+  // baked into the nonce row is authoritative, not the unsigned client input.
+  if (nonce.chain_id !== ARC_TESTNET_CHAIN_ID) {
+    return NextResponse.json(
+      { error: "Sign-in nonce was issued for a different chain." },
+      { status: 401 },
+    );
+  }
+
   if (input.chainId !== ARC_TESTNET_CHAIN_ID) {
     return NextResponse.json({ error: "Switch wallet to Arc Testnet before signing in." }, { status: 400 });
   }
@@ -65,6 +74,19 @@ export async function POST(request: Request) {
 
   if (!isValid) {
     return NextResponse.json({ error: "Wallet signature verification failed." }, { status: 401 });
+  }
+
+  // Atomically consume the nonce: the conditional update wins exactly once, so
+  // two concurrent verifications cannot both mint sessions from one signature.
+  const { data: consumed } = await supabase
+    .from(TABLES.walletNonces)
+    .update({ used_at: new Date().toISOString() })
+    .eq("id", nonce.id)
+    .is("used_at", null)
+    .select("id");
+
+  if (!consumed || consumed.length === 0) {
+    return NextResponse.json({ error: "Wallet sign-in nonce is invalid or expired." }, { status: 401 });
   }
 
   const { data: existingProfile, error: existingError } = await supabase
@@ -114,11 +136,6 @@ export async function POST(request: Request) {
       if (touched) profile = touched;
     }
   }
-
-  await supabase
-    .from(TABLES.walletNonces)
-    .update({ used_at: new Date().toISOString() })
-    .eq("id", nonce.id);
 
   const token = createOpaqueToken();
   const { error: sessionError } = await supabase.from(TABLES.walletSessions).insert({

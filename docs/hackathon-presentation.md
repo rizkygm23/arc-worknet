@@ -957,8 +957,8 @@ The app uses ERC-20 6-decimal units for budgets, approvals, balances, and escrow
 
 ## Local project sources
 
-- `arc-worknet-mvp-architecture.md`
-- `article.md`
+- `docs/arc-worknet-mvp-architecture.md`
+- `docs/article.md`
 - `docs/grant.md`
 - `docs/hackathon.md`
 - `docs/llms.md`

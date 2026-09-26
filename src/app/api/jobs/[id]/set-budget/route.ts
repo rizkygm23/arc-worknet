@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ERC8183_CONTRACT_ADDRESS, erc8183Abi } from "@/lib/arc";
 import { getServiceClientOrResponse, parseJson, updateTxSchema, validationError } from "@/lib/api";
-import { verifyArcTransaction } from "@/lib/server/arc-verify";
+import { verifyArcTransaction, arcJobIdFromArgs } from "@/lib/server/arc-verify";
 import { invalidateBootstrapCache } from "@/lib/server/cache";
 import { walletRateLimit } from "@/lib/server/rate-limit";
 import { requireWalletSession } from "@/lib/server/wallet-session";
@@ -25,7 +25,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const { data: targetJob, error: targetJobError } = await supabase
     .from(TABLES.jobs)
-    .select("client_profile_id,status")
+    .select("client_profile_id,status,arc_job_id,budget_usdc_units")
     .eq("id", id)
     .single();
 
@@ -39,13 +39,31 @@ export async function POST(request: Request, context: RouteContext) {
 
   let blockNumber = parsed.data.blockNumber;
   try {
-    const receipt = await verifyArcTransaction({
+    const { receipt, args } = await verifyArcTransaction({
       abi: erc8183Abi,
       expectedFrom: session.walletAddress,
       expectedFunctionName: "setBudget",
       expectedTo: ERC8183_CONTRACT_ADDRESS,
       txHash: parsed.data.txHash,
     });
+
+    // Bind the tx to this job: escrow jobId arg must match, and the budget
+    // set onchain must equal the budget recorded in the database.
+    const txJobId = arcJobIdFromArgs(args, 0);
+    const txAmount = typeof args[1] === "bigint" ? args[1] : undefined;
+    if (!targetJob.arc_job_id || txJobId !== targetJob.arc_job_id) {
+      return NextResponse.json(
+        { error: "Transaction escrow jobId does not match this job." },
+        { status: 400 },
+      );
+    }
+    if (txAmount === undefined || txAmount !== BigInt(targetJob.budget_usdc_units ?? 0)) {
+      return NextResponse.json(
+        { error: "Transaction budget does not match the job budget." },
+        { status: 400 },
+      );
+    }
+
     blockNumber = Number(receipt.blockNumber);
   } catch (error) {
     return NextResponse.json(
@@ -65,7 +83,15 @@ export async function POST(request: Request, context: RouteContext) {
     .select("*")
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    if (error.code === "23505") {
+      return NextResponse.json(
+        { error: "This onchain transaction was already used for another job." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   await supabase.from(TABLES.transactions).insert({
     job_id: id,

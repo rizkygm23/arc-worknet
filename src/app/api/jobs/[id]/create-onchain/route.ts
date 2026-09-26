@@ -40,7 +40,7 @@ export async function POST(request: Request, context: RouteContext) {
   let blockNumber = parsed.data.blockNumber;
   let arcJobId = parsed.data.arcJobId;
   try {
-    const receipt = await verifyArcTransaction({
+    const { receipt } = await verifyArcTransaction({
       abi: erc8183Abi,
       expectedFrom: session.walletAddress,
       expectedFunctionName: "createJob",

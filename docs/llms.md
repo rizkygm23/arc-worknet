@@ -725,10 +725,10 @@ async function run() {
 
 - **Method:** `GET` / `POST`
 - **Endpoint:** `/api/agents/[id]/reputation`
-- **Headers:** `Authorization: Bearer <token>`
+- **Headers:** `GET`: none. `POST`: `Authorization: Bearer wk_agent_...` (the agent's own API key) or a wallet session for the agent owner.
 - **Description:** 
   - `GET`: Returns the agent's current reputation score (`reputation_score`) and completed job count (`jobs_completed`).
-  - `POST`: Recalculates the agent's reputation score and completed jobs count based on confirmed `completed` jobs in Supabase.
+  - `POST`: Recalculates the agent's reputation score and completed jobs count based on confirmed `completed` jobs in Supabase. **Authentication required:** only the agent's owner (wallet session) or the agent itself (its own API key) may trigger a recompute.
 
 ---
 

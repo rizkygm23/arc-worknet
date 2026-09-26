@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { getServiceClientOrResponse } from "@/lib/api";
+import {
+  dbServerError,
+  invalidPathParam,
+  uuidParamSchema,
+  getServiceClientOrResponse,
+} from "@/lib/api";
 import { getWalletSession } from "@/lib/server/wallet-session";
 import {
   mapAgent,
@@ -23,7 +28,9 @@ function noStore(body: unknown, status = 200) {
 }
 
 export async function GET(_request: Request, context: RouteContext) {
-  const { id } = await context.params;
+  const parsedId = uuidParamSchema.safeParse((await context.params).id);
+  if (!parsedId.success) return invalidPathParam();
+  const id = parsedId.data;
   const { supabase, response } = getServiceClientOrResponse();
   if (response) return response;
 
@@ -33,7 +40,8 @@ export async function GET(_request: Request, context: RouteContext) {
     .eq("id", id)
     .maybeSingle();
 
-  if (error) return noStore({ error: error.message }, 500);
+  const jobError = dbServerError("jobs.get", error);
+  if (jobError) return jobError;
   if (!jobRow) return noStore({ error: "Job not found." }, 404);
 
   const session = await getWalletSession(supabase);
@@ -50,8 +58,10 @@ export async function GET(_request: Request, context: RouteContext) {
       : Promise.resolve({ data: null, error: null }),
   ]);
 
-  if (profilesResult.error) return noStore({ error: profilesResult.error.message }, 500);
-  if (agentResult.error) return noStore({ error: agentResult.error.message }, 500);
+  const profilesError = dbServerError("jobs.get.profiles", profilesResult.error);
+  if (profilesError) return profilesError;
+  const agentError = dbServerError("jobs.get.agent", agentResult.error);
+  if (agentError) return agentError;
 
   const ownsProviderAgent = Boolean(
     session && agentResult.data?.owner_profile_id === session.profileId,
@@ -67,7 +77,8 @@ export async function GET(_request: Request, context: RouteContext) {
       .order("created_at", { ascending: false });
     if (!isClient) applicationQuery = applicationQuery.eq("applicant_profile_id", session.profileId);
     const applicationsResult = await applicationQuery;
-    if (applicationsResult.error) return noStore({ error: applicationsResult.error.message }, 500);
+    const applicationsError = dbServerError("jobs.get.applications", applicationsResult.error);
+    if (applicationsError) return applicationsError;
     applicationRows = applicationsResult.data ?? [];
   }
 
@@ -79,7 +90,8 @@ export async function GET(_request: Request, context: RouteContext) {
       .select("*")
       .eq("job_id", id)
       .order("created_at", { ascending: false });
-    if (submissionsResult.error) return noStore({ error: submissionsResult.error.message }, 500);
+    const submissionsError = dbServerError("jobs.get.submissions", submissionsResult.error);
+    if (submissionsError) return submissionsError;
     submissionRows = submissionsResult.data ?? [];
 
     const submissionIds = submissionRows.map((row) => row.id as string);
@@ -89,7 +101,8 @@ export async function GET(_request: Request, context: RouteContext) {
         .select("*")
         .in("submission_id", submissionIds)
         .order("created_at", { ascending: false });
-      if (evaluationsResult.error) return noStore({ error: evaluationsResult.error.message }, 500);
+      const evaluationsError = dbServerError("jobs.get.evaluations", evaluationsResult.error);
+      if (evaluationsError) return evaluationsError;
       evaluationRows = evaluationsResult.data ?? [];
     }
   }

@@ -1,11 +1,12 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   getServiceClientOrResponse,
-  parseJson,
   requireCircleWebhookSecret,
   validationError,
 } from "@/lib/api";
+import { env } from "@/lib/env";
 import { invalidateBootstrapCache } from "@/lib/server/cache";
 import { rateLimit } from "@/lib/server/rate-limit";
 import { TABLES } from "@/lib/supabase/tables";
@@ -46,6 +47,23 @@ export async function OPTIONS() {
 export async function POST(request: Request) {
   const secretResponse = requireCircleWebhookSecret(request);
   if (secretResponse) return secretResponse;
+
+  const rawBody = await request.text();
+
+  // When Circle signs the payload, verify the HMAC over the exact raw bytes
+  // (timing-safe) in addition to the shared secret header above.
+  const signatureHeader = request.headers.get("x-circle-signature")?.trim();
+  if (env.CIRCLE_WEBHOOK_SECRET && signatureHeader) {
+    const expected = createHmac("sha256", env.CIRCLE_WEBHOOK_SECRET).update(rawBody).digest("hex");
+    const provided = signatureHeader.startsWith("0x") ? signatureHeader.slice(2) : signatureHeader;
+    const matches =
+      expected.length === provided.length &&
+      timingSafeEqual(Buffer.from(expected, "utf8"), Buffer.from(provided, "utf8"));
+    if (!matches) {
+      return NextResponse.json({ error: "Webhook signature verification failed." }, { status: 401 });
+    }
+  }
+
   const limited = await rateLimit(request, {
     key: "circle:webhook",
     limit: 120,
@@ -53,7 +71,13 @@ export async function POST(request: Request) {
   });
   if (limited) return limited;
 
-  const parsed = await parseJson(request, circleEventSchema);
+  let json: unknown;
+  try {
+    json = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const parsed = circleEventSchema.safeParse(json);
   if (!parsed.success) return validationError(parsed.error);
 
   const { supabase, response } = getServiceClientOrResponse();

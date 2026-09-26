@@ -4,7 +4,7 @@ This repository is the WorkNet MVP application. Treat it as a production-oriente
 
 ## Source Of Truth
 
-- Product architecture: `arc-worknet-mvp-architecture.md`
+- Product architecture: `docs/arc-worknet-mvp-architecture.md`
 - Next.js application: `src/`
 - Supabase schema and migrations: `supabase/schema.sql` and `supabase/migrations/`
 - Smart contract source: `contracts/ArcWorknetEscrow.sol`

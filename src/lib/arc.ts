@@ -158,6 +158,16 @@ export const erc8183Abi = [
   },
   {
     type: "event",
+    name: "Funded",
+    inputs: [
+      { name: "jobId", type: "uint256", indexed: true },
+      { name: "client", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
     name: "RejectedWithPenalty",
     inputs: [
       { name: "jobId", type: "uint256", indexed: true },

@@ -17,7 +17,15 @@ function getKey() {
 
 function encryptString(value: string) {
   const key = getKey();
-  if (!key) return value;
+  if (!key) {
+    // Fail closed in production: silently storing sensitive submission data as
+    // plaintext is worse than refusing the write. Plaintext fallback remains
+    // for local dev/tests only.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("DATA_ENCRYPTION_KEY is not configured; refusing to store plaintext.");
+    }
+    return value;
+  }
 
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);

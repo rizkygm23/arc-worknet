@@ -14,6 +14,12 @@ const nonceSchema = z.object({
 export async function POST(request: Request) {
   const parsed = await parseJson(request, nonceSchema);
   if (!parsed.success) return validationError(parsed.error);
+  if (parsed.data.chainId !== ARC_TESTNET_CHAIN_ID) {
+    return NextResponse.json(
+      { error: "Switch wallet to Arc Testnet before signing in." },
+      { status: 400 },
+    );
+  }
   const limited = await rateLimit(request, {
     key: `wallet-nonce:${parsed.data.address.toLowerCase()}`,
     limit: 10,
@@ -27,11 +33,17 @@ export async function POST(request: Request) {
   const nonce = randomBytes(24).toString("hex");
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
   const address = parsed.data.address.toLowerCase();
+  // Bind the signature to this deployment: the domain/URI lines make the
+  // message non-replayable across other dApps and chains (EIP-4361 style).
+  const host = request.headers.get("host") ?? "worknet.rizzgm.xyz";
+  const origin = request.headers.get("origin") ?? `https://${host}`;
   const message = [
     "Sign in to WorkNet",
     "",
+    `Domain: ${host}`,
+    `URI: ${origin}`,
     `Wallet: ${address}`,
-    `Chain ID: ${parsed.data.chainId}`,
+    `Chain ID: ${ARC_TESTNET_CHAIN_ID}`,
     `Expected Arc Chain ID: ${ARC_TESTNET_CHAIN_ID}`,
     `Nonce: ${nonce}`,
     `Expires: ${expiresAt}`,

@@ -14,6 +14,30 @@ export const txHashSchema = z.preprocess(
   z.string().regex(/^0x[a-fA-F0-9]{64}$/),
 );
 
+// Task files are uploaded server-side via POST /api/jobs/upload-task, which
+// generates "tasks/<uuid>/<sanitized-name>". Referencing any other object in
+// the bucket (e.g. another job's deliverable) must be rejected.
+export const taskFilePathSchema = z
+  .string()
+  .regex(
+    /^tasks\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[a-zA-Z0-9._-]{1,200}$/,
+    "Task file path must reference a file uploaded via the task upload endpoint.",
+  );
+
+export const uuidParamSchema = z.string().uuid();
+
+export function invalidPathParam() {
+  return NextResponse.json({ error: "Invalid identifier." }, { status: 400 });
+}
+
+// Database errors carry Postgres internals; log server-side, return a generic
+// message to the client.
+export function dbServerError(operation: string, error: { message: string } | null) {
+  if (!error) return undefined;
+  console.error(`[db] ${operation} failed:`, error.message);
+  return NextResponse.json({ error: "Database request failed." }, { status: 500 });
+}
+
 export const createJobSchema = z.object({
   clientProfileId: z.string().uuid(),
   title: z.string().trim().min(3, "Title must be at least 3 characters.").max(160),
@@ -26,7 +50,7 @@ export const createJobSchema = z.object({
   deadlineAt: z.string().datetime().optional(),
   actorType: z.enum(["human", "agent"]).default("human"),
   descriptionHash: txHashSchema.optional(),
-  taskFilePath: z.string().min(1).optional(),
+  taskFilePath: taskFilePathSchema.optional(),
   taskFileName: z.string().min(1).optional(),
 });
 

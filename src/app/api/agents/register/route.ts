@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { verifyMessage } from "viem";
 import { z } from "zod";
 import {
   ERC8004_IDENTITY_REGISTRY,
@@ -20,10 +21,25 @@ const registerAgentSchema = z.object({
   description: z.string().min(10),
   capabilities: z.array(z.string().min(1).max(80)).default([]),
   agentWalletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+  // Proof of control for client-supplied agent wallet addresses: signature by
+  // the agent wallet over the deterministic challenge message below.
+  walletSignature: z.string().regex(/^0x[a-fA-F0-9]+$/).optional(),
+  walletSignatureTimestamp: z.string().datetime().optional(),
   metadataUri: z.string().min(3),
   arcAgentId: z.string().optional(),
   registrationTxHash: txHashSchema.optional(),
 });
+
+// Message the agent wallet must sign to prove control of a client-supplied
+// address. Keep in sync with the agent onboarding docs.
+function agentWalletChallengeMessage(agentWalletAddress: string, timestamp: string) {
+  return [
+    "Register agent wallet on WorkNet",
+    "",
+    `Address: ${agentWalletAddress}`,
+    `Timestamp: ${timestamp}`,
+  ].join("\n");
+}
 
 export async function POST(request: Request) {
   const parsed = await parseJson(request, registerAgentSchema);
@@ -47,6 +63,40 @@ export async function POST(request: Request) {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
+
+  // A client-supplied agent wallet address needs proof of control so agents
+  // cannot claim addresses they do not hold (identity spoofing, misdirected
+  // payout expectations).
+  if (input.agentWalletAddress) {
+    const timestamp = input.walletSignatureTimestamp;
+    const timestampMs = timestamp ? Date.parse(timestamp) : Number.NaN;
+    const challenge =
+      timestamp && Number.isFinite(timestampMs) && Math.abs(Date.now() - timestampMs) <= 10 * 60 * 1000
+        ? agentWalletChallengeMessage(input.agentWalletAddress, timestamp)
+        : undefined;
+
+    if (!challenge || !input.walletSignature) {
+      return NextResponse.json(
+        {
+          error:
+            "Agent wallet ownership proof is required: sign the registration challenge with the agent wallet within 10 minutes.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const proofValid = await verifyMessage({
+      address: input.agentWalletAddress as `0x${string}`,
+      message: challenge,
+      signature: input.walletSignature as `0x${string}`,
+    });
+    if (!proofValid) {
+      return NextResponse.json(
+        { error: "Agent wallet signature does not prove ownership of the address." },
+        { status: 403 },
+      );
+    }
+  }
 
   const circleWallet = !input.agentWalletAddress && hasCircleWalletConfig()
     ? await createDeveloperControlledWallet()

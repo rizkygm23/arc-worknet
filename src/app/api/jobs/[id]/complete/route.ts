@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ERC8183_CONTRACT_ADDRESS, erc8183Abi } from "@/lib/arc";
 import { getServiceClientOrResponse, parseJson, reviewSchema, validationError } from "@/lib/api";
-import { verifyArcTransaction } from "@/lib/server/arc-verify";
+import { verifyArcTransaction, arcJobIdFromArgs } from "@/lib/server/arc-verify";
 import { invalidateBootstrapCache } from "@/lib/server/cache";
 import { encryptText } from "@/lib/server/encryption";
 import { walletRateLimit } from "@/lib/server/rate-limit";
@@ -74,13 +74,23 @@ export async function POST(request: Request, context: RouteContext) {
 
   let blockNumber = input.blockNumber;
   try {
-    const receipt = await verifyArcTransaction({
+    const { receipt, args } = await verifyArcTransaction({
       abi: erc8183Abi,
       expectedFrom: session.walletAddress,
       expectedFunctionName: input.reviewTxMethod,
       expectedTo: ERC8183_CONTRACT_ADDRESS,
       txHash: input.reviewTxHash,
     });
+
+    // Bind the tx to this job: the escrow jobId arg must match this job.
+    const txJobId = arcJobIdFromArgs(args, 0);
+    if (!targetJob.arc_job_id || txJobId !== targetJob.arc_job_id) {
+      return NextResponse.json(
+        { error: "Transaction escrow jobId does not match this job." },
+        { status: 400 },
+      );
+    }
+
     blockNumber = Number(receipt.blockNumber);
   } catch (error) {
     return NextResponse.json(
@@ -113,10 +123,21 @@ export async function POST(request: Request, context: RouteContext) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   await supabase.from(TABLES.submissions).update({ status: submissionStatus }).eq("id", input.submissionId);
-  await supabase
+
+  const { error: jobUpdateError } = await supabase
     .from(TABLES.jobs)
     .update({ status, complete_tx_hash: completeTxHash, last_indexed_block: blockNumber })
     .eq("id", id);
+
+  if (jobUpdateError) {
+    if (jobUpdateError.code === "23505") {
+      return NextResponse.json(
+        { error: "This onchain transaction was already used for another job." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: jobUpdateError.message }, { status: 500 });
+  }
 
   if (input.decision === "approve") {
     // 1. Update Provider profile stats (rating_avg, rating_count, completed_jobs_count, total_earned)

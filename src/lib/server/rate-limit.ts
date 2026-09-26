@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { hasSupabaseServiceConfig } from "@/lib/env";
+import { createSupabaseServiceClient } from "@/lib/supabase/server";
 
 type LimitOptions = {
   key: string;
@@ -11,19 +13,27 @@ type MemoryCounter = {
   resetAt: number;
 };
 
+// In-memory fallback. Only useful for a single process (local dev, tests) —
+// serverless instances each keep their own counters.
 const counters = new Map<string, MemoryCounter>();
 
 function clientIp(request: Request) {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  // Take the LAST x-forwarded-for entry: entries are prepended by untrusted
+  // hops, the final value is the one added by the trusted edge proxy.
+  const forwarded = request.headers
+    .get("x-forwarded-for")
+    ?.split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
   return (
-    forwarded ||
+    forwarded?.[forwarded.length - 1] ||
     request.headers.get("x-real-ip") ||
     request.headers.get("cf-connecting-ip") ||
     "unknown"
   );
 }
 
-function increment(key: string, windowSeconds: number) {
+function incrementMemory(key: string, windowSeconds: number) {
   const current = counters.get(key);
   const resetAt = Date.now() + windowSeconds * 1000;
   if (!current || current.resetAt <= Date.now()) {
@@ -35,6 +45,25 @@ function increment(key: string, windowSeconds: number) {
   return current.count;
 }
 
+// Shared counter via an atomic Postgres RPC so the limit holds across all
+// serverless instances. Returns undefined when the shared store is not
+// configured or unreachable; callers fall back to the in-memory counter.
+async function incrementShared(key: string, windowSeconds: number): Promise<number | undefined> {
+  if (!hasSupabaseServiceConfig()) return undefined;
+
+  try {
+    const supabase = createSupabaseServiceClient();
+    const { data, error } = await supabase.rpc("increment_rate_limit", {
+      p_key: key,
+      p_window_seconds: windowSeconds,
+    });
+    if (error || typeof data !== "number") return undefined;
+    return data;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function rateLimit(request: Request, options: LimitOptions) {
   // SEC-04: Only bypass rate limits in non-production environments.
   if (
@@ -44,7 +73,7 @@ export async function rateLimit(request: Request, options: LimitOptions) {
     return undefined;
   }
   const key = `worknet:ratelimit:${options.key}:${clientIp(request)}`;
-  const count = increment(key, options.windowSeconds);
+  const count = (await incrementShared(key, options.windowSeconds)) ?? incrementMemory(key, options.windowSeconds);
   const remaining = Math.max(options.limit - count, 0);
   const headers = {
     "X-RateLimit-Limit": String(options.limit),

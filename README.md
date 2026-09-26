@@ -123,7 +123,7 @@ flowchart TB
 | Contract | Solidity `0.8.24`, ERC-8183-style escrow |
 | Operations | Circle event webhook, backfill/indexer scripts, Vercel analytics |
 
-Detailed decisions: [`arc-worknet-mvp-architecture.md`](arc-worknet-mvp-architecture.md). Submission narrative: [`docs/hackathon-presentation.md`](docs/hackathon-presentation.md). Protocol paper: [`worknet_whitepaper.md`](worknet_whitepaper.md).
+Detailed decisions: [`docs/arc-worknet-mvp-architecture.md`](docs/arc-worknet-mvp-architecture.md). Submission narrative: [`docs/hackathon-presentation.md`](docs/hackathon-presentation.md). Protocol paper: [`docs/Arc_WorkNet_Whitepaper.docx`](docs/Arc_WorkNet_Whitepaper.docx).
 
 ## Security model
 
@@ -191,9 +191,9 @@ src/lib/                           Arc, wallet, store, and server helpers
 supabase/schema.sql                Canonical database schema
 supabase/migrations/               Forward migrations
 scripts/                           Arc and operations scripts
-docs/hackathon-presentation.md     Judge-facing presentation
-arc-worknet-mvp-architecture.md    Product source of truth
-worknet_whitepaper.md              Protocol paper
+docs/arc-worknet-mvp-architecture.md  Product source of truth
+docs/hackathon-presentation.md        Judge-facing presentation
+docs/Arc_WorkNet_Whitepaper.docx      Protocol paper
 ```
 
 ## Deployment

@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
-import { getServiceClientOrResponse } from "@/lib/api";
-import { TABLES } from "@/lib/supabase/tables";
+import {
+  invalidPathParam,
+  uuidParamSchema,
+  getServiceClientOrResponse,
+} from "@/lib/api";
+import { extractAgentFromHeader } from "@/lib/server/agent-auth";
 import { invalidateBootstrapCache } from "@/lib/server/cache";
+import { walletRateLimit } from "@/lib/server/rate-limit";
+import { requireWalletSession } from "@/lib/server/wallet-session";
+import { TABLES } from "@/lib/supabase/tables";
 
-export async function GET(
-  _request: Request,
-  props: { params: Promise<{ id: string }> },
-) {
-  const params = await props.params;
-  const { id } = params;
+type RouteProps = { params: Promise<{ id: string }> };
+
+export async function GET(_request: Request, props: RouteProps) {
+  const parsedId = uuidParamSchema.safeParse((await props.params).id);
+  if (!parsedId.success) return invalidPathParam();
+  const id = parsedId.data;
 
   const { supabase, response } = getServiceClientOrResponse();
   if (response) return response;
@@ -26,15 +33,50 @@ export async function GET(
   return NextResponse.json({ agent }, { status: 200 });
 }
 
-export async function POST(
-  _request: Request,
-  props: { params: Promise<{ id: string }> },
-) {
-  const params = await props.params;
-  const { id } = params;
+// POST rewrites the agent's derived reputation, so it must never be callable
+// anonymously: only the owner (wallet session) or the agent itself (its own
+// API key, as documented in the agent runbook) may trigger a recompute.
+export async function POST(request: Request, props: RouteProps) {
+  const parsedId = uuidParamSchema.safeParse((await props.params).id);
+  if (!parsedId.success) return invalidPathParam();
+  const id = parsedId.data;
 
   const { supabase, response } = getServiceClientOrResponse();
   if (response) return response;
+
+  const agentAuth = await extractAgentFromHeader(request, supabase);
+  const viaAgentKey = !agentAuth.error && agentAuth.agentId === id;
+
+  let callerProfileId: string | undefined;
+  if (viaAgentKey) {
+    callerProfileId = undefined;
+  } else {
+    const { session, response: authResponse } = await requireWalletSession(supabase);
+    if (authResponse) return authResponse;
+    callerProfileId = session.profileId;
+  }
+
+  const limited = await walletRateLimit(request, callerProfileId ?? `agent-key:${id}`, "agents:reputation");
+  if (limited) return limited;
+
+  const { data: agent, error: agentError } = await supabase
+    .from(TABLES.agents)
+    .select("id,owner_profile_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (agentError) {
+    return NextResponse.json({ error: "Database request failed." }, { status: 500 });
+  }
+  if (!agent) {
+    return NextResponse.json({ error: "Agent not found." }, { status: 404 });
+  }
+  if (callerProfileId && agent.owner_profile_id !== callerProfileId) {
+    return NextResponse.json(
+      { error: "Only the agent owner can trigger a reputation recompute." },
+      { status: 403 },
+    );
+  }
 
   // Compute completed jobs count for this agent
   const { data: jobs, error: jobsError } = await supabase
@@ -44,7 +86,7 @@ export async function POST(
     .eq("status", "completed");
 
   if (jobsError) {
-    return NextResponse.json({ error: jobsError.message }, { status: 500 });
+    return NextResponse.json({ error: "Database request failed." }, { status: 500 });
   }
 
   const jobsCompleted = jobs ? jobs.length : 0;
@@ -63,7 +105,7 @@ export async function POST(
     .single();
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    return NextResponse.json({ error: "Database request failed." }, { status: 500 });
   }
 
   void invalidateBootstrapCache();

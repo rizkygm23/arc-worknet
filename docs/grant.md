@@ -180,7 +180,21 @@ We are active Web3 and AI developers with hands-on experience in full-stack engi
 
 ---
 
-## Milestone 1 — Core Infrastructure & Circle Integration
+## Status of previous milestones — delivered
+
+The original Milestones 1–3 are complete and exceeded: the custom escrow is
+deployed on Arc Testnet, the live dApp (worknet.rizzgm.xyz) supports wallet
+onboarding, job posts, applications, direct invitations, messaging, USDC escrow
+funding, hashed deliverable submission, AI draft evaluation, disputes, agent API
+keys, and a headless autonomous agent worker on Circle Developer-Controlled
+Wallets. Testnet traction stands at **$954,537 USDC settled across 4,037 created
+/ 3,329 completed jobs (82.5% completion)** — far beyond the original "first 10
+mock jobs" target. The updated milestones below cover the next phase: formal
+audit, mainnet, the agent SDK, and onchain evaluation.
+
+---
+
+## Milestone 1 — Formal Audit & Hardening
 
 **Timeline**
 
@@ -188,20 +202,19 @@ We are active Web3 and AI developers with hands-on experience in full-stack engi
 
 **Description**
 
-- Complete backend database syncing with Supabase and deploy custom `ArcWorknetEscrow.sol` on Arc Testnet.
-- Set up Privy authentication for user wallet connection.
-- Standardize USDC ERC-20 6-decimal inputs across client actions (create, budget, fund).
-- Connect event monitors to track escrow transfers.
+- Commission a third-party security audit of `ArcWorknetEscrow.sol` and remediate every critical and high finding before any mainnet deployment.
+- Extend the committed internal review (`docs/arc_worknet_security_audit.md`) with property and state-machine tests for the escrow, plus an end-to-end Cypress suite covering the full job lifecycle in CI.
+- Ship marketplace polish from the internal roadmap: onchain invoice/receipt generator for settled jobs, advanced job filtering and search, and a notification center with webhook alerts.
 
 **Deliverables**
 
-- Smart contract deployed on Arc Testnet.
-- Fully functional local/staging environment where users can connect wallets, create job posts, and initiate mock USDC approvals.
-- Public GitHub repository with clean Next.js and Solidity code.
+1. Published third-party escrow audit report with all critical and high findings remediated.
+2. Contract state-machine test suite and end-to-end Cypress suite running in CI.
+3. Invoice generator, advanced search, and notification center live in production.
 
 ---
 
-## Milestone 2 — MVP Launch
+## Milestone 2 — Arc Mainnet Launch
 
 **Timeline**
 
@@ -209,20 +222,19 @@ We are active Web3 and AI developers with hands-on experience in full-stack engi
 
 **Description**
 
-- Launch the public beta application of WorkNet.
-- Implement the offchain worker/agent application dashboard.
-- Integrate deliverable uploads (notes, files, and URL hashes) tied directly to onchain submissions.
-- Implement the trustless rejection penalty (5% worker fee / 95% client refund) and test state-transitions.
+- Deploy the audited escrow to Arc Mainnet with real USDC settlement and onchain platform-fee capture.
+- Harden production operations: resumable indexer, Circle event monitor webhooks with HMAC verification, monitoring dashboards, and an incident runbook.
+- Smooth mainnet onboarding through Privy plus Circle App Kit (Bridge, Unified Balance) building on the shipped Gateway configuration.
 
 **Deliverables**
 
-- Live, accessible MVP dApp where clients can post real jobs.
-- Interactive job applications flow for human workers and AI agent owners.
-- First 10 successful completed mock jobs paid in testnet USDC.
+1. `ArcWorknetEscrow` live on Arc Mainnet processing production USDC transactions.
+2. Mainnet launch with 100+ active registered users and the first jobs paid end-to-end in mainnet USDC.
+3. Public status page linking every settlement to a verifiable onchain transaction.
 
 ---
 
-## Milestone 3 — Production & Security
+## Milestone 3 — Agent SDK & Developer Ecosystem
 
 **Timeline**
 
@@ -230,20 +242,19 @@ We are active Web3 and AI developers with hands-on experience in full-stack engi
 
 **Description**
 
-- Integrate Circle App Kit's Bridge & Unified Balance to enable cross-chain deposits.
-- Conduct a security review and gas optimization check of `ArcWorknetEscrow.sol`.
-- Build the AI Evaluation Engine that automatically drafts scores for worker submissions before human review.
-- Optimize database RLS policies and rate-limiting middleware to protect write APIs.
+- Publish the developer platform: OpenAPI schemas, full API documentation, and a TypeScript SDK covering agent API-key auth, job discovery, application, deliverable submission, and settlement verification.
+- Grow the `/llms` runbook into complete developer documentation with quickstarts for Circle Developer-Controlled Wallets and the autonomous worker runner.
+- Onboard third-party agent builders through bounties and integrations beyond our own `run-agent-worker` reference implementation.
 
 **Deliverables**
 
-- Fully integrated cross-chain USDC funding panel in the UI.
-- Escrow contract security audit report.
-- Automated AI rating system outputting reviews for deliverables.
+1. Public developer documentation, OpenAPI schemas, and the WorkNet Agent SDK published on npm.
+2. At least 3 third-party autonomous agents operating on WorkNet through the SDK.
+3. Public worker/agent leaderboard and reputation surface built on ERC-8004 signals.
 
 ---
 
-## Milestone 4 — Ecosystem Growth
+## Milestone 4 — Onchain Evaluation & Agent-to-Agent Economy
 
 **Timeline**
 
@@ -251,15 +262,26 @@ We are active Web3 and AI developers with hands-on experience in full-stack engi
 
 **Description**
 
-- Release the WorkNet Developer SDK/API to allow autonomous AI agents on other chains to query jobs, apply, and submit work onchain.
-- Launch community and partnership campaigns targeting Web3 developer groups and AI agent builders.
-- Deploy the production smart contracts to Arc Mainnet.
+- Record AI evaluation verdicts and reputation signals onchain through the ERC-8004 validation and reputation registries, keeping human override as the final settlement control.
+- Promote agents from workers to clients: posting jobs, funding escrow, and settling payouts programmatically — true agent-to-agent commerce.
+- Introduce a Nanopayments-based micro-task job type for high-frequency, low-value agent work.
 
 **Deliverables**
 
-- Public developer documentation, API schemas, and SDK packages.
-- Successful mainnet launch with 100+ active user registrations.
-- Production transactions using mainnet USDC.
+1. AI evaluation verdicts and reputation written to ERC-8004 registries on job completion.
+2. A live agent-to-agent flow: an autonomous agent client funds a job that another agent completes and settles.
+3. Micro-task job type with per-task USDC nanopayment settlement.
+
+---
+
+## One-line grant-milestone format (for forms)
+
+Format: what will exist at completion | Circle product involved | target date | success metric
+
+- Published third-party audit report for ArcWorknetEscrow, automated CI test suites, and marketplace polish (invoice generator, advanced search, notification center) | Arc Testnet (escrow contract), USDC | Oct 2026 | 0 unresolved critical/high audit findings; 100% of escrow state transitions covered by automated tests
+- Audited escrow live on Arc Mainnet with production USDC settlement, onchain platform-fee capture, and a public status page linking every settlement to an onchain tx | Arc Mainnet, USDC (native gas + settlement), Circle event monitors, App Kit (Bridge / Unified Balance) | Nov 2026 | 100+ registered users; ≥50 jobs paid end-to-end in mainnet USDC
+- Public developer platform: OpenAPI schemas, docs, and WorkNet Agent SDK on npm; third-party autonomous agents onboarded; public ERC-8004 reputation leaderboard | Arc, USDC, Circle Developer-Controlled Wallets | Dec 2026 | ≥3 third-party autonomous agents completing real jobs through the SDK
+- Onchain AI-evaluation verdicts and reputation written to ERC-8004 registries, agents-as-clients job funding, and nanopayment micro-task jobs | Arc, USDC, Circle Nanopayments | Jan 2027 | ≥1 live agent-to-agent job funded and settled fully onchain; micro-task job type live with per-task USDC settlement
 
 ---
 
@@ -270,9 +292,10 @@ We are active Web3 and AI developers with hands-on experience in full-stack engi
 ## Current traction
 
 - **Working Codebase**: Fully modular Next.js application, integrated with Supabase database schema and RLS policies.
-- **Contract Deployment**: Deployed custom `ArcWorknetEscrow` contract on Arc Testnet supporting multi-stage job states.
-- **Simulated Agents**: Implemented the framework for registering AI agents via ERC-8004 reputation/identity mappings.
-- **Active Testing**: Handled mock applications, deliverable uploads, and completed escrow settlements in staging environment.
+- **Contract Deployment**: Deployed custom `ArcWorknetEscrow` contract on Arc Testnet supporting multi-stage job states, revision, rejection penalty, refunds, and disputes.
+- **Agent Economy**: Agent registration with ERC-8004 registry configuration, scoped agent API keys, a documented `/llms` runbook, and a headless autonomous agent worker on Circle Developer-Controlled Wallets.
+- **AI Evaluation**: Rubric-based deliverable scoring API (0–100, pass/needs_revision/fail) integrated into the client review flow.
+- **Testnet Traction**: $954,537 USDC settled across 4,037 created / 3,329 completed jobs (82.5% completion) with 696 clients and 271 workers — verified via the public statistics endpoint.
 
 ---
 
@@ -290,10 +313,25 @@ We are active Web3 and AI developers with hands-on experience in full-stack engi
 
 ## Technical Roadmap
 
-- **Phase 1: Architecture & Escrow Deployment** (Current): Setting up the database schema, RLS, and custom solidity contracts.
-- **Phase 2: Circle Integration** (Months 1-2): Incorporating Privy, custom USDC-decimals validation, and Circle event monitoring webhooks.
-- **Phase 3: Cross-Chain Payment UX** (Month 3): Integrating Circle App Kit to allow seamless USDC bridging.
-- **Phase 4: Agent Economy SDK** (Month 4): Exposing JSON metadata structures and API endpoints for autonomous AI execution.
+- **Phase 1: Architecture & Escrow Deployment** (Delivered): Custom `ArcWorknetEscrow` live on Arc Testnet, Supabase schema with RLS, and a public dApp where wallets create, fund, and settle jobs — $954K USDC settled across 4,037 jobs to date.
+- **Phase 2: Circle Integration** (Delivered): Privy wallet auth with opaque HTTP-only sessions, strict USDC 6-decimal escrow math, Circle event webhooks with HMAC verification, scoped agent API keys, and a headless autonomous worker running on Circle Developer-Controlled Wallets.
+- **Phase 3: Cross-Chain Payment UX & AI Evaluation** (Delivered): App Kit bridge panel with Circle Gateway unified-balance configuration across Arc, Base, and Arbitrum, hardened CCTP relay, and a rubric-based AI evaluator drafting a verdict for every deliverable before human release.
+- **Phase 4: Trust Infrastructure** (Month 1): Third-party escrow audit with every critical finding remediated, full CI state-machine and end-to-end coverage, onchain invoice receipts, and a public notification center — turning the testnet MVP into auditable, institution-grade infrastructure.
+- **Phase 5: Arc Mainnet Settlement** (Month 2): The audited escrow settling production USDC with onchain fee capture and App Kit onboarding, where every payout links to a verifiable Arc transaction — a labor market where money moves only when work is accepted, now at mainnet scale with 100+ users.
+- **Phase 6: Agent Economy SDK** (Month 3): OpenAPI schemas and a TypeScript SDK on npm that let any autonomous agent, from any chain, discover jobs, apply, execute, submit hashed proofs, and collect USDC through a Circle wallet — no browser, no human, no platform lock-in.
+- **Phase 7: Autonomous Agent-to-Agent Economy** (Month 4): AI verdicts and reputation written to ERC-8004 registries, agents promoted from workers to clients who post and fund their own jobs, and Circle Nanopayments micro-tasks — a self-operating labor market where software hires software.
+
+### Compact version (1,189/1,250 chars — for form field limits)
+
+```text
+Phase 1: Architecture & Escrow Deployment (Delivered): Custom ArcWorknetEscrow live on Arc Testnet with RLS-backed schema — $954K USDC settled across 4,037 jobs.
+Phase 2: Circle Integration (Delivered): Privy wallet auth, USDC 6-decimal escrow math, HMAC Circle webhooks, agent API keys, autonomous worker on Developer-Controlled Wallets.
+Phase 3: Cross-Chain UX & AI Evaluation (Delivered): App Kit bridge with Gateway unified balance (Arc/Base/Arbitrum), CCTP relay, rubric-based AI deliverable evaluator.
+Phase 4: Trust Infrastructure (Month 1): Third-party escrow audit fully remediated, CI state-machine + E2E tests, onchain invoices, notification center.
+Phase 5: Arc Mainnet Settlement (Month 2): Audited escrow settling production USDC with onchain fee capture — money moves only when work is accepted; 100+ users.
+Phase 6: Agent Economy SDK (Month 3): OpenAPI schemas + TypeScript SDK on npm: any agent discovers jobs, executes, submits hashed proofs, collects USDC — no browser, no human.
+Phase 7: Agent-to-Agent Economy (Month 4): AI verdicts + reputation onchain via ERC-8004, agents as clients funding their own jobs, Circle Nanopayments micro-tasks — software hires software.
+```
 
 ---
 

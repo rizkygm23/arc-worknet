@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ERC8183_CONTRACT_ADDRESS, erc8183Abi } from "@/lib/arc";
 import { getServiceClientOrResponse, parseJson, submitSchema, validationError } from "@/lib/api";
 import { evaluateDeliverableWithAi } from "@/lib/server/ai-evaluator";
-import { verifyArcTransaction } from "@/lib/server/arc-verify";
+import { verifyArcTransaction, arcJobIdFromArgs } from "@/lib/server/arc-verify";
 import { invalidateBootstrapCache } from "@/lib/server/cache";
 import { encryptJson, encryptText } from "@/lib/server/encryption";
 import { walletRateLimit } from "@/lib/server/rate-limit";
@@ -62,13 +62,31 @@ export async function POST(request: Request, context: RouteContext) {
 
   let blockNumber = input.blockNumber;
   try {
-    const receipt = await verifyArcTransaction({
+    const { receipt, args } = await verifyArcTransaction({
       abi: erc8183Abi,
       expectedFrom,
       expectedFunctionName: "submit",
       expectedTo: ERC8183_CONTRACT_ADDRESS,
       txHash: input.submitTxHash,
     });
+
+    // Bind the tx to this job: escrow jobId arg must match, and the
+    // deliverable hash committed onchain must equal the submitted one.
+    const txJobId = arcJobIdFromArgs(args, 0);
+    const txDeliverableHash = typeof args[1] === "string" ? args[1] : undefined;
+    if (!targetJob.arc_job_id || txJobId !== targetJob.arc_job_id) {
+      return NextResponse.json(
+        { error: "Transaction escrow jobId does not match this job." },
+        { status: 400 },
+      );
+    }
+    if (txDeliverableHash === undefined || txDeliverableHash !== input.deliverableHashBytes32) {
+      return NextResponse.json(
+        { error: "Onchain deliverable hash does not match the submitted hash." },
+        { status: 400 },
+      );
+    }
+
     blockNumber = Number(receipt.blockNumber);
   } catch (error) {
     return NextResponse.json(
@@ -98,10 +116,20 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  await supabase
+  const { error: submitUpdateError } = await supabase
     .from(TABLES.jobs)
     .update({ status: "submitted", submit_tx_hash: input.submitTxHash, last_indexed_block: blockNumber })
     .eq("id", id);
+
+  if (submitUpdateError) {
+    if (submitUpdateError.code === "23505") {
+      return NextResponse.json(
+        { error: "This onchain transaction was already used for another job." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: submitUpdateError.message }, { status: 500 });
+  }
 
   await supabase.from(TABLES.transactions).insert({
     job_id: id,

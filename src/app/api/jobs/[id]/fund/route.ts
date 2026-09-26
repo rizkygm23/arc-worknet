@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ARC_USDC_ADDRESS, ERC8183_CONTRACT_ADDRESS, erc20UsdcAbi, erc8183Abi } from "@/lib/arc";
 import { getServiceClientOrResponse, parseJson, updateTxSchema, validationError } from "@/lib/api";
-import { verifyArcTransaction } from "@/lib/server/arc-verify";
+import { verifyArcTransaction, arcJobIdFromArgs, extractFundedAmount } from "@/lib/server/arc-verify";
 import { invalidateBootstrapCache } from "@/lib/server/cache";
 import { walletRateLimit } from "@/lib/server/rate-limit";
 import { requireWalletSession } from "@/lib/server/wallet-session";
@@ -29,7 +29,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const { data: targetJob, error: targetJobError } = await supabase
     .from(TABLES.jobs)
-    .select("client_profile_id,status")
+    .select("client_profile_id,status,arc_job_id,budget_usdc_units")
     .eq("id", id)
     .single();
 
@@ -52,13 +52,31 @@ export async function POST(request: Request, context: RouteContext) {
         txHash: parsed.data.approveTxHash,
       });
     }
-    const receipt = await verifyArcTransaction({
+    const { receipt, args } = await verifyArcTransaction({
       abi: erc8183Abi,
       expectedFrom: session.walletAddress,
       expectedFunctionName: "fund",
       expectedTo: ERC8183_CONTRACT_ADDRESS,
       txHash: parsed.data.txHash,
     });
+
+    // Bind the tx to this job: escrow jobId arg must match, and the funded
+    // amount in the Funded event must cover the job budget.
+    const txJobId = arcJobIdFromArgs(args);
+    if (!targetJob.arc_job_id || txJobId !== targetJob.arc_job_id) {
+      return NextResponse.json(
+        { error: "Transaction escrow jobId does not match this job." },
+        { status: 400 },
+      );
+    }
+    const fundedAmount = await extractFundedAmount(parsed.data.txHash, ERC8183_CONTRACT_ADDRESS);
+    if (fundedAmount === undefined || fundedAmount !== BigInt(targetJob.budget_usdc_units ?? 0)) {
+      return NextResponse.json(
+        { error: "Funded amount does not match the job budget." },
+        { status: 400 },
+      );
+    }
+
     blockNumber = Number(receipt.blockNumber);
   } catch (error) {
     return NextResponse.json(
@@ -79,7 +97,15 @@ export async function POST(request: Request, context: RouteContext) {
     .select("*")
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    if (error.code === "23505") {
+      return NextResponse.json(
+        { error: "This onchain transaction was already used for another job." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   if (parsed.data.approveTxHash) {
     await supabase.from(TABLES.transactions).insert({

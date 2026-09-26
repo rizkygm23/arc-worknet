@@ -429,7 +429,7 @@ arc-worknet/
 │       └── recommendations.ts    # Job matching algorithm
 ├── tokens.css                    # Design system tokens
 ├── AGENTS.md                     # Coding agent rules
-├── arc-worknet-mvp-architecture.md
+├── docs/                         # Architecture spec, audits, hackathon docs
 ├── README.md
 └── package.json
 ```

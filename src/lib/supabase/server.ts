@@ -452,6 +452,10 @@ export type Database = {
         Args: { p_profile_id: string };
         Returns: Json;
       };
+      increment_rate_limit: {
+        Args: { p_key: string; p_window_seconds: number };
+        Returns: number;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
