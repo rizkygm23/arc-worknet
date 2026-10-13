@@ -2,8 +2,13 @@ import type { Abi, Address } from "viem";
 import { defineChain } from "viem";
 
 export const ARC_TESTNET_CHAIN_ID = Number(process.env.NEXT_PUBLIC_ARC_CHAIN_ID ?? 5042002);
+// Server-side deployments can override the RPC with a managed provider
+// (Alchemy, QuickNode, Blockdaemon, dRPC) via ARC_RPC_URL without exposing it
+// to the client bundle; the NEXT_PUBLIC value remains the client default.
 export const ARC_RPC_URL =
-  process.env.NEXT_PUBLIC_ARC_RPC_URL ?? "https://rpc.testnet.arc.network";
+  process.env.ARC_RPC_URL ??
+  process.env.NEXT_PUBLIC_ARC_RPC_URL ??
+  "https://rpc.testnet.arc.network";
 export const ARC_WS_URL = process.env.ARC_WS_URL ?? "wss://rpc.testnet.arc.network";
 export const ARC_EXPLORER_URL =
   process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app";

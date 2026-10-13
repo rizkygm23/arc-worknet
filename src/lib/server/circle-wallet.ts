@@ -83,7 +83,7 @@ export async function getFreshEntitySecretCiphertext() {
   return encrypted.toString("base64");
 }
 
-export async function createDeveloperControlledWallet() {
+export async function createDeveloperControlledWallet(accountType: "EOA" | "SCA" = "EOA") {
   if (!hasCircleWalletConfig()) {
     throw new Error(
       "Missing Circle wallet env. Set CIRCLE_API_KEY, CIRCLE_WALLET_SET_ID, CIRCLE_WALLET_BLOCKCHAIN, and CIRCLE_ENTITY_SECRET.",
@@ -102,7 +102,7 @@ export async function createDeveloperControlledWallet() {
     body: JSON.stringify({
       idempotencyKey: crypto.randomUUID(),
       walletSetId: env.CIRCLE_WALLET_SET_ID,
-      accountType: "EOA",
+      accountType,
       blockchains: [env.CIRCLE_WALLET_BLOCKCHAIN],
       count: 1,
       entitySecretCiphertext: ciphertext,
@@ -157,4 +157,90 @@ export async function signCircleEvmTransaction(input: {
     signedTransaction,
     txHash: payload.data?.txHash,
   } satisfies CircleSignedTransaction;
+}
+
+type CircleTransactionRecord = {
+  id?: string;
+  state?: string;
+  txHash?: string;
+};
+
+type CircleTransactionResponse = {
+  data?: CircleTransactionRecord | { transaction?: CircleTransactionRecord };
+  message?: string;
+  code?: number;
+};
+
+function unwrapTransaction(payload: CircleTransactionResponse): CircleTransactionRecord | undefined {
+  const data = payload.data as CircleTransactionResponse["data"];
+  if (!data) return undefined;
+  if (typeof data === "object" && "transaction" in data) {
+    return (data as { transaction?: CircleTransactionRecord }).transaction;
+  }
+  return data as CircleTransactionRecord;
+}
+
+/**
+ * Executes a contract call from a Circle SCA wallet. Circle constructs the
+ * ERC-4337 user operation and broadcasts it; gas is sponsored by the Gas
+ * Station policy when one covers the wallet's chain. SCA transactions require
+ * a fee level (Circle error 177012) instead of explicit gas fields.
+ */
+export async function createScaContractExecution(input: {
+  walletId: string;
+  entitySecretCiphertext: string;
+  contractAddress: string;
+  callData: string;
+}): Promise<{ transactionId: string; state: string; txHash?: string }> {
+  const response = await fetch(`${CIRCLE_API_BASE_URL}/v1/w3s/developer/transactions`, {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      authorization: `Bearer ${env.CIRCLE_API_KEY}`,
+    },
+    body: JSON.stringify({
+      walletId: input.walletId,
+      entitySecretCiphertext: input.entitySecretCiphertext,
+      contractAddress: input.contractAddress,
+      callData: input.callData,
+      fee: { type: "level", config: { feeLevel: "MEDIUM" } },
+      idempotencyKey: crypto.randomUUID(),
+    }),
+    cache: "no-store",
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as CircleTransactionResponse;
+  const transaction = unwrapTransaction(payload);
+  if (!response.ok || !transaction?.id) {
+    const suffix = payload.code ? ` (code ${payload.code})` : "";
+    throw new Error(`${payload.message || "Circle SCA transaction failed."}${suffix}`);
+  }
+
+  return {
+    transactionId: transaction.id,
+    state: transaction.state ?? "INITIATED",
+    txHash: transaction.txHash,
+  };
+}
+
+export async function getCircleTransaction(
+  transactionId: string,
+): Promise<{ state: string; txHash?: string }> {
+  const response = await fetch(`${CIRCLE_API_BASE_URL}/v1/w3s/transactions/${transactionId}`, {
+    headers: {
+      accept: "application/json",
+      authorization: `Bearer ${env.CIRCLE_API_KEY}`,
+    },
+    cache: "no-store",
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as CircleTransactionResponse;
+  const transaction = unwrapTransaction(payload);
+  if (!response.ok || !transaction) {
+    const suffix = payload.code ? ` (code ${payload.code})` : "";
+    throw new Error(`${payload.message || "Circle transaction lookup failed."}${suffix}`);
+  }
+
+  return { state: transaction.state ?? "UNKNOWN", txHash: transaction.txHash };
 }

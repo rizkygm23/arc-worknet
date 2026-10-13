@@ -1,6 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+// v2.1 (2026-09-27) — compiled, ready, NOT cut over. The WorkNet testnet
+// deployment remains v1 at 0x1E40AE030e03E0a7E481046647B2a0E021F8A6F1 by
+// decision (2026-09-27): the app-level remediations cover the pentest
+// findings that matter for testnet; v2.1 is deployed and verified on-chain
+// at 0xd13917cfb3180b5dd9c2bf34c9827b8f8fd52076 (owner = platform wallet)
+// and can be cut over via ERC8183_CONTRACT_ADDRESS whenever needed.
+// v2 change vs v1: refundExpired() is restricted to the Funded status only. A
+// client can no longer self-refund 100% after work was submitted (deadline
+// race) — post-submission outcomes are complete(), rejectWithPenalty(), or a
+// dispute.
+// v2.1 change: owner is an explicit constructor parameter. Circle's deploy
+// pipeline executes through its own relayer, so msg.sender in the constructor
+// is Circle's deployment address — an implicit owner = msg.sender would hand
+// resolveDispute/setFeeRecipient/transferOwner to a key nobody controls.
+// Owner trust (dispute resolution, fee config) remains centralized; move
+// owner to a multisig before mainnet.
+
 interface IERC20 {
     function transfer(address to, uint256 value) external returns (bool);
     function transferFrom(address from, address to, uint256 value) external returns (bool);
@@ -137,16 +154,23 @@ contract ArcWorknetEscrow {
         locked = false;
     }
 
-    constructor(address paymentToken_, address feeRecipient_, uint256 platformFeeBps_) {
-        if (paymentToken_ == address(0) || feeRecipient_ == address(0)) revert InvalidAddress();
+    constructor(
+        address paymentToken_,
+        address feeRecipient_,
+        uint256 platformFeeBps_,
+        address owner_
+    ) {
+        if (paymentToken_ == address(0) || feeRecipient_ == address(0) || owner_ == address(0)) {
+            revert InvalidAddress();
+        }
         if (platformFeeBps_ > MAX_PLATFORM_FEE_BPS) revert InvalidBudget();
 
         paymentToken = IERC20(paymentToken_);
-        owner = msg.sender;
+        owner = owner_;
         feeRecipient = feeRecipient_;
         platformFeeBps = platformFeeBps_;
 
-        emit OwnerTransferred(address(0), msg.sender);
+        emit OwnerTransferred(address(0), owner_);
         emit FeeRecipientUpdated(feeRecipient_);
         emit PlatformFeeUpdated(platformFeeBps_);
     }
@@ -330,13 +354,10 @@ contract ArcWorknetEscrow {
     function refundExpired(uint256 jobId) external jobExists(jobId) nonReentrant {
         Job storage job = jobs[jobId];
         if (msg.sender != job.client && msg.sender != job.evaluator) revert NotParticipant();
-        if (
-            job.status != JobStatus.Funded &&
-            job.status != JobStatus.Submitted &&
-            job.status != JobStatus.RevisionRequested
-        ) {
-            revert InvalidStatus();
-        }
+        // v2: only unfunded-timeout refunds here. Once work is submitted the
+        // outcome must go through complete(), rejectWithPenalty(), or a
+        // dispute — a full self-refund after delivery would grief the worker.
+        if (job.status != JobStatus.Funded) revert InvalidStatus();
         if (job.expiredAt == 0 || block.timestamp <= job.expiredAt) revert DeadlineNotPassed();
 
         uint256 amount = job.fundedAmount;

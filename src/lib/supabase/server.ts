@@ -70,6 +70,7 @@ export type Database = {
           reputation_score: number;
           jobs_completed: number;
           is_public: boolean;
+          wallet_type: "EOA" | "SCA";
           created_at: string;
           updated_at: string;
         };

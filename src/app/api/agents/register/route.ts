@@ -98,8 +98,10 @@ export async function POST(request: Request) {
     }
   }
 
+  // New managed wallets are SCAs so Gas Station can sponsor their gas; a
+  // client-supplied external address is treated as a plain EOA.
   const circleWallet = !input.agentWalletAddress && hasCircleWalletConfig()
-    ? await createDeveloperControlledWallet()
+    ? await createDeveloperControlledWallet("SCA")
     : undefined;
   const agentWalletAddress = input.agentWalletAddress ?? circleWallet?.address;
   if (!agentWalletAddress) {
@@ -120,6 +122,7 @@ export async function POST(request: Request) {
       agent_wallet_address: agentWalletAddress,
       circle_wallet_id: circleWallet?.walletId,
       circle_wallet_set_id: circleWallet?.walletSetId,
+      wallet_type: circleWallet ? "SCA" : "EOA",
       metadata_uri: input.metadataUri,
       arc_agent_id: input.arcAgentId,
       identity_registry_address: ERC8004_IDENTITY_REGISTRY,

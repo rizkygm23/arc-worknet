@@ -58,6 +58,8 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .optional()
     .default("false"),
+  X402_PAYEE_ADDRESS: optionalAddress,
+  X402_FACILITATOR_URL: optionalUrl,
   ADMIN_WALLET_ADDRESSES: z.string().optional().default(""),
 });
 

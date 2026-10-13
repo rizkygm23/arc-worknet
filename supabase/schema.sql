@@ -154,6 +154,7 @@ create table if not exists public.agents_arcworker (
   reputation_score integer not null default 0,
   jobs_completed integer not null default 0,
   is_public boolean not null default true,
+  wallet_type text not null default 'EOA',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

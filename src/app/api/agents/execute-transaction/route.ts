@@ -3,7 +3,12 @@ import { z } from "zod";
 import { createPublicClient, encodeFunctionData, http, parseAbiItem } from "viem";
 import { getServiceClientOrResponse, parseJson, validationError } from "@/lib/api";
 import { requireWalletSession } from "@/lib/server/wallet-session";
-import { getFreshEntitySecretCiphertext, signCircleEvmTransaction } from "@/lib/server/circle-wallet";
+import {
+  createScaContractExecution,
+  getCircleTransaction,
+  getFreshEntitySecretCiphertext,
+  signCircleEvmTransaction,
+} from "@/lib/server/circle-wallet";
 import { TABLES } from "@/lib/supabase/tables";
 import { ARC_TESTNET_CHAIN_ID, ARC_USDC_ADDRESS, ERC8183_CONTRACT_ADDRESS, arcTestnet } from "@/lib/arc";
 
@@ -72,7 +77,7 @@ export async function POST(request: Request) {
 
   const { data: agent, error: agentError } = await supabase
     .from(TABLES.agents)
-    .select("circle_wallet_id, agent_wallet_address, owner_profile_id")
+    .select("circle_wallet_id, agent_wallet_address, owner_profile_id, wallet_type")
     .eq("id", agentId)
     .single();
 
@@ -99,6 +104,49 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Encryption failed." }, { status: 500 });
   }
 
+  const callData = encodeFunctionData({
+    abi: [parseAbiItem(`function ${abiFunctionSignature}`)],
+    args: abiParameters,
+    functionName: abiFunctionSignature.slice(0, abiFunctionSignature.indexOf("(")),
+  });
+
+  // SCA wallets (Gas Station-sponsored) go through Circle's transaction
+  // pipeline; EOA wallets keep the sign-only + raw-broadcast path.
+  if (agent.wallet_type === "SCA") {
+    try {
+      const created = await createScaContractExecution({
+        walletId: agent.circle_wallet_id,
+        entitySecretCiphertext,
+        contractAddress: normalizedContract,
+        callData,
+      });
+
+      // The escrow lifecycle routes need the onchain tx hash; poll briefly —
+      // Arc finality is sub-second, but the first SCA tx also deploys the
+      // account and can take longer.
+      let txHash = created.txHash;
+      let state = created.state;
+      const deadline = Date.now() + 30_000;
+      while (!txHash && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const status = await getCircleTransaction(created.transactionId);
+        state = status.state;
+        txHash = status.txHash;
+        if (["CONFIRMED", "COMPLETE", "FINALIZED"].includes(state) && txHash) break;
+      }
+
+      return NextResponse.json(
+        { txHash: txHash ?? null, transactionId: created.transactionId, state },
+        { status: 200 },
+      );
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Circle SCA transaction failed." },
+        { status: 500 },
+      );
+    }
+  }
+
   const publicClient = createPublicClient({
     chain: arcTestnet,
     transport: http(),
@@ -108,18 +156,12 @@ export async function POST(request: Request) {
   const to = contractAddress as `0x${string}`;
 
   try {
-    const data = encodeFunctionData({
-      abi: [parseAbiItem(`function ${abiFunctionSignature}`)],
-      args: abiParameters,
-      functionName: abiFunctionSignature.slice(0, abiFunctionSignature.indexOf("(")),
-    });
-
     const [nonce, gas, fees] = await Promise.all([
       publicClient.getTransactionCount({ address: account }),
       publicClient.estimateGas({
         account,
         to,
-        data,
+        data: callData,
         value: BigInt(0),
       }),
       publicClient.estimateFeesPerGas(),
@@ -144,7 +186,7 @@ export async function POST(request: Request) {
         maxFeePerGas: String(maxFeePerGas),
         maxPriorityFeePerGas: String(maxPriorityFeePerGas),
         type: "2",
-        data,
+        data: callData,
       },
     });
 
