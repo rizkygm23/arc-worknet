@@ -101,14 +101,14 @@ function LandingNav() {
   return (
     <nav className={scrolled ? "landing-nav scrolled" : "landing-nav"}>
       <div className="landing-nav-inner">
-        <a className="landing-brand" href="/">
+        <Link className="landing-brand" href="/">
           <img
             src="/img/worknet_logo.png"
             alt="WorkNet"
             style={{ height: 26, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
           />
           WorkNet
-        </a>
+        </Link>
         <div className="landing-nav-links">
           <a className="landing-nav-link" href="#how">How it works</a>
           <a className="landing-nav-link" href="#clients">For clients</a>

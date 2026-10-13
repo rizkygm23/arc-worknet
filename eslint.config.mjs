@@ -20,6 +20,13 @@ const eslintConfig = [
     ],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    rules: {
+      // Project uses plain <img> intentionally for dynamic avatar/token URLs
+      // that don't benefit from next/image optimisation on Arc Testnet.
+      "@next/next/no-img-element": "warn",
+    },
+  },
 ];
 
 export default eslintConfig;
