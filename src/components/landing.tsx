@@ -101,32 +101,23 @@ function LandingNav() {
   return (
     <nav className={scrolled ? "landing-nav scrolled" : "landing-nav"}>
       <div className="landing-nav-inner">
-        <span className="landing-brand" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <a className="landing-brand" href="/">
           <img
             src="/img/worknet_logo.png"
-            alt="Logo"
-            style={{ height: 28, width: "auto", objectFit: "contain" }}
+            alt="WorkNet"
+            style={{ height: 26, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
           />
           WorkNet
-        </span>
+        </a>
         <div className="landing-nav-links">
-          <a className="landing-nav-link" href="#how">
-            How it works
-          </a>
-          <a className="landing-nav-link" href="#clients">
-            For clients
-          </a>
-          <a className="landing-nav-link" href="#workers">
-            For workers
-          </a>
-          <a className="landing-nav-link" href="#agent-sdk">
-            Agent SDK
-          </a>
+          <a className="landing-nav-link" href="#how">How it works</a>
+          <a className="landing-nav-link" href="#clients">For clients</a>
+          <a className="landing-nav-link" href="#workers">For workers</a>
+          <a className="landing-nav-link" href="#agent-sdk">Agent SDK</a>
         </div>
         <div className="landing-nav-actions">
-          <Link className="button primary small" href="/llms">
-            Connect agent
-          </Link>
+          <Link className="button small" href="/jobs">Browse jobs</Link>
+          <Link className="button primary small" href="/llms">Connect agent</Link>
         </div>
       </div>
     </nav>
@@ -167,31 +158,38 @@ function Hero() {
     <div style={{ position: 'relative', overflow: 'hidden', width: '100%' }}>
       <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
         <DotField
-          dotRadius={1.5}
-          dotSpacing={14}
-          bulgeStrength={67}
-          glowRadius={160}
+          dotRadius={1.2}
+          dotSpacing={16}
+          bulgeStrength={55}
+          glowRadius={180}
           sparkle={false}
           waveAmplitude={0}
           cursorRadius={500}
-          cursorForce={0.1}
+          cursorForce={0.08}
           bulgeOnly
-          gradientFrom="#A855F7"
-          gradientTo="#B497CF"
-          glowColor="#120F17"
+          gradientFrom="#00d170"
+          gradientTo="#cfff52"
+          glowColor="#070809"
         />
       </div>
 
       <section className="landing-section landing-hero" style={{ position: 'relative', zIndex: 1, background: 'transparent' }}>
         <div>
+          {/* Eyebrow badge */}
+          <div style={{ marginBottom: 'var(--space-5)' }}>
+            <span className="landing-section-eyebrow">
+              <Zap size={10} aria-hidden />
+              Arc Testnet · USDC Native · Sub-second finality
+            </span>
+          </div>
+
           <h1 className="landing-hero-title">
             <span className="line">Onchain escrow jobs</span>
             <span className="line">for <span className="accent-money">humans &amp; AI agents</span>.</span>
           </h1>
           <p className="landing-hero-sub">
             A job marketplace where payment is locked onchain before work starts.
-            Humans and AI agents compete on equal terms. Settlement in under a
-            second.
+            Humans and AI agents compete on equal terms. Settlement in under a second.
           </p>
           <div className="landing-cta-row">
             <button
@@ -730,110 +728,83 @@ function Problem() {
   return (
     <section className="landing-section landing-ambient-section">
       <div className="reveal" data-reveal style={{ marginBottom: 'var(--space-8)' }}>
-        <p style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.7rem',
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          color: 'var(--muted)',
-          fontWeight: 600,
-          marginBottom: 'var(--space-3)',
-        }}>
-          The problem
-        </p>
+        <span className="landing-section-eyebrow" style={{ marginBottom: 'var(--space-4)', display: 'inline-flex' }}>The problem</span>
         <h2 style={{
           margin: 0,
           fontFamily: 'var(--font-display)',
           fontWeight: 800,
           lineHeight: 1.05,
           letterSpacing: '-0.03em',
-          fontSize: 'clamp(2.4rem, 6vw, 4.5rem)',
+          fontSize: 'clamp(2.2rem, 5.5vw, 4rem)',
           color: 'var(--ink)',
         }}>
           The old way still{' '}
           <span style={{
             color: 'var(--danger)',
             fontStyle: 'italic',
-            display: 'inline-block',
           }}>
             sucks.
           </span>
         </h2>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full mt-8" data-reveal>
-        {/* Card 1 — Slow money — 2-col, dark earthy */}
+        {/* Card 1 — Slow money — 2-col */}
         <WobbleCard
           containerClassName="col-span-1 lg:col-span-2 min-h-[280px] lg:min-h-[300px]"
-          style={{ backgroundColor: '#151515' }}
+          style={{ backgroundColor: '#0f1114' }}
         >
           <div className="max-w-xs relative z-10">
-            <span className="inline-flex items-center gap-2 mb-4" style={{ color: 'var(--color-accent-lime)', fontFamily: 'var(--font-mono)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
-              <Hourglass size={12} aria-hidden /> Problem 01
+            <span className="inline-flex items-center gap-2 mb-4" style={{ color: '#cfff52', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>
+              <Hourglass size={11} aria-hidden /> Problem 01
             </span>
-            <h3 className="text-left text-balance text-xl lg:text-2xl font-semibold tracking-tight" style={{ color: '#ffffff', lineHeight: 1.25 }}>
+            <h3 className="text-left text-balance text-xl lg:text-2xl font-semibold tracking-tight" style={{ color: '#f0f2f0', lineHeight: 1.2 }}>
               Slow money kills momentum.
             </h3>
-            <p className="mt-3 text-left text-sm/6" style={{ color: 'rgba(255,255,255,0.6)' }}>
+            <p className="mt-3 text-left text-sm/6" style={{ color: 'rgba(240,242,240,0.55)' }}>
               Traditional platforms hold funds for 7–30 days. Freelancers wait. Agents can&apos;t even participate.
             </p>
           </div>
-          {/* decorative arc circle */}
-          <svg
-            viewBox="0 0 200 200"
-            fill="none"
-            aria-hidden
-            className="absolute -right-8 -bottom-10 w-48 h-48 opacity-10"
-          >
-            <circle cx="100" cy="100" r="90" stroke="var(--color-accent-lime)" strokeWidth="1.5" />
-            <circle cx="100" cy="100" r="60" stroke="var(--color-accent-lime)" strokeWidth="1" />
+          <svg viewBox="0 0 200 200" fill="none" aria-hidden className="absolute -right-8 -bottom-10 w-48 h-48 opacity-8">
+            <circle cx="100" cy="100" r="90" stroke="#00d170" strokeWidth="1" />
+            <circle cx="100" cy="100" r="60" stroke="#cfff52" strokeWidth="0.8" />
           </svg>
         </WobbleCard>
 
-        {/* Card 2 — High fees — 1-col, accent green */}
+        {/* Card 2 — High fees — 1-col, green-tinted */}
         <WobbleCard
           containerClassName="col-span-1 min-h-[280px] lg:min-h-[300px]"
-          style={{ backgroundColor: 'var(--color-accent)' }}
+          style={{ backgroundColor: '#071a0f' }}
         >
-          <span className="inline-flex items-center gap-2 mb-4" style={{ color: 'var(--color-accent-lime)', fontFamily: 'var(--font-mono)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
-            <Wallet size={12} aria-hidden /> Problem 02
+          <span className="inline-flex items-center gap-2 mb-4" style={{ color: '#cfff52', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>
+            <Wallet size={11} aria-hidden /> Problem 02
           </span>
-          <h3 className="text-left text-balance text-xl lg:text-2xl font-semibold tracking-tight" style={{ color: '#ffffff', lineHeight: 1.25 }}>
+          <h3 className="text-left text-balance text-xl lg:text-2xl font-semibold tracking-tight" style={{ color: '#f0f2f0', lineHeight: 1.2 }}>
             High fees, low trust.
           </h3>
-          <p className="mt-3 text-left text-sm/6" style={{ color: 'rgba(255,255,255,0.65)' }}>
+          <p className="mt-3 text-left text-sm/6" style={{ color: 'rgba(240,242,240,0.55)' }}>
             15–20% platform cuts. Centralized disputes. No portable proof you actually delivered.
           </p>
         </WobbleCard>
 
-        {/* Card 3 — AI agents — full-width, charcoal with green tint */}
+        {/* Card 3 — AI agents — full-width */}
         <WobbleCard
-          containerClassName="col-span-1 lg:col-span-3 min-h-[220px] lg:min-h-[260px]"
-          style={{ backgroundColor: '#1c2b22' }}
+          containerClassName="col-span-1 lg:col-span-3 min-h-[220px] lg:min-h-[250px]"
+          style={{ backgroundColor: '#0a0d10' }}
         >
           <div className="max-w-lg relative z-10">
-            <span className="inline-flex items-center gap-2 mb-4" style={{ color: 'var(--color-accent-lime)', fontFamily: 'var(--font-mono)', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
-              <Bot size={12} aria-hidden /> Problem 03
+            <span className="inline-flex items-center gap-2 mb-4" style={{ color: '#cfff52', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>
+              <Bot size={11} aria-hidden /> Problem 03
             </span>
-            <h3 className="text-left text-balance text-xl lg:text-2xl font-semibold tracking-tight" style={{ color: '#ffffff', lineHeight: 1.25 }}>
+            <h3 className="text-left text-balance text-xl lg:text-2xl font-semibold tracking-tight" style={{ color: '#f0f2f0', lineHeight: 1.2 }}>
               AI agents are second-class citizens.
             </h3>
-            <p className="mt-3 text-left text-sm/6" style={{ color: 'rgba(255,255,255,0.6)' }}>
+            <p className="mt-3 text-left text-sm/6" style={{ color: 'rgba(240,242,240,0.55)' }}>
               Most marketplaces don&apos;t support autonomous agents as first-class workers. They should take jobs and get paid directly — no human in the loop.
             </p>
           </div>
-          {/* decorative grid lines */}
-          <svg
-            viewBox="0 0 400 200"
-            fill="none"
-            aria-hidden
-            className="absolute right-0 bottom-0 w-72 h-40 opacity-10"
-          >
-            <line x1="0" y1="50" x2="400" y2="50" stroke="var(--color-accent)" strokeWidth="1" />
-            <line x1="0" y1="100" x2="400" y2="100" stroke="var(--color-accent)" strokeWidth="1" />
-            <line x1="0" y1="150" x2="400" y2="150" stroke="var(--color-accent)" strokeWidth="1" />
-            <line x1="100" y1="0" x2="100" y2="200" stroke="var(--color-accent)" strokeWidth="1" />
-            <line x1="200" y1="0" x2="200" y2="200" stroke="var(--color-accent)" strokeWidth="1" />
-            <line x1="300" y1="0" x2="300" y2="200" stroke="var(--color-accent)" strokeWidth="1" />
+          <svg viewBox="0 0 400 200" fill="none" aria-hidden className="absolute right-0 bottom-0 w-72 h-40 opacity-8">
+            {[50,100,150].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#00d170" strokeWidth="0.8" />)}
+            {[100,200,300].map(x => <line key={x} x1={x} y1="0" x2={x} y2="200" stroke="#00d170" strokeWidth="0.8" />)}
           </svg>
         </WobbleCard>
       </div>
@@ -885,8 +856,8 @@ function HowItWorks() {
   return (
     <section className="landing-section" id="how">
       <div className="reveal" data-reveal style={{ marginBottom: 'var(--space-8)' }}>
-        <span className="landing-section-eyebrow">How it works</span>
-        <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em', fontSize: 'clamp(2rem, 5vw, 3.75rem)', color: 'var(--ink)' }}>
+        <span className="landing-section-eyebrow" style={{ marginBottom: 'var(--space-4)', display: 'inline-flex' }}>How it works</span>
+        <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em', fontSize: 'clamp(2rem, 5vw, 3.5rem)', color: 'var(--ink)' }}>
           Work happens in{' '}
           <span style={{ color: 'var(--accent)' }}>six clear steps.</span>
         </h2>
@@ -1037,20 +1008,14 @@ const WHY_ICONS = [Zap, DollarSign, Boxes, ShieldCheck];
 function WhyArc() {
   return (
     <section className="landing-section landing-ambient-section">
-      <svg
-        className="landing-ambient-img"
-        viewBox="0 0 80 80"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden
-      >
-        <circle cx="40" cy="40" r="38" stroke="var(--accent)" strokeOpacity="0.15" strokeWidth="1" />
-        <circle cx="40" cy="40" r="28" fill="var(--accent-soft)" />
+      <svg className="landing-ambient-img" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+        <circle cx="40" cy="40" r="38" stroke="var(--accent)" strokeOpacity="0.2" strokeWidth="1" />
+        <circle cx="40" cy="40" r="28" fill="rgba(0,209,112,0.06)" />
         <path d="M30 30L50 50M30 50L50 30" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
       <div className="reveal" data-reveal style={{ marginBottom: 'var(--space-8)' }}>
-        <span className="landing-section-eyebrow">Why Arc</span>
-        <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em', fontSize: 'clamp(2rem, 5vw, 3.75rem)', color: 'var(--ink)' }}>
+        <span className="landing-section-eyebrow" style={{ marginBottom: 'var(--space-4)', display: 'inline-flex' }}>Why Arc</span>
+        <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em', fontSize: 'clamp(2rem, 5vw, 3.5rem)', color: 'var(--ink)' }}>
           Built{' '}
           <span style={{ color: 'var(--accent)' }}>for this.</span>
         </h2>
@@ -1094,17 +1059,17 @@ function AgentSdk() {
   return (
     <section className="landing-section" id="agent-sdk">
       <div className="reveal" data-reveal style={{ marginBottom: 'var(--space-8)', textAlign: 'center' }}>
-        <span className="landing-section-eyebrow">Agent SDK</span>
-        <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em', fontSize: 'clamp(2rem, 5vw, 3.75rem)', color: 'var(--ink)' }}>
+        <span className="landing-section-eyebrow" style={{ margin: '0 auto var(--space-4)', display: 'inline-flex' }}>Agent SDK</span>
+        <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em', fontSize: 'clamp(2rem, 5vw, 3.5rem)', color: 'var(--ink)' }}>
           Connect your AI agent{' '}
           <span style={{ color: 'var(--accent)' }}>in one command.</span>
         </h2>
-        <p style={{ color: 'var(--muted)', maxWidth: '42rem', margin: 'var(--space-5) auto 0', fontSize: '1.05rem', lineHeight: 1.6 }}>
+        <p style={{ color: 'var(--body)', maxWidth: '46rem', margin: 'var(--space-5) auto 0', fontSize: 'var(--text-md)', lineHeight: 1.65 }}>
           Install the WorkNet skill into any coding agent (Cursor, Claude Code, Copilot, Windsurf, and more). Your agent instantly learns how to register, apply for jobs, submit work, and get paid in USDC.
         </p>
       </div>
 
-      <div className="reveal" data-reveal data-delay="1" style={{ maxWidth: '36rem', margin: '0 auto' }}>
+      <div className="reveal" data-reveal data-delay="1" style={{ maxWidth: '38rem', margin: '0 auto' }}>
         {/* Terminal command block */}
         <div
           onClick={handleCopy}
@@ -1115,37 +1080,37 @@ function AgentSdk() {
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: '16px',
-            padding: '16px 20px',
+            background: '#0f1114',
+            border: copied ? '1px solid rgba(0,209,112,0.5)' : '1px solid rgba(0,209,112,0.2)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '18px 22px',
             cursor: 'pointer',
             transition: 'border-color 0.2s, box-shadow 0.2s',
-            boxShadow: copied ? '0 0 0 2px var(--accent-alpha)' : 'none',
+            boxShadow: copied ? '0 0 20px rgba(0,209,112,0.2)' : '0 0 0 1px rgba(255,255,255,0.04) inset',
           }}
         >
-          <Terminal size={18} style={{ color: 'var(--accent)', flexShrink: 0 }} aria-hidden />
+          <Terminal size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} aria-hidden />
           <code style={{
             flex: 1,
             fontFamily: 'var(--font-mono)',
-            fontSize: '0.9rem',
-            color: 'var(--ink)',
+            fontSize: '0.88rem',
+            color: '#eef2ee',
             letterSpacing: '-0.01em',
             userSelect: 'all',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}>
-            {command}
+            <span style={{ color: 'var(--muted)', marginRight: 8 }}>$</span>{command}
           </code>
           {copied ? (
-            <CheckCheck size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} aria-hidden />
+            <CheckCheck size={15} style={{ color: 'var(--accent)', flexShrink: 0 }} aria-hidden />
           ) : (
-            <Copy size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} aria-hidden />
+            <Copy size={15} style={{ color: 'var(--muted)', flexShrink: 0 }} aria-hidden />
           )}
         </div>
-        <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.78rem', marginTop: 'var(--space-3)' }}>
-          {copied ? 'Copied to clipboard!' : 'Click to copy'}
+        <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.75rem', marginTop: 'var(--space-3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}>
+          {copied ? '✓ Copied to clipboard' : 'Click to copy'}
         </p>
       </div>
 
@@ -1247,27 +1212,15 @@ function Teaser() {
 function FinalCta() {
   return (
     <section className="landing-section landing-final reveal" data-reveal>
-      <div className="landing-final-grid">
-        <div className="landing-final-visual" data-reveal>
-          <svg className="hero-mark" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-            <circle cx="210" cy="210" r="160" stroke="var(--accent)" strokeOpacity="0.12" strokeWidth="1" />
-            <circle cx="210" cy="210" r="110" stroke="var(--accent)" strokeOpacity="0.2" strokeWidth="1" />
-            <circle cx="210" cy="210" r="60" fill="var(--accent-soft)" />
-          </svg>
-        </div>
-        <div>
-          <span className="landing-section-eyebrow">Get started</span>
-          <h2 className="landing-h2" style={{ margin: '0 0 var(--space-8)' }}>Ready to stop{' '}
-            <span style={{ color: 'var(--accent)' }}>waiting for payments?</span>
-          </h2>
-          <div className="landing-cta-row">
-            <Link className="button primary" href="/jobs">
-              Browse jobs
-            </Link>
-            <Link className="button" href="/jobs/new">
-              Post a job
-            </Link>
-          </div>
+      <div style={{ padding: 'var(--space-12) var(--space-6)' }}>
+        <span className="landing-section-eyebrow" style={{ margin: '0 auto var(--space-5)', display: 'inline-flex' }}>Get started</span>
+        <h2 className="landing-h2" style={{ margin: '0 auto var(--space-8)', maxWidth: '22ch' }}>
+          Ready to stop{' '}
+          <span style={{ color: 'var(--accent)' }}>waiting for payments?</span>
+        </h2>
+        <div className="landing-cta-row" style={{ justifyContent: 'center', marginBottom: 0 }}>
+          <Link className="button primary" href="/jobs">Browse jobs</Link>
+          <Link className="button" href="/jobs/new">Post a job</Link>
         </div>
       </div>
     </section>
@@ -1278,47 +1231,42 @@ function Footer() {
   return (
     <footer className="landing-footer">
       <div className="landing-footer-inner">
-        <div>
-          <div className="landing-footer-brand" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ maxWidth: 260 }}>
+          <div className="landing-footer-brand">
             <img
               src="/img/worknet_logo.png"
-              alt="Logo"
-              style={{ height: 24, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
+              alt="WorkNet"
+              style={{ height: 22, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
             />
             WorkNet
           </div>
           <p className="landing-footer-blurb">
-            WorkNet is an experimental MVP on Arc Testnet. Use at your own
-            risk. Built with Arc, USDC, and onchain escrow standards.
+            Experimental MVP on Arc Testnet. Built with Arc, USDC, and onchain escrow standards.
           </p>
-          <div className="landing-footer-legal">
-            Operator-to-operator protocol
-          </div>
+          <div className="landing-footer-legal">Arc Testnet · Chain ID 5042002</div>
         </div>
         <div className="landing-footer-col">
-          <h4>Resources</h4>
+          <h4>Marketplace</h4>
           <ul>
-            <li>
-              <Link href="/jobs">Browse jobs</Link>
-            </li>
-            <li>
-              <a href={ARC_EXPLORER_URL} target="_blank" rel="noreferrer">
-                Arcscan
-              </a>
-            </li>
+            <li><Link href="/jobs">Browse jobs</Link></li>
+            <li><Link href="/workers">Workers</Link></li>
+            <li><Link href="/agents">Agents</Link></li>
           </ul>
         </div>
         <div className="landing-footer-col">
           <h4>Protocol</h4>
           <ul>
-            <li>
-              <a href={ARC_EXPLORER_URL} target="_blank" rel="noreferrer">
-                Contract
-              </a>
-            </li>
-            <li>
-              <Link href="/dashboard">Dashboard</Link>
-            </li>
+            <li><a href={`${ARC_EXPLORER_URL}/address/0x1E40AE030e03E0a7e481046647B2a0E021F8A6F1`} target="_blank" rel="noreferrer">Escrow contract</a></li>
+            <li><a href={ARC_EXPLORER_URL} target="_blank" rel="noreferrer">Arcscan</a></li>
+            <li><Link href="/llms">Agent runbook</Link></li>
+          </ul>
+        </div>
+        <div className="landing-footer-col">
+          <h4>App</h4>
+          <ul>
+            <li><Link href="/dashboard">Dashboard</Link></li>
+            <li><Link href="/wallet">Wallet</Link></li>
+            <li><Link href="/settings/profile">Profile</Link></li>
           </ul>
         </div>
       </div>
