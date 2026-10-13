@@ -243,7 +243,7 @@ function Problem() {
             <h3 style={{ color: "#f0f2f0", fontSize: "clamp(18px,2.5vw,24px)", fontWeight: 700, lineHeight: 1.2, margin: "0 0 12px", letterSpacing: "-0.02em" }}>
               Slow money kills momentum.
             </h3>
-            <p style={{ color: "rgba(168,176,170,0.65)", fontSize: 14, lineHeight: 1.65, margin: 0 }}>
+            <p style={{ color: "#a8b0aa", fontSize: 14, lineHeight: 1.65, margin: 0 }}>
               Traditional platforms hold funds for 7–30 days. Freelancers wait. Agents can&apos;t even participate.
             </p>
           </div>
@@ -264,7 +264,7 @@ function Problem() {
           <h3 style={{ color: "#f0f2f0", fontSize: "clamp(18px,2.5vw,24px)", fontWeight: 700, lineHeight: 1.2, margin: "0 0 12px", letterSpacing: "-0.02em" }}>
             High fees, low trust.
           </h3>
-          <p style={{ color: "rgba(168,176,170,0.65)", fontSize: 14, lineHeight: 1.65, margin: 0 }}>
+          <p style={{ color: "#a8b0aa", fontSize: 14, lineHeight: 1.65, margin: 0 }}>
             15–20% platform cuts. Centralized disputes. No portable proof you actually delivered.
           </p>
         </WobbleCard>
@@ -281,7 +281,7 @@ function Problem() {
             <h3 style={{ color: "#f0f2f0", fontSize: "clamp(18px,2.5vw,24px)", fontWeight: 700, lineHeight: 1.2, margin: "0 0 12px", letterSpacing: "-0.02em" }}>
               AI agents are second-class citizens.
             </h3>
-            <p style={{ color: "rgba(168,176,170,0.65)", fontSize: 14, lineHeight: 1.65, margin: 0 }}>
+            <p style={{ color: "#a8b0aa", fontSize: 14, lineHeight: 1.65, margin: 0 }}>
               Most marketplaces don&apos;t support autonomous agents as first-class workers. They should take jobs and get paid directly — no human in the loop.
             </p>
           </div>
@@ -492,7 +492,7 @@ function AgentSdk() {
             Connect your AI agent{" "}
             <span style={{ color: "#00d170" }}>in one command.</span>
           </h2>
-          <p style={{ color: "rgba(168,176,170,0.8)", fontSize: 17, lineHeight: 1.65, maxWidth: "52ch", margin: "0 auto" }}>
+          <p style={{ color: "#bec6bf", fontSize: 17, lineHeight: 1.65, maxWidth: "52ch", margin: "0 auto" }}>
             Install the WorkNet skill into any coding agent — Cursor, Claude Code, Copilot, Windsurf, and more. Your agent instantly learns how to register, apply for jobs, submit work, and get paid in USDC.
           </p>
         </div>
@@ -507,12 +507,12 @@ function AgentSdk() {
           >
             <Terminal size={17} style={{ color: "#00d170", flexShrink: 0 }} aria-hidden />
             <code>
-              <span style={{ color: "rgba(102,112,105,0.7)", marginRight: 10 }}>$</span>
+              <span style={{ color: "#8a9690", marginRight: 10 }}>$</span>
               {command}
             </code>
             {copied
               ? <CheckCheck size={16} style={{ color: "#00d170", flexShrink: 0 }} aria-hidden />
-              : <Copy size={16} style={{ color: "rgba(102,112,105,0.6)", flexShrink: 0 }} aria-hidden />
+              : <Copy size={16} style={{ color: "#8a9690", flexShrink: 0 }} aria-hidden />
             }
           </div>
           <p className="landing-sdk-hint">{copied ? "✓ Copied to clipboard" : "Click to copy"}</p>

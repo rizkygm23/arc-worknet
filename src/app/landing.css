@@ -81,7 +81,7 @@
 }
 
 .landing-nav-link {
-  color: rgba(168,176,170,0.75);
+  color: #a8b0aa;
   font-size: 13.5px;
   font-weight: 450;
   letter-spacing: 0;
@@ -239,7 +239,7 @@
 .landing-hero-sub {
   max-width: 54ch;
   margin: 0 auto 36px;
-  color: rgba(168,176,170,0.85);
+  color: rgba(190,198,191,1);
   font-size: 18px;
   line-height: 1.7;
 }
@@ -297,7 +297,7 @@
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(168,176,170,0.6);
+  color: #a8b0aa;
 }
 
 /* ── Section shell ── */
@@ -432,7 +432,7 @@
 
 .landing-step-body {
   margin: 0;
-  color: rgba(168,176,170,0.8);
+  color: rgba(190,198,191,1);
   font-size: 14px;
   line-height: 1.65;
 }
@@ -493,7 +493,7 @@
 
 .landing-card-body {
   margin: 0;
-  color: rgba(168,176,170,0.8);
+  color: rgba(190,198,191,1);
   font-size: 14px;
   line-height: 1.65;
 }
@@ -521,7 +521,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  color: rgba(168,176,170,0.85);
+  color: rgba(190,198,191,1);
   font-size: 14.5px;
   line-height: 1.55;
 }
@@ -573,7 +573,7 @@
 
 .landing-why-body {
   font-size: 13.5px;
-  color: rgba(168,176,170,0.75);
+  color: #a8b0aa;
   line-height: 1.6;
   margin: 0;
 }
@@ -621,7 +621,7 @@
 
 .landing-sdk-hint {
   text-align: center;
-  color: rgba(102,112,105,0.8);
+  color: #9aa29b;
   font-family: var(--font-mono);
   font-size: 11px;
   margin-top: 10px;
@@ -700,7 +700,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  color: rgba(102,112,105,0.9);
+  color: #a8b0aa;
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.06em;
@@ -712,7 +712,7 @@
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 6px;
   background: rgba(255,255,255,0.03);
-  color: rgba(168,176,170,0.7);
+  color: #a8b0aa;
 }
 
 .landing-job-right {
@@ -733,7 +733,7 @@
 }
 .landing-job-budget span {
   display: block;
-  color: rgba(102,112,105,0.8);
+  color: #9aa29b;
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -801,7 +801,7 @@
 }
 
 .landing-footer-blurb {
-  color: rgba(102,112,105,0.9);
+  color: #a8b0aa;
   font-size: 13.5px;
   line-height: 1.65;
   max-width: 32ch;
@@ -809,7 +809,7 @@
 }
 
 .landing-footer-legal {
-  color: rgba(102,112,105,0.6);
+  color: #8a928a;
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -835,7 +835,7 @@
 }
 
 .landing-footer-col a {
-  color: rgba(102,112,105,0.85);
+  color: #a0a89f;
   font-size: 14px;
   transition: color 0.18s;
 }
@@ -850,7 +850,7 @@
   margin: 0 auto;
   padding: 16px 40px 28px;
   border-top: 1px solid rgba(255,255,255,0.06);
-  color: rgba(102,112,105,0.6);
+  color: #8a928a;
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.06em;
@@ -879,16 +879,16 @@
   border-radius: 50%;
   background: currentColor;
 }
-.status-badge.open      { color: rgba(240,242,240,0.7); border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); }
+.status-badge.open      { color: #d8ddd8; border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); }
 .status-badge.funded, .status-badge.completed { color: #00d170; border-color: rgba(0,209,112,0.35); background: rgba(0,209,112,0.08); }
-.status-badge.submitted { color: rgba(240,242,240,0.7); border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); }
+.status-badge.submitted { color: #d8ddd8; border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); }
 .status-badge.draft, .status-badge.revision_requested, .status-badge.funding_pending { color: #f5a623; border-color: rgba(245,166,35,0.35); background: rgba(245,166,35,0.08); }
 .status-badge.rejected, .status-badge.cancelled, .status-badge.disputed { color: #f0483a; border-color: rgba(240,72,58,0.35); background: rgba(240,72,58,0.08); }
 
 /* ── Note ── */
 .landing-note {
   margin: 32px 0 0;
-  color: rgba(102,112,105,0.65);
+  color: #8a928a;
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.06em;
@@ -899,7 +899,7 @@
   margin: 40px 0 0;
   padding-left: 20px;
   border-left: 2px solid #00d170;
-  color: rgba(168,176,170,0.8);
+  color: rgba(190,198,191,1);
   font-size: 17px;
   line-height: 1.6;
   font-style: italic;

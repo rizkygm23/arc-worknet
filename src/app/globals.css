@@ -8,7 +8,7 @@
   --color-surface-elevated: #21252b;
   --color-ink:            #f0f2f0;
   --color-body:           #a8b0aa;
-  --color-muted:          #667069;
+  --color-muted:          #8a9690;
   --color-line:           rgba(255,255,255,0.08);
   --color-line-strong:    rgba(255,255,255,0.14);
   --color-hairline:       rgba(255,255,255,0.06);
@@ -76,7 +76,7 @@
   --primary-foreground: var(--on-accent);
   --secondary: #1a1d21;
   --secondary-foreground: #f0f2f0;
-  --muted-foreground: #667069;
+  --muted-foreground: #8a9690;
   --accent-foreground: #f0f2f0;
   --destructive: #f0483a;
   --border: rgba(255,255,255,0.08);
