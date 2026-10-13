@@ -42,7 +42,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#f9faf6",
+  themeColor: "#0c0d0e",
 };
 
 export default function RootLayout({
@@ -51,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn(plusJakarta.variable, inter.variable, jetbrainsMono.variable, "font-sans", geist.variable)}>
+    <html lang="en" className={cn(plusJakarta.variable, inter.variable, jetbrainsMono.variable, "font-sans", geist.variable, "dark")}>
       <body>
         <Providers>{children}</Providers>
         <Analytics />

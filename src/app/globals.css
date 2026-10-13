@@ -1561,9 +1561,9 @@ a.portfolio-title:hover {
 }
 
 .worker-card:hover {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(246, 247, 244, 0.98) 100%),
-    var(--surface);
+  background: var(--surface-muted);
+  border-color: rgba(0,209,112,0.2);
+  box-shadow: var(--glow-green-sm);
 }
 
 .worker-bio {
@@ -2785,20 +2785,20 @@ pre {
   }
 }
 
-/* Flat app surfaces. Landing is outside `.app-shell`. */
+/* Flat app surfaces — dark theme. Landing is outside `.app-shell`. */
 .app-shell :is(.card, .panel, .onboarding-card),
 .app-shell :is(.card, .panel, .onboarding-card):hover {
-  border: 0;
-  background: #ffffff;
-  box-shadow: none;
+  border: var(--rule-thin) solid var(--hairline);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, var(--shadow-md);
   transform: none;
 }
 
 .app-shell .stat,
 .app-shell .stat:hover {
-  border: 0;
-  background: #f9fafb;
-  box-shadow: none;
+  border: var(--rule-thin) solid var(--hairline);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, var(--shadow-md);
   transform: none;
 }
 
@@ -2813,12 +2813,11 @@ pre {
   .invitation-item,
   .invite-item
 ) {
-  border: 0;
-  border-top: var(--rule-thin) solid var(--hairline);
-  border-radius: 0;
-  background: transparent;
+  border: var(--rule-thin) solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
   box-shadow: none;
-  transition: background-color var(--dur-short) var(--ease-out);
+  transition: background-color var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out);
 }
 
 .app-shell :is(
@@ -2832,8 +2831,8 @@ pre {
   .invitation-item,
   .invite-item
 ):hover {
-  border-color: var(--hairline);
-  background: #f3f4f6;
+  border-color: rgba(0,209,112,0.2);
+  background: var(--surface-muted);
   box-shadow: none;
   transform: none;
 }
