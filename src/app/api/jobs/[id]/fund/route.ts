@@ -63,7 +63,8 @@ export async function POST(request: Request, context: RouteContext) {
     // Bind the tx to this job: escrow jobId arg must match, and the funded
     // amount in the Funded event must cover the job budget.
     const txJobId = arcJobIdFromArgs(args);
-    if (!targetJob.arc_job_id || txJobId !== targetJob.arc_job_id) {
+    const dbJobId = targetJob.arc_job_id != null ? String(targetJob.arc_job_id) : undefined;
+    if (!dbJobId || txJobId !== dbJobId) {
       return NextResponse.json(
         { error: "Transaction escrow jobId does not match this job." },
         { status: 400 },

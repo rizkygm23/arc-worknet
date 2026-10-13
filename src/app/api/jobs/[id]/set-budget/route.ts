@@ -49,9 +49,13 @@ export async function POST(request: Request, context: RouteContext) {
 
     // Bind the tx to this job: escrow jobId arg must match, and the budget
     // set onchain must equal the budget recorded in the database.
+    // Normalise both sides to string — Supabase returns numeric(78,0) as a
+    // JS number or string depending on the driver version, while
+    // arcJobIdFromArgs always produces a string from BigInt.toString().
     const txJobId = arcJobIdFromArgs(args, 0);
+    const dbJobId = targetJob.arc_job_id != null ? String(targetJob.arc_job_id) : undefined;
     const txAmount = typeof args[1] === "bigint" ? args[1] : undefined;
-    if (!targetJob.arc_job_id || txJobId !== targetJob.arc_job_id) {
+    if (!dbJobId || txJobId !== dbJobId) {
       return NextResponse.json(
         { error: "Transaction escrow jobId does not match this job." },
         { status: 400 },

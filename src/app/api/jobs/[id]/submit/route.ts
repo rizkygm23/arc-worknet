@@ -74,7 +74,8 @@ export async function POST(request: Request, context: RouteContext) {
     // deliverable hash committed onchain must equal the submitted one.
     const txJobId = arcJobIdFromArgs(args, 0);
     const txDeliverableHash = typeof args[1] === "string" ? args[1] : undefined;
-    if (!targetJob.arc_job_id || txJobId !== targetJob.arc_job_id) {
+    const dbJobId = targetJob.arc_job_id != null ? String(targetJob.arc_job_id) : undefined;
+    if (!dbJobId || txJobId !== dbJobId) {
       return NextResponse.json(
         { error: "Transaction escrow jobId does not match this job." },
         { status: 400 },
