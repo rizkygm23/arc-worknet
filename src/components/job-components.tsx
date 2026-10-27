@@ -15,6 +15,7 @@ import {
   Download,
   ExternalLink,
   FileCheck2,
+  FileUp,
   Lock,
   Repeat,
   Star,
@@ -168,39 +169,76 @@ export function JobRow({
   );
 }
 
-const timeline: Array<{ status: JobStatus; label: string; text: string }> = [
-  { status: "open", label: "Open", text: "Listing is accepting applications." },
-  { status: "assigned", label: "Assigned", text: "Provider has been selected." },
-  { status: "onchain_created", label: "Started", text: "Job is live." },
-  { status: "budget_set", label: "Budget", text: "Budget has been set." },
-  { status: "funded", label: "Funded", text: "USDC is locked in escrow." },
-  { status: "submitted", label: "Submitted", text: "Deliverable is awaiting review." },
-  { status: "completed", label: "Paid", text: "Payment has been released." },
+const timeline: Array<{ status: JobStatus; label: string; text: string; icon: typeof Circle }> = [
+  { status: "open", label: "Open", text: "Listing is accepting applications.", icon: Circle },
+  { status: "assigned", label: "Assigned", text: "Provider has been selected.", icon: UserRound },
+  { status: "onchain_created", label: "Created", text: "Escrow job is live onchain.", icon: FileCheck2 },
+  { status: "budget_set", label: "Budget", text: "Amount agreed for the work.", icon: CreditCard },
+  { status: "funded", label: "Funded", text: "USDC is locked in escrow.", icon: Lock },
+  { status: "submitted", label: "Submitted", text: "Deliverable is awaiting review.", icon: FileUp },
+  { status: "completed", label: "Paid", text: "Payment has been released.", icon: BadgeCheck },
 ];
 
+/** Non-linear statuses overlay the linear timeline instead of advancing it. */
+const overlayStatuses: Partial<Record<JobStatus, { step: JobStatus; label: string; text: string; tone: "warn" | "danger" }>> = {
+  draft: { step: "open", label: "Draft", text: "Job is not published yet.", tone: "warn" },
+  funding_pending: { step: "budget_set", label: "Awaiting funding", text: "Waiting for the client to lock USDC in escrow.", tone: "warn" },
+  revision_requested: { step: "submitted", label: "Revision requested", text: "Client asked for changes before payment.", tone: "warn" },
+  rejected: { step: "submitted", label: "Rejected", text: "Deliverable was rejected — penalty applied, client refunded.", tone: "danger" },
+  disputed: { step: "submitted", label: "Disputed", text: "A dispute is open — funds frozen until resolved.", tone: "danger" },
+  cancelled: { step: "open", label: "Cancelled", text: "Job was cancelled before funding.", tone: "danger" },
+  expired: { step: "funded", label: "Expired", text: "Deadline passed — client can reclaim the escrow.", tone: "danger" },
+};
+
 export function EscrowTimeline({ status }: { status: JobStatus }) {
-  const rank = statusRank(status);
+  const overlay = overlayStatuses[status];
+  const effectiveStatus: JobStatus = overlay ? overlay.step : status;
+  const rank = statusRank(effectiveStatus);
+  const currentIndex = timeline.findIndex((step) => statusRank(step.status) === rank);
+  // Progress fill covers the current step's segment; terminal paid = 100%.
+  const progress = effectiveStatus === "completed" ? 100 : Math.max(0, (currentIndex / (timeline.length - 1)) * 100);
+  const tone = overlay?.tone ?? (effectiveStatus === "completed" ? "success" : undefined);
+
   return (
-    <div className="timeline">
-      {timeline.map((step, index) => {
-        const stepRank = statusRank(step.status);
-        const done = stepRank <= rank || status === "completed";
-        const nextStep = timeline[index - 1];
-        const isNext = nextStep ? statusRank(nextStep.status) === rank : false;
-        const current =
-          isNext || (status === "revision_requested" && step.status === "submitted");
-        return (
-          <div key={step.status} className={clsx("timeline-step", done && "done", current && "current")}>
-            <span className="timeline-dot">
-              {done ? <CheckCircle2 size={15} /> : current ? <Clock3 size={15} /> : <Circle size={13} />}
-            </span>
-            <span className="timeline-copy">
-              <strong>{step.label}</strong>
-              <span>{step.text}</span>
-            </span>
-          </div>
-        );
-      })}
+    <div className={clsx("escrow-timeline", tone && `escrow-timeline-${tone}`)}>
+      <div className="escrow-track" aria-hidden>
+        <div className="escrow-track-fill" style={{ width: `${progress}%` }} />
+      </div>
+      <ol className="escrow-steps" role="list">
+        {timeline.map((step, index) => {
+          const done = index < currentIndex || effectiveStatus === "completed";
+          const current = index === currentIndex && effectiveStatus !== "completed";
+          const upcoming = !done && !current;
+          const Icon = step.icon;
+          const stepTone =
+            overlay && index === currentIndex ? tone : done && effectiveStatus === "completed" ? "success" : undefined;
+          return (
+            <li
+              key={step.status}
+              className={clsx(
+                "escrow-step",
+                done && "done",
+                current && "current",
+                upcoming && "upcoming",
+                stepTone && `escrow-step-${stepTone}`,
+              )}
+              aria-current={current ? "step" : undefined}
+            >
+              <span className="escrow-dot">
+                {done ? <CheckCircle2 size={15} /> : current ? <Icon size={14} /> : <Circle size={11} />}
+              </span>
+              <span className="escrow-step-label">{step.label}</span>
+              <span className="escrow-step-text">{step.text}</span>
+            </li>
+          );
+        })}
+      </ol>
+      {overlay ? (
+        <div className={clsx("escrow-overlay-note", tone === "danger" ? "escrow-overlay-danger" : "escrow-overlay-warn")} role="status">
+          <strong>{overlay.label}</strong>
+          <span>{overlay.text}</span>
+        </div>
+      ) : null}
     </div>
   );
 }
