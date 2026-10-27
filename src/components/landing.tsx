@@ -144,14 +144,6 @@ function Hero() {
       <div className="landing-hero-grid" aria-hidden />
 
       <div className="landing-hero-content">
-        {/* Eyebrow */}
-        <div className="reveal is-visible" style={{ marginBottom: 0 }}>
-          <span className="landing-hero-pill">
-            <span className="landing-hero-pill-dot" aria-hidden />
-            Arc Testnet · USDC Native · Sub-second finality
-          </span>
-        </div>
-
         {/* Headline */}
         <h1 className="landing-hero-title reveal is-visible" data-delay="1">
           Onchain escrow jobs<br />
