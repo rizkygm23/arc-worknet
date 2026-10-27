@@ -22,10 +22,18 @@ const GATEWAY_WALLET_BATCHED_NAME = "GatewayWalletBatched";
 const GATEWAY_WALLET_BATCHED_VERSION = "1";
 
 // Canonical Arc Testnet Gateway deployment shipped with the SDK.
+// v4 moved the USDC config under `tokens`; read both shapes so the asset
+// resolves regardless of the installed kit version.
 const arcChainConfig = CHAIN_CONFIGS.arcTestnet;
+const legacyUsdc = (arcChainConfig as { usdc?: string }).usdc;
+const X402_ASSET_RESOLVED =
+  legacyUsdc ?? (arcChainConfig as { tokens?: { USDC?: { address?: string } } }).tokens?.USDC?.address;
 
 export const X402_NETWORK = `eip155:${ARC_TESTNET_CHAIN_ID}`;
-export const X402_ASSET = arcChainConfig.usdc;
+if (!X402_ASSET_RESOLVED) {
+  throw new Error("x402: USDC asset address not found in kit chain config.");
+}
+export const X402_ASSET: string = X402_ASSET_RESOLVED;
 export const X402_GATEWAY_WALLET = arcChainConfig.gatewayWallet;
 
 /** Prices in USDC units (6 decimals), matching `*_usdc_units` elsewhere. */
