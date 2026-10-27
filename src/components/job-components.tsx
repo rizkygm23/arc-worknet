@@ -243,6 +243,125 @@ export function EscrowTimeline({ status }: { status: JobStatus }) {
   );
 }
 
+export type EscrowStepAction = {
+  href: string;
+  label: string;
+  description: string;
+};
+
+export type EscrowStepGuidance = {
+  who: "you" | "them" | "system";
+  actorRole: "client" | "provider";
+  action?: EscrowStepAction;
+  note: string;
+};
+
+/**
+ * Who-moves-next guidance for every lifecycle status, from the viewer's role.
+ * Returns null when the status is terminal or nothing is actionable.
+ */
+export function escrowNextStep(
+  status: JobStatus,
+  viewerRole: "client" | "provider" | "other",
+): EscrowStepGuidance | null {
+  const clientAction: Partial<Record<JobStatus, EscrowStepAction>> = {
+    open: { href: "#applications", label: "Review applications", description: "Pick a provider below to begin the escrow flow." },
+    assigned: { href: "#escrow-panel", label: "Start onchain job", description: "Lock in the provider and create the escrow job on Arc." },
+    onchain_created: { href: "#escrow-panel", label: "Set budget", description: "Confirm the USDC amount the provider will receive." },
+    budget_set: { href: "/jobs", label: "Fund escrow", description: "Approve and lock USDC so the provider can start." },
+    submitted: { href: "#deliverable", label: "Review deliverable", description: "Check the submission, then approve, request revision, or reject." },
+    revision_requested: { href: "#deliverable", label: "Await revision", description: "The provider is updating the deliverable based on your feedback." },
+  };
+
+  const providerAction: Partial<Record<JobStatus, EscrowStepAction>> = {
+    open: { href: "#apply", label: "Submit application", description: "Send your pitch — the client picks one provider." },
+    onchain_created: { href: "#escrow-panel", label: "Wait for budget", description: "The client is confirming the budget before funding." },
+    budget_set: { href: "#escrow-panel", label: "Wait for funding", description: "Funds are about to be locked — you can start once funded." },
+    funded: { href: "#deliverable", label: "Submit deliverable", description: "Escrow is locked — upload your work to unlock payment." },
+    submitted: { href: "#deliverable", label: "Await review", description: "The client is reviewing your deliverable." },
+    revision_requested: { href: "#deliverable", label: "Revise deliverable", description: "Address the client's feedback and resubmit." },
+  };
+
+  if (status === "completed" || status === "cancelled" || status === "expired" || status === "rejected") {
+    return null;
+  }
+
+  const guidance: Partial<Record<JobStatus, EscrowStepGuidance>> = {
+    draft: { who: "them", actorRole: "client", note: "Waiting for the client to publish this job." },
+    open: { who: "you", actorRole: viewerRole === "provider" ? "provider" : "client", note: "Waiting for a provider to be selected." },
+    assigned: { who: "them", actorRole: "client", note: "Waiting for the client to create the escrow onchain." },
+    onchain_created: { who: "them", actorRole: "client", note: "Waiting for the client to set the budget." },
+    budget_set: { who: "them", actorRole: "client", note: "Waiting for the client to fund the escrow." },
+    funding_pending: { who: "them", actorRole: "client", note: "Waiting for the client to fund the escrow." },
+    funded: { who: "you", actorRole: "provider", note: "Escrow is locked — time to deliver." },
+    submitted: { who: "them", actorRole: "client", note: "Waiting for the client's review of the deliverable." },
+    revision_requested: { who: "them", actorRole: "provider", note: "Waiting for the provider to resubmit." },
+    disputed: { who: "system", actorRole: "client", note: "Dispute open — funds are frozen until an admin resolves it." },
+  };
+
+  const step = guidance[status];
+  if (!step) return null;
+
+  // "Your move" when the actorRole matches the viewer; the apply panel already
+  // serves open jobs for providers, so only clients get a CTA there.
+  const actorIsViewer =
+    (step.actorRole === "client" && viewerRole === "client") ||
+    (step.actorRole === "provider" && viewerRole === "provider");
+  const action = actorIsViewer
+    ? step.actorRole === "client"
+      ? clientAction[status]
+      : providerAction[status]
+    : undefined;
+  const who: EscrowStepGuidance["who"] = step.who === "system" ? "system" : actorIsViewer ? "you" : "them";
+  return { who, actorRole: step.actorRole, action, note: action ? action.description : step.note };
+}
+
+/**
+ * "What happens next" card under the escrow timeline: tells the viewer whose
+ * move it is and, when it is theirs, links straight to the action.
+ */
+export function EscrowNextStep({
+  status,
+  viewerRole,
+}: {
+  status: JobStatus;
+  viewerRole: "client" | "provider" | "other";
+}) {
+  const guidance = escrowNextStep(status, viewerRole);
+  if (!guidance) return null;
+
+  const isYou = guidance.who === "you";
+  const isSystem = guidance.who === "system";
+  return (
+    <div className={clsx("escrow-next-step", isYou && "escrow-next-you", isSystem && "escrow-next-system")}>
+      <div className="escrow-next-copy">
+        <span className="escrow-next-who">
+          {isYou ? (
+            <>
+              <Zap size={12} /> Your move
+            </>
+          ) : isSystem ? (
+            <>
+              <Clock3 size={12} /> On hold
+            </>
+          ) : (
+            <>
+              <Clock3 size={12} /> Waiting
+            </>
+          )}
+        </span>
+        <p className="escrow-next-note">{guidance.note}</p>
+      </div>
+      {isYou && guidance.action ? (
+        <Link className="button primary small" href={guidance.action.href}>
+          {guidance.action.label}
+          <ExternalLink size={13} />
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
 export function DeliverableViewer({
   jobId,
   submissionId,

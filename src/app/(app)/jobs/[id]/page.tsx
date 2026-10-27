@@ -23,6 +23,7 @@ import {
   BudgetAmount,
   ChainTxLink,
   DeliverableViewer,
+  EscrowNextStep,
   EscrowTimeline,
   JobStatusBadge,
 } from "@/components/job-components";
@@ -674,7 +675,7 @@ export default function JobDetailPage() {
         </div>
 
         <aside className="grid">
-          <div className="panel">
+          <div className="panel" id="escrow-panel">
             <div className="panel-header">
               <div>
                 <h2 className="panel-title">Escrow</h2>
@@ -685,6 +686,12 @@ export default function JobDetailPage() {
               <JobStatusBadge status={currentJob.status} />
             </div>
             <EscrowTimeline status={currentJob.status} />
+            {isClient || isProvider ? (
+              <EscrowNextStep
+                status={currentJob.status}
+                viewerRole={isClient ? "client" : "provider"}
+              />
+            ) : null}
             <NextStepAction job={currentJob} />
             <div style={{ marginTop: 16, borderTop: "var(--rule-thin) solid var(--hairline)", paddingTop: 16 }}>
               <p className="small muted" style={{ margin: "0 0 10px" }}>Participants</p>

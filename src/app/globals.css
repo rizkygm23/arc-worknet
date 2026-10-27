@@ -1879,6 +1879,74 @@ a.portfolio-title:hover {
   color: var(--body);
 }
 
+/* ─── Escrow next-step card ─── */
+.escrow-next-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+  border: var(--rule-thin) solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  padding: var(--space-3) var(--space-4);
+}
+
+.escrow-next-step.escrow-next-you {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--hairline));
+  background: var(--accent-soft);
+}
+
+.escrow-next-step.escrow-next-system {
+  border-color: color-mix(in srgb, var(--warning) 40%, var(--hairline));
+  background: var(--warning-soft);
+}
+
+.escrow-next-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.escrow-next-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-mono-sm);
+  font-weight: 600;
+  letter-spacing: var(--tracking-mono-sm);
+  text-transform: uppercase;
+}
+
+.escrow-next-you .escrow-next-who {
+  color: var(--accent);
+}
+
+.escrow-next-system .escrow-next-who {
+  color: var(--warning);
+}
+
+.escrow-next-note {
+  margin: 0;
+  color: var(--body);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .escrow-next-step {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .escrow-next-step .button {
+    width: 100%;
+  }
+}
+
 @media (max-width: 760px) {
   .escrow-steps {
     gap: 2px;
