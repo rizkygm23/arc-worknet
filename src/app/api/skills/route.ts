@@ -4,6 +4,7 @@ import { getServiceClientOrResponse, parseJson, validationError } from "@/lib/ap
 import { invalidateBootstrapCache } from "@/lib/server/cache";
 import { walletRateLimit } from "@/lib/server/rate-limit";
 import { requireWalletSession, type WalletSession } from "@/lib/server/wallet-session";
+import type { Database } from "@/lib/supabase/server";
 import { TABLES } from "@/lib/supabase/tables";
 
 type SupabaseServiceClient = NonNullable<Awaited<ReturnType<typeof getServiceClientOrResponse>>["supabase"]>;
@@ -18,6 +19,8 @@ const updateSkillSchema = z.object({
   name: z.string().trim().min(1).max(48).optional(),
   category: z.string().trim().min(1).max(48).optional(),
 });
+
+type SkillUpdate = Database["public"]["Tables"]["skills_arcworker"]["Update"];
 
 const deleteSkillSchema = z.object({
   id: z.string().uuid(),
@@ -106,7 +109,7 @@ export async function PATCH(request: Request) {
   const limited = await walletRateLimit(request, session!.profileId, "skills:write");
   if (limited) return limited;
 
-  const patch: Record<string, string> = {};
+  const patch: SkillUpdate = {};
   if (name) patch.name = name.toLowerCase();
   if (category) patch.category = category.toLowerCase();
 
