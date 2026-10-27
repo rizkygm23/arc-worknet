@@ -3,12 +3,10 @@
 import {
   ArrowLeft,
   Check,
-  CircleDollarSign,
   Download,
   ExternalLink,
   FileText,
   FileUp,
-  Handshake,
   MessageSquare,
   Plus,
   Send,
@@ -315,19 +313,23 @@ function TransactionsPanel({ job }: { job: Job }) {
   );
 }
 
-function NextStepAction({ job }: { job: Job }) {
+function useEscrowOnchainAction(job?: Job) {
   const { activeProfile } = useWorkNetData();
   const { createOnchainJob, setBudget, approveAndFund } = useWorkNetActions();
-  const { wallet } = useWorkNetWallet();
-  const action = nextOnchainAction(job.status);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
-  async function runAction(handler: () => Promise<void>) {
+  const action = job ? nextOnchainAction(job.status) : undefined;
+  const isClientOfJob = Boolean(activeProfile && job && activeProfile.id === job.clientProfileId);
+
+  async function run(handlerKey: "createJob" | "setBudget" | "fund") {
+    if (!job) return;
     setIsBusy(true);
     setError(undefined);
     try {
-      await handler();
+      if (handlerKey === "createJob") await createOnchainJob(job.id);
+      else if (handlerKey === "setBudget") await setBudget(job.id);
+      else await approveAndFund(job.id);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Action failed.");
     } finally {
@@ -335,41 +337,12 @@ function NextStepAction({ job }: { job: Job }) {
     }
   }
 
-  if (activeProfile?.id !== job.clientProfileId) return null;
-  if (!action) return null;
-
-  const copy = {
-    createJob: {
-      label: "Start job",
-      text: "Lock in the assigned provider and begin the escrow flow.",
-      icon: <Handshake size={16} />,
-      onClick: () => runAction(() => createOnchainJob(job.id)),
-    },
-    setBudget: {
-      label: "Set budget",
-      text: "Confirm the USDC budget for this job.",
-      icon: <CircleDollarSign size={16} />,
-      onClick: () => runAction(() => setBudget(job.id)),
-    },
-    fund: {
-      label: "Fund escrow",
-      text: "Approve and lock USDC into escrow until the work is delivered.",
-      icon: <Check size={16} />,
-      onClick: () => runAction(() => approveAndFund(job.id)),
-    },
-  }[action];
-
-  return (
-    <div style={{ marginTop: 16, borderTop: "var(--rule-thin) solid var(--hairline)", paddingTop: 16 }}>
-      <p className="small muted" style={{ margin: "0 0 8px" }}>Next step</p>
-      <p className="muted" style={{ margin: "0 0 12px" }}>{copy.text}</p>
-      {error ? <p className="small" style={{ color: "var(--danger)", margin: "0 0 8px" }}>{error}</p> : null}
-      <button className="button primary" type="button" onClick={copy.onClick} disabled={isBusy || !wallet.address}>
-        {copy.icon}
-        {copy.label}
-      </button>
-    </div>
-  );
+  return {
+    enabled: isClientOfJob && Boolean(action),
+    run: action ? () => run(action) : undefined,
+    busy: isBusy,
+    error,
+  };
 }
 
 export default function JobDetailPage() {
@@ -394,6 +367,7 @@ export default function JobDetailPage() {
   const [isDetailLoading, setIsDetailLoading] = useState(true);
   const { decline, getEffectiveStatus, getDeclineReason } = useApplicationOverlay();
   const job = getJob(params.id);
+  const onchain = useEscrowOnchainAction(job);
 
   useEffect(() => {
     let cancelled = false;
@@ -690,9 +664,11 @@ export default function JobDetailPage() {
               <EscrowNextStep
                 status={currentJob.status}
                 viewerRole={isClient ? "client" : "provider"}
+                onAction={onchain.enabled ? onchain.run : undefined}
+                busy={onchain.busy}
+                error={onchain.error}
               />
             ) : null}
-            <NextStepAction job={currentJob} />
             <div style={{ marginTop: 16, borderTop: "var(--rule-thin) solid var(--hairline)", paddingTop: 16 }}>
               <p className="small muted" style={{ margin: "0 0 10px" }}>Participants</p>
               <div className="activity-list">

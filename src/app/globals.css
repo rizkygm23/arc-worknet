@@ -1936,6 +1936,13 @@ a.portfolio-title:hover {
   line-height: 1.45;
 }
 
+.escrow-next-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
 @media (max-width: 760px) {
   .escrow-next-step {
     flex-direction: column;

@@ -244,9 +244,11 @@ export function EscrowTimeline({ status }: { status: JobStatus }) {
 }
 
 export type EscrowStepAction = {
+  /** Anchor/URL target. "#" means handle via onAction callback instead. */
   href: string;
   label: string;
   description: string;
+  icon?: React.ReactNode;
 };
 
 export type EscrowStepGuidance = {
@@ -266,20 +268,18 @@ export function escrowNextStep(
 ): EscrowStepGuidance | null {
   const clientAction: Partial<Record<JobStatus, EscrowStepAction>> = {
     open: { href: "#applications", label: "Review applications", description: "Pick a provider below to begin the escrow flow." },
-    assigned: { href: "#escrow-panel", label: "Start onchain job", description: "Lock in the provider and create the escrow job on Arc." },
-    onchain_created: { href: "#escrow-panel", label: "Set budget", description: "Confirm the USDC amount the provider will receive." },
-    budget_set: { href: "/jobs", label: "Fund escrow", description: "Approve and lock USDC so the provider can start." },
+    assigned: { href: "#", label: "Start onchain job", description: "Lock in the provider and create the escrow job on Arc." },
+    onchain_created: { href: "#", label: "Set budget", description: "Confirm the USDC amount the provider will receive." },
+    budget_set: { href: "#", label: "Fund escrow", description: "Approve and lock USDC so the provider can start." },
+    funding_pending: { href: "#", label: "Fund escrow", description: "Approve and lock USDC so the provider can start." },
     submitted: { href: "#deliverable", label: "Review deliverable", description: "Check the submission, then approve, request revision, or reject." },
-    revision_requested: { href: "#deliverable", label: "Await revision", description: "The provider is updating the deliverable based on your feedback." },
+    revision_requested: { href: "#deliverable", label: "View feedback", description: "You requested changes — the provider is updating the deliverable." },
   };
 
   const providerAction: Partial<Record<JobStatus, EscrowStepAction>> = {
     open: { href: "#apply", label: "Submit application", description: "Send your pitch — the client picks one provider." },
-    onchain_created: { href: "#escrow-panel", label: "Wait for budget", description: "The client is confirming the budget before funding." },
-    budget_set: { href: "#escrow-panel", label: "Wait for funding", description: "Funds are about to be locked — you can start once funded." },
-    funded: { href: "#deliverable", label: "Submit deliverable", description: "Escrow is locked — upload your work to unlock payment." },
-    submitted: { href: "#deliverable", label: "Await review", description: "The client is reviewing your deliverable." },
-    revision_requested: { href: "#deliverable", label: "Revise deliverable", description: "Address the client's feedback and resubmit." },
+    funded: { href: "#", label: "Submit deliverable", description: "Escrow is locked — upload your work to unlock payment.", },
+    revision_requested: { href: "#", label: "Revise & resubmit", description: "Address the client's feedback and resubmit." },
   };
 
   if (status === "completed" || status === "cancelled" || status === "expired" || status === "rejected") {
@@ -318,20 +318,29 @@ export function escrowNextStep(
 
 /**
  * "What happens next" card under the escrow timeline: tells the viewer whose
- * move it is and, when it is theirs, links straight to the action.
+ * move it is and, when it is theirs, links straight to the action. `onAction`
+ * (optional) replaces the link with an inline button for onchain signing —
+ * `busy`/`error` reflect the signing state.
  */
 export function EscrowNextStep({
   status,
   viewerRole,
+  onAction,
+  busy,
+  error,
 }: {
   status: JobStatus;
   viewerRole: "client" | "provider" | "other";
+  onAction?: () => Promise<void> | void;
+  busy?: boolean;
+  error?: string;
 }) {
   const guidance = escrowNextStep(status, viewerRole);
   if (!guidance) return null;
 
   const isYou = guidance.who === "you";
   const isSystem = guidance.who === "system";
+  const showInlineButton = isYou && guidance.action && (onAction || guidance.action.href !== "#");
   return (
     <div className={clsx("escrow-next-step", isYou && "escrow-next-you", isSystem && "escrow-next-system")}>
       <div className="escrow-next-copy">
@@ -351,12 +360,20 @@ export function EscrowNextStep({
           )}
         </span>
         <p className="escrow-next-note">{guidance.note}</p>
+        {error ? <p className="escrow-next-error">{error}</p> : null}
       </div>
       {isYou && guidance.action ? (
-        <Link className="button primary small" href={guidance.action.href}>
-          {guidance.action.label}
-          <ExternalLink size={13} />
-        </Link>
+        onAction && showInlineButton ? (
+          <button className="button primary small" type="button" onClick={onAction} disabled={busy}>
+            {busy ? <span className="spinner" aria-hidden /> : guidance.action.icon ?? null}
+            {guidance.action.label}
+          </button>
+        ) : guidance.action.href !== "#" ? (
+          <Link className="button primary small" href={guidance.action.href}>
+            {guidance.action.label}
+            <ExternalLink size={13} />
+          </Link>
+        ) : null
       ) : null}
     </div>
   );
