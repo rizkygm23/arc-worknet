@@ -297,9 +297,9 @@ function StepIndicator({ step, currentStep, onClickStep, disableStepIndicators =
         className="flex h-8 w-8 items-center justify-center rounded-full font-semibold"
       >
         {status === 'complete' ? (
-          <CheckIcon className="h-4 w-4 text-white" />
+          <CheckIcon className="h-4 w-4 text-[color:var(--on-accent)]" />
         ) : status === 'active' ? (
-          <div className="h-3 w-3 rounded-full bg-white" />
+          <div className="h-3 w-3 rounded-full bg-[color:var(--on-accent)]" />
         ) : (
           <span className="text-sm">{step}</span>
         )}

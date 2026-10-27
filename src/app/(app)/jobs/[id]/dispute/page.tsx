@@ -133,7 +133,7 @@ export default function DisputeWorkspacePage({
             type="button"
             disabled={!reason.trim() || submitting}
             onClick={() => setSubmitting(true)}
-            className="px-5 py-2 text-sm font-semibold text-white bg-primary rounded-xl disabled:opacity-50 hover:bg-primary/90 transition shadow"
+            className="px-5 py-2 text-sm font-semibold text-[color:var(--on-accent)] bg-primary rounded-xl disabled:opacity-50 hover:bg-primary/90 transition shadow"
           >
             {submitting ? "Processing..." : "Confirm & Execute Onchain"}
           </button>
