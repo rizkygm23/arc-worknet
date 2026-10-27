@@ -1702,6 +1702,8 @@ a.portfolio-title:hover {
 }
 
 .escrow-step {
+  position: relative;
+  z-index: 1;
   display: grid;
   justify-items: center;
   gap: 4px;
@@ -1804,10 +1806,6 @@ a.portfolio-title:hover {
   z-index: 5;
   box-shadow: var(--shadow-md);
   pointer-events: none;
-}
-
-.escrow-step {
-  position: relative;
 }
 
 /* Tone overlays: warning (draft / funding / revision) and danger (dispute etc.) */
