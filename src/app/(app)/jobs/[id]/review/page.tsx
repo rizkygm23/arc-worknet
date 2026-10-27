@@ -8,7 +8,6 @@ import {
   Eye,
   Loader2,
   RotateCcw,
-  Sparkles,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -194,7 +193,6 @@ export default function ReviewJobPage() {
           <div className="panel" style={{ border: "1px solid var(--border)", position: "relative" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Sparkles size={16} style={{ color: "#a855f7" }} />
                 <h2 className="panel-title" style={{ margin: 0 }}>AI Judge Evaluation</h2>
               </div>
               <button
@@ -347,7 +345,6 @@ export default function ReviewJobPage() {
                   disabled={!submission || isEvaluating}
                   onClick={handleRunAiEvaluation}
                 >
-                  <Sparkles size={14} style={{ color: "#a855f7" }} />
                   Run AI Judge Evaluation
                 </button>
               </div>

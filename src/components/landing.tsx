@@ -20,7 +20,6 @@ import {
   Copy,
   CheckCheck,
   BookOpen,
-  Sparkles,
 } from "lucide-react";
 import { useWorkNetData, useWorkNetWallet } from "@/lib/store";
 import { useStatistics } from "@/lib/use-statistics";
@@ -577,7 +576,6 @@ function FinalCta() {
     <div className="landing-final-wrap">
       <section className="landing-section landing-final reveal" data-reveal>
         <span className="landing-section-eyebrow" style={{ margin: "0 auto 20px", display: "inline-flex" }}>
-          <Sparkles size={10} aria-hidden />
           Get started
         </span>
         <h2 className="landing-h2">
