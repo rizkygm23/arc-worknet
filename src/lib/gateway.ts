@@ -19,8 +19,8 @@ export const GATEWAY_TESTNET_NETWORKS: GatewayNetworkConfig[] = [
     chainId: ARC_TESTNET_CHAIN_ID,
     usdcAddress: ARC_USDC_ADDRESS,
     gatewayAddress: getAddress("0x0077777d7EBA4688B4467FD722791FeF1bA9c3B5"), // Circle Gateway Testnet
-    explorerUrl: "https://testnet.arcscan.app",
-    rpcUrl: "https://rpc.testnet.arc.network",
+    explorerUrl: "https://explorer.testnet.arc.io",
+    rpcUrl: "https://rpc.testnet.arc.io",
   },
   {
     id: "base-sepolia",

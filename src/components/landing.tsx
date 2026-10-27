@@ -29,7 +29,7 @@ import CountUp from "./CountUp";
 import type { Profile, Job } from "@/lib/types";
 
 const ARC_EXPLORER_URL =
-  process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app";
+  process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://explorer.testnet.arc.io";
 
 function useScrollReveal() {
   useEffect(() => {
@@ -454,7 +454,7 @@ function WhyArc() {
       </div>
 
       <p className="landing-note reveal" data-reveal style={{ textAlign: "center" }}>
-        Arc Testnet · Chain ID 5042002 · Explorer: testnet.arcscan.app
+        Arc Testnet · Chain ID 5042002 · Explorer: explorer.testnet.arc.io
       </p>
     </section>
   );

@@ -13,9 +13,9 @@ const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   NEXT_PUBLIC_ARC_CHAIN_ID: z.coerce.number().int().positive().default(5042002),
-  NEXT_PUBLIC_ARC_RPC_URL: z.string().url().default("https://rpc.testnet.arc.network"),
-  ARC_WS_URL: z.string().url().default("wss://rpc.testnet.arc.network"),
-  NEXT_PUBLIC_ARC_EXPLORER_URL: z.string().url().default("https://testnet.arcscan.app"),
+  NEXT_PUBLIC_ARC_RPC_URL: z.string().url().default("https://rpc.testnet.arc.io"),
+  ARC_WS_URL: z.string().url().default("wss://rpc.testnet.arc.io"),
+  NEXT_PUBLIC_ARC_EXPLORER_URL: z.string().url().default("https://explorer.testnet.arc.io"),
   NEXT_PUBLIC_ARC_USDC_ADDRESS: optionalAddress.default(
     "0x3600000000000000000000000000000000000000",
   ),

@@ -8,10 +8,10 @@ export const ARC_TESTNET_CHAIN_ID = Number(process.env.NEXT_PUBLIC_ARC_CHAIN_ID 
 export const ARC_RPC_URL =
   process.env.ARC_RPC_URL ??
   process.env.NEXT_PUBLIC_ARC_RPC_URL ??
-  "https://rpc.testnet.arc.network";
-export const ARC_WS_URL = process.env.ARC_WS_URL ?? "wss://rpc.testnet.arc.network";
+  "https://rpc.testnet.arc.io";
+export const ARC_WS_URL = process.env.ARC_WS_URL ?? "wss://rpc.testnet.arc.io";
 export const ARC_EXPLORER_URL =
-  process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app";
+  process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://explorer.testnet.arc.io";
 
 export const ARC_USDC_ADDRESS = (process.env.NEXT_PUBLIC_ARC_USDC_ADDRESS ??
   "0x3600000000000000000000000000000000000000") as Address;

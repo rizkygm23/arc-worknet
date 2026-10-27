@@ -24,7 +24,7 @@ import CountUp from "./CountUp";
 import { Sidebar as AceternitySidebar, SidebarBody, SidebarLink, SidebarGroupTitle } from "@/components/ui/sidebar";
 
 
-const ARC_EXPLORER_URL = process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://testnet.arcscan.app";
+const ARC_EXPLORER_URL = process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://explorer.testnet.arc.io";
 
 const navGroups = [
   {
