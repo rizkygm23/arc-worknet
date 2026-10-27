@@ -1797,13 +1797,7 @@ a.portfolio-title:hover {
   grid-template-columns: 28px minmax(0, 1fr);
   gap: var(--space-4);
   align-items: start;
-  border-bottom: var(--rule-thin) solid var(--hairline);
-  padding-bottom: var(--space-4);
-}
-
-.activity-item:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
+  padding: var(--space-4);
 }
 
 .activity-icon {
@@ -2285,10 +2279,6 @@ pre {
 
   .activity-list {
     gap: var(--space-3);
-  }
-
-  .activity-item {
-    padding-bottom: var(--space-3);
   }
 
   .tags {
