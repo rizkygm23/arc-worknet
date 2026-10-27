@@ -175,7 +175,7 @@ function Hero() {
             disabled={isWalletPending}
             style={{ minWidth: 148 }}
           >
-            {isWalletPending ? <span className="spinner" aria-hidden /> : <Sparkles size={16} aria-hidden />}
+            {isWalletPending ? <span className="spinner" aria-hidden /> : null}
             Post a job
           </button>
           <Link className="button" href="/jobs" style={{ minWidth: 148 }}>
