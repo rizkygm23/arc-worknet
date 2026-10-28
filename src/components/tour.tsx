@@ -95,11 +95,11 @@ export function TourOverlay({ onClose }: { onClose: () => void }) {
       if (e.key === "ArrowLeft") setIndex((i) => Math.max(0, i - 1));
     }
     window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onResize, true);
+    window.addEventListener("scroll", onResize, { capture: true, passive: true });
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", onResize, true);
+      window.removeEventListener("scroll", onResize, { capture: true });
       window.removeEventListener("keydown", onKey);
     };
   }, [measure, isLast, finish]);

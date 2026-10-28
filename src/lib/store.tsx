@@ -204,13 +204,14 @@ function mergeState(current: WorkNetState, incoming: WorkNetState, walletAddress
     applicationOverlays: current.applicationOverlays,
   };
 
-  // Short-circuit if nothing meaningful changed. Cheap structural check using
-  // stableJson keeps React from re-rendering 21 consumers on every bootstrap.
-  if (stableJson(current) === stableJson(next)) {
-    return current;
+  // Short-circuit if nothing meaningful changed. Shallow per-key equality is
+  // enough here: arrays are rebuilt by dedupeById, so reference identity flips
+  // only when an entry actually changed. Avoids double-serializing the whole
+  // state (stableJson) on every bootstrap/realtime refresh.
+  for (const key of Object.keys(next) as (keyof WorkNetState)[]) {
+    if (next[key] !== current[key]) return next;
   }
-
-  return next;
+  return current;
 }
 
 type JobDetailResponse = {
@@ -249,7 +250,21 @@ function mergeJobDetail(current: WorkNetState, detail: JobDetailResponse): WorkN
       ...detail.aiEvaluations,
     ],
   };
-  return stableJson(current) === stableJson(next) ? current : next;
+  // Rebuilt arrays above always get new identity; compare item ids + lengths
+  // instead of serializing the entire state.
+  const sameList = (a: { id: string }[], b: { id: string }[]) =>
+    a.length === b.length && a.every((item, i) => item.id === b[i].id);
+  if (
+    current.jobs === next.jobs &&
+    current.profiles === next.profiles &&
+    current.agents === next.agents &&
+    sameList(current.applications, next.applications) &&
+    sameList(current.submissions, next.submissions) &&
+    sameList(current.aiEvaluations, next.aiEvaluations)
+  ) {
+    return current;
+  }
+  return next;
 }
 
 type PrivateBootstrapResponse =
@@ -296,8 +311,13 @@ function mergePrivate(
     applicationOverlays: priv.applicationOverlays,
   };
 
-  if (stableJson(current) === stableJson(next)) return current;
-  return next;
+  // dedupeById preserves item references, so any unchanged key keeps the same
+  // array identity — shallow compare is exact here and skips a full
+  // double-serialize of the state on every private refresh.
+  for (const key of Object.keys(next) as (keyof WorkNetState)[]) {
+    if (next[key] !== current[key]) return next;
+  }
+  return current;
 }
 
 async function refreshWalletBalance(address: string): Promise<number | undefined> {
@@ -407,12 +427,19 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
 
   const refreshState = useCallback(async () => {
     setIsSyncing(true);
+    // Start both fetches immediately — the private slice is independent of the
+    // public one, so don't serialize them. Public still paints first because
+    // its handler applies as soon as it resolves.
+    const publicFetch = fetch(`/api/bootstrap?t=${Date.now()}`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    const privateFetch = apiJson<PrivateBootstrapResponse>(`/api/bootstrap/private?t=${Date.now()}`).catch(
+      () => undefined, // private slice is best-effort
+    );
+
     try {
-      // Public data first — fast, unblocks UI immediately.
-      const response = await fetch(`/api/bootstrap?t=${Date.now()}`, {
-        credentials: "include",
-        cache: "no-store",
-      });
+      const response = await publicFetch;
 
       // Verify user device clock synchronization
       const dateHeader = response.headers.get("date");
@@ -446,15 +473,13 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Private slice — fetched lazily so the UI can render with public data
-    // immediately. Failures here don't block the dashboard from rendering.
+    // Private slice — applying it here doesn't block the dashboard: the public
+    // state above is already committed. Failures are ignored (caught above).
+    const priv = await privateFetch;
     try {
-      const priv = await apiJson<PrivateBootstrapResponse>(`/api/bootstrap/private?t=${Date.now()}`);
       if (priv && "activeProfileId" in priv && priv.activeProfileId) {
         setState((current) => mergePrivate(current, priv));
       }
-    } catch {
-      // Private fetch is best-effort; public state already painted.
     } finally {
       setIsSyncing(false);
     }

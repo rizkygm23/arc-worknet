@@ -2,6 +2,11 @@
 const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  // Transform barrel-file imports (lucide-react etc.) into per-icon direct
+  // imports — avoids loading thousands of unused re-exports.
+  experimental: {
+    optimizePackageImports: ["lucide-react"],
+  },
   // Privy pulls in optional Farcaster/Solana connectors we don't use.
   // Mark them as resolved-to-false so webpack stops complaining.
   webpack: (config) => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -23,7 +24,12 @@ import {
 } from "lucide-react";
 import { useWorkNetData, useWorkNetWallet } from "@/lib/store";
 import { useStatistics } from "@/lib/use-statistics";
-import { WobbleCard } from "./ui/wobble-card";
+// WobbleCard pulls in motion (framer). It renders below the fold — load that
+// bundle lazily instead of shipping it with the landing page.
+const WobbleCard = dynamic(() => import("./ui/wobble-card").then((mod) => mod.WobbleCard), {
+  ssr: false,
+  loading: () => <div className="min-h-[180px] rounded-[20px] bg-surface" />,
+});
 import Stepper, { Step } from "./Stepper";
 import CountUp from "./CountUp";
 import type { Profile, Job } from "@/lib/types";
