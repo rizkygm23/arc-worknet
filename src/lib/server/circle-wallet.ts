@@ -181,10 +181,12 @@ function unwrapTransaction(payload: CircleTransactionResponse): CircleTransactio
 }
 
 /**
- * Executes a contract call from a Circle SCA wallet. Circle constructs the
+ * Executes a contract call from a Circle SCA wallet via
+ * POST /v1/w3s/developer/transactions/contractExecution. Circle constructs the
  * ERC-4337 user operation and broadcasts it; gas is sponsored by the Gas
- * Station policy when one covers the wallet's chain. SCA transactions require
- * a fee level (Circle error 177012) instead of explicit gas fields.
+ * Station policy when one covers the wallet's chain. The official endpoint
+ * takes a top-level `feeLevel` — the generic /transactions path and the
+ * nested `fee: { type: "level" }` body both return 404 "Resource not found".
  */
 export async function createScaContractExecution(input: {
   walletId: string;
@@ -192,23 +194,26 @@ export async function createScaContractExecution(input: {
   contractAddress: string;
   callData: string;
 }): Promise<{ transactionId: string; state: string; txHash?: string }> {
-  const response = await fetch(`${CIRCLE_API_BASE_URL}/v1/w3s/developer/transactions`, {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "content-type": "application/json",
-      authorization: `Bearer ${env.CIRCLE_API_KEY}`,
+  const response = await fetch(
+    `${CIRCLE_API_BASE_URL}/v1/w3s/developer/transactions/contractExecution`,
+    {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+        authorization: `Bearer ${env.CIRCLE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        idempotencyKey: crypto.randomUUID(),
+        walletId: input.walletId,
+        entitySecretCiphertext: input.entitySecretCiphertext,
+        contractAddress: input.contractAddress,
+        callData: input.callData,
+        feeLevel: "MEDIUM",
+      }),
+      cache: "no-store",
     },
-    body: JSON.stringify({
-      walletId: input.walletId,
-      entitySecretCiphertext: input.entitySecretCiphertext,
-      contractAddress: input.contractAddress,
-      callData: input.callData,
-      fee: { type: "level", config: { feeLevel: "MEDIUM" } },
-      idempotencyKey: crypto.randomUUID(),
-    }),
-    cache: "no-store",
-  });
+  );
 
   const payload = (await response.json().catch(() => ({}))) as CircleTransactionResponse;
   const transaction = unwrapTransaction(payload);
