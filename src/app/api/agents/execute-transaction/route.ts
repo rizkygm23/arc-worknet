@@ -104,11 +104,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Encryption failed." }, { status: 500 });
   }
 
-  const callData = encodeFunctionData({
-    abi: [parseAbiItem(`function ${abiFunctionSignature}`)],
-    args: abiParameters,
-    functionName: abiFunctionSignature.slice(0, abiFunctionSignature.indexOf("(")),
-  });
+  // encodeFunctionData sits outside the try/catch blocks below; a viem throw
+  // here (bad arg types, non-hex bytes) would crash the handler and Next turns
+  // that into a bodyless 500.
+  let callData: string;
+  try {
+    callData = encodeFunctionData({
+      abi: [parseAbiItem(`function ${abiFunctionSignature}`)],
+      args: abiParameters,
+      functionName: abiFunctionSignature.slice(0, abiFunctionSignature.indexOf("(")),
+    });
+  } catch (err) {
+    return NextResponse.json(
+      {
+        error: `Failed to encode call data: ${err instanceof Error ? err.message : "invalid ABI parameters."}`,
+      },
+      { status: 400 },
+    );
+  }
 
   // SCA wallets (Gas Station-sponsored) go through Circle's transaction
   // pipeline; EOA wallets keep the sign-only + raw-broadcast path.
@@ -161,7 +174,7 @@ export async function POST(request: Request) {
       publicClient.estimateGas({
         account,
         to,
-        data: callData,
+        data: callData as `0x${string}`,
         value: BigInt(0),
       }),
       publicClient.estimateFeesPerGas(),
