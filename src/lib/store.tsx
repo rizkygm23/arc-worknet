@@ -303,10 +303,11 @@ function mergePrivate(
 async function refreshWalletBalance(address: string): Promise<number | undefined> {
   try {
     const balance = await readArcUsdcBalance(address as Address);
+    console.log("[balance] fetched for", address, "→", balance.toString());
     return Number(balance);
   } catch (error) {
     // Distinguish "RPC failed" (undefined → UI shows stale/unknown) from a real zero.
-    console.warn("[refreshWalletBalance] failed to fetch balance:", error);
+    console.warn("[refreshWalletBalance] failed to fetch balance:", address, error);
     return undefined;
   }
 }
@@ -722,7 +723,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
           address,
           chainId,
           isConnected: true,
-          usdcBalanceUnits: balance,
+          usdcBalanceUnits: balance ?? 0,
           balanceUpdatedAt: new Date().toISOString(),
         });
         setState((current) => ({
