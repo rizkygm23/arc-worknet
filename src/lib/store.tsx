@@ -90,6 +90,7 @@ type WalletContextValue = {
   connectWallet: () => Promise<void>;
   disconnectWallet: () => Promise<void>;
   switchWalletToArc: () => Promise<void>;
+  refreshBalance: () => Promise<void>;
 };
 
 type UpdateProfileInput = Partial<{
@@ -299,13 +300,14 @@ function mergePrivate(
   return next;
 }
 
-async function refreshWalletBalance(address: string) {
+async function refreshWalletBalance(address: string): Promise<number | undefined> {
   try {
     const balance = await readArcUsdcBalance(address as Address);
     return Number(balance);
   } catch (error) {
+    // Distinguish "RPC failed" (undefined → UI shows stale/unknown) from a real zero.
     console.warn("[refreshWalletBalance] failed to fetch balance:", error);
-    return 0;
+    return undefined;
   }
 }
 
@@ -595,6 +597,17 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
     }
   }, [primaryWallet]);
 
+  const refreshBalance = useCallback(async () => {
+    const address = primaryWallet?.address;
+    if (!address) return;
+    const balance = await refreshWalletBalance(address);
+    setWallet((current) => ({
+      ...current,
+      usdcBalanceUnits: balance ?? current.usdcBalanceUnits,
+      balanceUpdatedAt: balance === undefined ? current.balanceUpdatedAt : new Date().toISOString(),
+    }));
+  }, [primaryWallet]);
+
   const verifyWalletSession = useCallback(
     async (
       wallet: NonNullable<typeof primaryWallet>,
@@ -686,7 +699,7 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
             address,
             chainId,
             isConnected: true,
-            usdcBalanceUnits: balance,
+            usdcBalanceUnits: balance ?? 0,
             balanceUpdatedAt: new Date().toISOString(),
           });
           return;
@@ -1352,8 +1365,9 @@ export function WorkNetProvider({ children }: { children: ReactNode }) {
       connectWallet,
       disconnectWallet,
       switchWalletToArc,
+      refreshBalance,
     }),
-    [wallet, walletError, isWalletPending, connectWallet, disconnectWallet, switchWalletToArc],
+    [wallet, walletError, isWalletPending, connectWallet, disconnectWallet, switchWalletToArc, refreshBalance],
   );
 
   // Actions never change identity — all callbacks above use refs internally.

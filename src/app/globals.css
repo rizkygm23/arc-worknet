@@ -438,6 +438,34 @@ button:disabled {
   gap: var(--space-2);
 }
 
+.wallet-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: var(--rule-thin) solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption-mono-sm);
+  letter-spacing: var(--tracking-mono-sm);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out);
+}
+
+.wallet-refresh:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.wallet-refresh:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 .wallet-popover-actions {
   display: inline-flex;
   gap: var(--space-2);

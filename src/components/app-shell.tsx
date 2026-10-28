@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import clsx from "clsx";
-import { Activity, AlertTriangle, Bell, Briefcase, Bot, Check, Copy, ExternalLink, FileText, LayoutDashboard, LogOut, ShieldCheck, User, Users, Wallet } from "lucide-react";
+import { Activity, AlertTriangle, Bell, Briefcase, Bot, Check, Copy, ExternalLink, FileText, LayoutDashboard, LogOut, RefreshCw, ShieldCheck, User, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -96,8 +96,10 @@ function WalletPanel() {
     connectWallet,
     disconnectWallet,
     switchWalletToArc,
+    refreshBalance,
   } = useWorkNetWallet();
   const { state, isSyncing } = useWorkNetData();
+  const [refreshing, setRefreshing] = useState(false);
 
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
@@ -207,6 +209,19 @@ function WalletPanel() {
             <span>Escrowed</span>
             <strong>{formatUsdcUnits(escrowed)}</strong>
           </div>
+
+          <button
+            className="wallet-refresh"
+            type="button"
+            onClick={() => {
+              setRefreshing(true);
+              void refreshBalance().finally(() => setRefreshing(false));
+            }}
+            disabled={refreshing}
+          >
+            <RefreshCw size={12} className={clsx(refreshing && "spin")} />
+            {refreshing ? "Refreshing…" : "Refresh balance"}
+          </button>
 
           <div className="wallet-popover-row">
             <AddFundsButton compact />
