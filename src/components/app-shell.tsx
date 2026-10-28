@@ -202,7 +202,7 @@ function WalletPanel() {
             <strong>{wrongChain ? "Wrong network" : "Arc Testnet"}</strong>
           </div>
           <div className="wallet-stat">
-            <span>Balance</span>
+            <span>Balance of {formatWalletAddress(wallet.address)}</span>
             <strong>{walletBalanceLabel(wallet)}</strong>
           </div>
           <div className="wallet-stat">
