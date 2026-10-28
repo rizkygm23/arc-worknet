@@ -195,15 +195,10 @@ export function EscrowTimeline({ status }: { status: JobStatus }) {
   const effectiveStatus: JobStatus = overlay ? overlay.step : status;
   const rank = statusRank(effectiveStatus);
   const currentIndex = timeline.findIndex((step) => statusRank(step.status) === rank);
-  // Progress fill covers the current step's segment; terminal paid = 100%.
-  const progress = effectiveStatus === "completed" ? 100 : Math.max(0, (currentIndex / (timeline.length - 1)) * 100);
   const tone = overlay?.tone ?? (effectiveStatus === "completed" ? "success" : undefined);
 
   return (
     <div className={clsx("escrow-timeline", tone && `escrow-timeline-${tone}`)}>
-      <div className="escrow-track" aria-hidden>
-        <div className="escrow-track-fill" style={{ width: `${progress}%` }} />
-      </div>
       <ol className="escrow-steps" role="list">
         {timeline.map((step, index) => {
           const done = index < currentIndex || effectiveStatus === "completed";

@@ -1701,24 +1701,8 @@ a.portfolio-title:hover {
   padding: var(--space-5) 0 var(--space-2);
 }
 
-.escrow-track {
-  position: absolute;
-  top: calc(var(--space-5) + 15px);
-  left: 40px;
-  right: 40px;
-  height: 2px;
-  background: var(--hairline);
-  border-radius: 999px;
-}
-
-.escrow-track-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent-strong), var(--accent));
-  box-shadow: 0 0 8px rgba(0, 209, 112, 0.35);
-  transition: width var(--dur-mid) var(--ease-out);
-}
-
+/* Connector segments live between dots: each step paints the line from its
+   dot's center to the previous dot's center via ::before. Self-aligning. */
 .escrow-steps {
   position: relative;
   list-style: none;
@@ -1726,7 +1710,6 @@ a.portfolio-title:hover {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: var(--space-1);
 }
 
 .escrow-step {
@@ -1737,6 +1720,37 @@ a.portfolio-title:hover {
   gap: 4px;
   text-align: center;
   min-width: 0;
+}
+
+/* Line from this dot back to the previous dot. */
+.escrow-step + .escrow-step::before {
+  content: "";
+  position: absolute;
+  top: 15px; /* center of 32px dot minus 1px line */
+  right: calc(50% + 16px);
+  left: calc(-50% + 16px);
+  height: 2px;
+  background: var(--hairline);
+}
+
+/* Filled connector when this step is done: the segment behind a done step. */
+.escrow-step.done + .escrow-step.done::before,
+.escrow-step.done + .escrow-step.current::before {
+  background: linear-gradient(90deg, var(--accent-strong), var(--accent));
+  box-shadow: 0 0 8px rgba(0, 209, 112, 0.35);
+}
+
+/* Tone-colored connectors for warn/danger overlays. */
+.escrow-timeline-warn .escrow-step.done + .escrow-step::before,
+.escrow-timeline-warn .escrow-step + .escrow-step.current.escrow-step-warn::before {
+  background: var(--warning);
+  box-shadow: none;
+}
+
+.escrow-timeline-danger .escrow-step.done + .escrow-step::before,
+.escrow-timeline-danger .escrow-step + .escrow-step.current.escrow-step-danger::before {
+  background: var(--danger);
+  box-shadow: none;
 }
 
 .escrow-dot {
@@ -1791,8 +1805,10 @@ a.portfolio-title:hover {
   letter-spacing: 0;
   line-height: 1.2;
   color: var(--ink);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
   max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .escrow-step.current .escrow-step-label {
@@ -1837,16 +1853,6 @@ a.portfolio-title:hover {
 }
 
 /* Tone overlays: warning (draft / funding / revision) and danger (dispute etc.) */
-.escrow-timeline-warn .escrow-track-fill,
-.escrow-timeline-danger .escrow-track-fill {
-  background: var(--warning);
-  box-shadow: none;
-}
-
-.escrow-timeline-danger .escrow-track-fill {
-  background: var(--danger);
-}
-
 .escrow-step-warn .escrow-dot {
   border-color: var(--warning);
   background: var(--warning-soft);
@@ -1981,17 +1987,8 @@ a.portfolio-title:hover {
 }
 
 @media (max-width: 760px) {
-  .escrow-steps {
-    gap: 2px;
-  }
-
   .escrow-step-text {
     display: none !important;
-  }
-
-  .escrow-step-label {
-    font-size: 9px;
-    letter-spacing: 0;
   }
 
   .escrow-dot {
@@ -1999,20 +1996,16 @@ a.portfolio-title:hover {
     height: 26px;
   }
 
-  .escrow-track {
-    top: calc(var(--space-5) + 12px);
-    left: 26px;
-    right: 26px;
+  .escrow-step + .escrow-step::before {
+    top: 12px; /* center of 26px dot minus 1px */
+    right: calc(50% + 13px);
+    left: calc(-50% + 13px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .escrow-step.current .escrow-dot {
     animation: none;
-  }
-
-  .escrow-track-fill {
-    transition: none;
   }
 }
 
