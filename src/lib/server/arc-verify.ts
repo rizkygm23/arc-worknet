@@ -6,8 +6,8 @@ const publicClient = createPublicClient({
   transport: http(ARC_RPC_URL),
 });
 
-function normalize(address?: string | null) {
-  return address?.toLowerCase();
+function normalize(address?: string | null): string {
+  return address?.toLowerCase() ?? "";
 }
 
 export type VerifiedArcTransaction = {
@@ -20,6 +20,34 @@ export type VerifiedArcTransaction = {
 export function arcJobIdFromArgs(args: readonly unknown[], index = 0): string | undefined {
   const value = args[index];
   return typeof value === "bigint" ? value.toString() : undefined;
+}
+
+/**
+ * Collects every address recorded by escrow-contract events in a receipt.
+ * ERC-4337 (Circle SCA) transactions are broadcast by a bundler, so tx.from is
+ * the relayer — the real actor is whatever address the contract recorded in
+ * its event fields (e.g. Submitted.provider).
+ */
+function eventActorAddresses(
+  receipt: Awaited<ReturnType<typeof publicClient.getTransactionReceipt>>,
+  contractAddress: string,
+  abi: Abi,
+): string[] {
+  const addresses = new Set<string>();
+  for (const log of receipt.logs) {
+    if (normalize(log.address) !== normalize(contractAddress)) continue;
+    try {
+      const decoded = decodeEventLog({ abi, data: log.data, topics: log.topics });
+      for (const value of decoded.args ?? []) {
+        if (typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value)) {
+          addresses.add(normalize(value));
+        }
+      }
+    } catch {
+      // Ignore unrelated logs from the same transaction.
+    }
+  }
+  return [...addresses];
 }
 
 export async function verifyArcTransaction({
@@ -43,7 +71,13 @@ export async function verifyArcTransaction({
   if (transaction.chainId !== ARC_TESTNET_CHAIN_ID) {
     throw new Error("Transaction is not on the configured Arc chain.");
   }
-  if (normalize(transaction.from) !== normalize(expectedFrom)) {
+  // tx.from alone is wrong for ERC-4337 sends (bundler/relayer signs), so a tx
+  // also verifies when the expected wallet appears in the escrow events.
+  const expected = normalize(expectedFrom);
+  const senderOk =
+    normalize(transaction.from) === expected ||
+    eventActorAddresses(receipt, expectedTo, abi).includes(expected);
+  if (!senderOk) {
     throw new Error("Transaction sender does not match connected wallet.");
   }
   if (normalize(transaction.to) !== normalize(expectedTo)) {
