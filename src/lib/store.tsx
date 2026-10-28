@@ -301,13 +301,25 @@ function mergePrivate(
 }
 
 async function refreshWalletBalance(address: string): Promise<number | undefined> {
+  // Primary path: server-side proxy. The public Arc RPC bot-blocks direct
+  // browser fetches from the deployed origin, so read via our API instead.
+  try {
+    const proxy = await apiJson<{ balance: string }>("/api/wallet/balance", {
+      method: "POST",
+      body: JSON.stringify({ address }),
+    });
+    return Number(proxy.balance);
+  } catch (proxyError) {
+    console.warn("[refreshWalletBalance] proxy fetch failed:", proxyError);
+  }
+
+  // Fallback: direct RPC read (works locally where the RPC allows browser CORS).
   try {
     const balance = await readArcUsdcBalance(address as Address);
-    console.log("[balance] fetched for", address, "→", balance.toString());
     return Number(balance);
   } catch (error) {
-    // Distinguish "RPC failed" (undefined → UI shows stale/unknown) from a real zero.
-    console.warn("[refreshWalletBalance] failed to fetch balance:", address, error);
+    // "RPC failed" (undefined → keeps previous state) vs. a genuine zero.
+    console.warn("[refreshWalletBalance] direct RPC failed:", address, error);
     return undefined;
   }
 }

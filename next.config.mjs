@@ -42,7 +42,7 @@ const nextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://auth.privy.io",
               "frame-src 'self' https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org https://challenges.cloudflare.com",
               "worker-src 'self' blob:",
-              "connect-src 'self' https://*.supabase.co https://*.arc.network https://rpc.testnet.arc.network wss://rpc.testnet.arc.network https://testnet.arcscan.app https://auth.privy.io https://*.privy.io https://*.privy.systems wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org https://*.walletconnect.com https://*.walletconnect.org https://explorer-api.walletconnect.com https://api.coingecko.com",
+              "connect-src 'self' https://*.supabase.co https://*.arc.network https://*.arc.io https://rpc.testnet.arc.network wss://rpc.testnet.arc.network https://testnet.arcscan.app https://auth.privy.io https://*.privy.io https://*.privy.systems wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org https://*.walletconnect.com https://*.walletconnect.org https://explorer-api.walletconnect.com https://api.coingecko.com",
             ].join("; "),
           },
         ],
