@@ -61,9 +61,24 @@ const navGroups = [
 
 function useFilteredNavGroups() {
   const { activeProfile } = useWorkNetData();
+  const { wallet } = useWorkNetWallet();
+
+  // Role keyed on the wallet session, not on every profile object refresh —
+  // bootstrap refetches recreate the profile object and made admin nav items
+  // flicker. Sticky role: keep the last known role while refetching.
+  const walletKey = wallet.isConnected && wallet.address ? wallet.address : "disconnected";
+  const roleFromProfile = activeProfile?.role;
+  const roleRef = useRef<{ key: string; role: "admin" | "client" | "worker" | "agent_owner" | undefined }>({
+    key: "",
+    role: undefined,
+  });
+  if (roleRef.current.key !== walletKey || (roleFromProfile && roleRef.current.role !== roleFromProfile)) {
+    roleRef.current = { key: walletKey, role: roleFromProfile };
+  }
+  const stableRole = roleRef.current.role;
 
   return useMemo(() => {
-    const role = activeProfile?.role ?? "worker"; // default to worker if not logged in
+    const role = stableRole ?? "worker"; // default to worker if not logged in
 
     return navGroups
       .map((group: any) => {
@@ -85,7 +100,7 @@ function useFilteredNavGroups() {
         return { ...group, items };
       })
       .filter((group: any) => group.items.length > 0);
-  }, [activeProfile]);
+  }, [stableRole]);
 }
 
 function WalletPanel() {
