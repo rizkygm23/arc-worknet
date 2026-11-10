@@ -15,8 +15,9 @@ export async function GET(request: Request, context: RouteContext) {
   const { supabase, response } = getServiceClientOrResponse();
   if (response) return response;
 
-  // The task file ships with the public job listing for prospective applicants,
-  // but requires a signed-in wallet so anonymous scrapers cannot enumerate it.
+  // The client's uploaded task document is disclosed only to the job's
+  // owner, assigned provider, or applicants. Job-listing metadata
+  // (filename/title) stays public; the file content does not.
   const { session, response: authResponse } = await requireWalletSession(supabase);
   if (authResponse) return authResponse;
   const limited = await walletRateLimit(request, session.profileId, "jobs:task-file");
@@ -24,11 +25,28 @@ export async function GET(request: Request, context: RouteContext) {
 
   const { data: job, error: jobError } = await supabase
     .from(TABLES.jobs)
-    .select("task_file_path,task_file_name")
+    .select("task_file_path,task_file_name,client_profile_id,provider_profile_id")
     .eq("id", parsedId.data)
     .single();
 
   if (jobError || !job || !job.task_file_path) {
+    return NextResponse.json({ error: "Task file not found." }, { status: 404 });
+  }
+
+  const isOwner =
+    job.client_profile_id === session.profileId ||
+    job.provider_profile_id === session.profileId;
+  let hasRelationship = isOwner;
+  if (!hasRelationship) {
+    const { count } = await supabase
+      .from(TABLES.applications)
+      .select("id", { count: "exact", head: true })
+      .eq("job_id", parsedId.data)
+      .eq("applicant_profile_id", session.profileId);
+    hasRelationship = (count ?? 0) > 0;
+  }
+
+  if (!hasRelationship) {
     return NextResponse.json({ error: "Task file not found." }, { status: 404 });
   }
 
