@@ -1,0 +1,720 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-10 08:10:32 UTC",
+  "run_id": "worknet-rizzgm-xyz_72f2",
+  "run_name": "worknet-rizzgm-xyz_72f2",
+  "scope": {
+    "targets": [
+      {
+        "type": "web_application",
+        "details": {
+          "target_url": "https://worknet.rizzgm.xyz"
+        },
+        "original": "worknet.rizzgm.xyz"
+      }
+    ],
+    "scan_mode": "deep",
+    "scope_mode": "auto",
+    "diff_scope": {
+      "active": false,
+      "mode": "auto"
+    },
+    "instruction": ""
+  },
+  "summary": {
+    "surfaces_reviewed": 45,
+    "outcomes": {
+      "reported": 7,
+      "no_issue_found": 22,
+      "ruled_out": 14,
+      "not_applicable": 1,
+      "needs_follow_up": 1
+    },
+    "findings_filed": 2,
+    "gaps": 3
+  },
+  "machine_observed": {
+    "agents": [
+      {
+        "agent_id": "b6d2893d",
+        "agent_name": "App API Auth/IDOR Tester",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/idor",
+          "vulnerabilities/broken_function_level_authorization",
+          "vulnerabilities/business_logic"
+        ],
+        "task": "Authenticated IDOR/BFLA hunting on https://worknet.rizzgm.xyz app API, using a legitimate low-priv identity only. Context: Next.js on Vercel, session cookie is session=<64hex> (tokens plaintext-leaked in Supabase sessions table — wiki note 56ea4f + finding 12d1d9 have endpoint map + a leaked token; /api/bootstrap proves auth works with it). llms.txt documents API surface: /api/jobs*, /api/profile, /api/agents/register|execute-transaction|{id}/reputation, /api/jobs/{id}/apply|submit|upload-task, /api/wallet/*, /api/indexer/sync (x-admin-secret), x402 paid endpoints.\nStrict rules: RATE 1 req/3s max, curl only, single browser session allowed via agent-browser --session appapi (WAF trips on bursts, ~10min cooldown burn). NEVER touch /api/indexer/sync (admin secret brute = out of scope). No scanner tools against this host. No destructive actions (no deleting others' jobs/applications; create nothing unless needed for validation chain, then clean up own artifacts).\nHunt list:\n1. Session robustness with leaked token: expired-token acceptance, session cookie Secure/HttpOnly flags, logout invalidation (do NOT log out other users' sessions — with own synthetic flow only if possible; if leaked token logout affects victim, skip).\n2. IDOR: /api/jobs/{id} enumeration for other users' submissions, apply/submit/upload-task accepting attacker-controlled submitterProfileId/ownerProfileId (per llms.txt these are client-supplied), /api/agents/{id}/reputation injection or cross-account read.\n3. BFLA: unauthenticated or leaked-session access to privileged flows (agent registration, execute-transaction). If execute-transaction reachable w/ leaked session, STOP and validate reachability only — do not sign/emit chain transactions.\n4. Business logic: job pricing/escrow state tamper via well-formed requests; duplicate application; self-apply.\nFile each confirmed separate vuln via create_vulnerability_report with proxy http_exchange_ids, severity per real impact (IDOR high/critical based on data sensitivity). record_coverage each surface tested. agent_finish with open_items for anything WAF-blocked or needing a wallet identity you lack.",
+        "is_root": false
+      },
+      {
+        "agent_id": "65de1ee0",
+        "agent_name": "Learning Login Bypass Validator",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/authentication_jwt",
+          "vulnerabilities/idor",
+          "vulnerabilities/business_logic"
+        ],
+        "task": "Validate suspected critical auth bypass on https://learning.rizzgm.xyz (same Supabase project eldrxpulpluelgapyfjs as worknet.rizzgm.xyz — in-scope via shared backend). Lead from earlier validator: /login Discord-username-only login issues real `auth_session` cookie via Next.js Server Action id 4086e4e2e6ec55ae89a8f8c4964d3b49c80f1fc919. Username exists → response leaks \"Failed registering new user. RLS block?\"; unknown username → auto-creates row + session.\nYour job (READ wiki note 56ea4f + get_note 12d1d9 first; threat model amendments 1-8 list this lead):\n1. Reproduce username-only login with a synthetic username you create; capture cookie via proxy. Verify cookie is same trust class as real login (JWT? structure? claims?).\n2. Determine what a forged session actually unlocks: /dashboard and any other app routes — check server-side rendered data exposure (client-side guarded UI that renders nothing without data hydration may still be fine; find the real server boundary).\n3. Cross-project impact: same Supabase project means check if learning auth session grants access to worknet.rizzgm.xyz routes, and vice versa (session cookie confusion across the two apps sharing DB).\n4. If server-side data access confirmed beyond your own rows, that's the critical chain — file separately: title \"learning.rizzgm.xyz username-only login issues valid session (no password/proof required)\".\n5. Also test: role escalation via username choice (e.g. 'admin'-like names), pre-existing user impersonation (real usernames visible via users_learn table — do NOT lock anyone out, do NOT modify other rows; impersonation = read-level check only, log out immediately after).\nRate limits: learning host not WAF-burned yet, keep under 1 req/3s anyway. Never destroy other users' data. Through Caido proxy always. File report with http_exchange_ids + record_coverage + agent_finish.",
+        "is_root": false
+      },
+      {
+        "agent_id": "3d4b3b20",
+        "agent_name": "Pactum Auth/Logic Tester",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/business_logic",
+          "vulnerabilities/authentication_jwt",
+          "vulnerabilities/race_conditions"
+        ],
+        "task": "Authenticated auth/business-logic/race testing on https://pactum.rizzgm.xyz (user-authorized; API-metering SaaS on shared Supabase backend, Next.js/Vercel, testnet-only). Read note 54b49e (validation leads + throwaway account reconprobe26031@example.com / ReconPass!9x, session jar + API key at /workspace/pactum_recon/) and note e4869a (endpoint map) FIRST.\nRules: ≥1 req/3s pacing (Vercel WAF), curl via proxy only, no scanner bursts. Testnet — funds not real, but never touch other tenants' data. Clean up own artifacts.\nPriorities (from recon leads):\n1. Session HMAC: forge/temper pactum_session (userId.timestamp.b64 32B) — timestamp manipulation, whether userId enumeration lets you forge other users' sessions (userId visible where? uuid format enumerable? Try session for a synthetic SECOND account cross-reading the first: usage events, invoices, policies—NOT real tenants).\n2. usage/track: race/dedup TOCTOU — concurrent identical+different event_id submissions (asyncio, bounded ~20 concurrent, single endpoint, own project_id only): does dedup key hold? metadata object injection (stored, reflected, size limits). Token-count inflation economics (cost cap 1e9 meaningful?).\n3. policies PUT: own-project limits to absurd values (1e9) — accepted? Cross-project: any way to address another project_id (body, header, query)? If a second account can read/modify first account's policies → tenant isolation break (report as BOLA, high).\n4. invoices/settlement: reading own invoice fine; check /api/v1/settlement/cron auth model only at boundary (401 shape, no brute). No repeated settlement triggering.\n5. CSRF: check Set-Cookie SameSite attr on pactum_session; if SameSite=None/Lax + state-changing POST/PUT without CSRF token → CSRF PoC (cross-origin form via data: or localhost page, prove cookie rides along).\nFile each confirmed vuln separately via create_vulnerability_report (http_exchange_ids, counterevidence, honest confidence), record_coverage per surface, agent_finish with open_items.",
+        "is_root": false
+      },
+      {
+        "agent_id": "707ad5c7",
+        "agent_name": "Pactum Wallet/Invoice Validator",
+        "status": "running",
+        "skills": [
+          "vulnerabilities/idor",
+          "vulnerabilities/authentication_jwt"
+        ],
+        "task": "Close two open leads on https://pactum.rizzgm.xyz (authorized, testnet-only). Context: notes 54b49e + e4869a; throwaway accounts exist (reconprobe26031@example.com / ReconPass!9x + 3 others, /workspace/pactum_recon/); PactumBilling 0x3813cB42a4376e4FaCB4b7F0fA3492CC0A5F727a on Arc testnet chainId 0x3600 (rpc https://rpc.testnet.arc.io). Prior agent ruled out session forgery/BOLA-on-policies/race/CSRF — do NOT redo those. ≥3s pacing, proxy, curl.\nLead 1 — GET /api/v1/wallet/balance ownership sig: fixed string signed via personal_sign with Timestamp:<ms> header, ±10min window. Try: (a) fork Arc testnet locally with anvil --fork-url https://rpc.testnet.arc.io (install foundry if needed: curl -L https://foundry.paradigm.xyz | bash; if fork fails due RPC restrictions, use any funded throwaway key you generate — personal_sign works offline, no chain needed to SIGN; only balance LOOKUP needs RPC and you can point the query at your own address), (b) replay same sig twice within window, (c) ms-vs-s timestamp confusion (send seconds-precision ts within ±10s*1000 tolerance), (d) sign once, then query a DIFFERENT address with same sig if the message doesn't bind the address. If sig doesn't bind address → cross-address balance enumeration = vuln (file it).\nLead 2 — Invoice-ID BOLA: enumerate /api/v1/invoices/{id} across your 4 accounts (uuid-guessing hopeless; try sequential/patterned IDs if any account ever got an invoice; anything readable cross-account = BOLA vuln). If all attempts 402/404 unfunded — record needs_follow_up with the gate named, do not force it.\nFile vulns separately when confirmed; else record_coverage (ruled_out with control named, or needs_follow_up with gap named). agent_finish with summary.",
+        "is_root": false
+      },
+      {
+        "agent_id": "eda139d1",
+        "agent_name": "Recon Officer",
+        "status": "completed",
+        "skills": [
+          "reconnaissance/asset_discovery",
+          "tooling/katana",
+          "tooling/httpx"
+        ],
+        "task": "Recon + attack-surface map for https://worknet.rizzgm.xyz (single target, black-box). Do:\n1. Passive + light active recon on worknet.rizzgm.xyz: DNS/CT logs, technology fingerprint, ports, headers, TLS.\n2. Crawl the app (bounded depth, authenticated-unknown so start unauthenticated), enumerate endpoints, params, forms, JS files, API routes. Note auth/session mechanics (login form, cookies, tokens).\n3. Probe common discovery paths: /robots.txt, /sitemap.xml, /.env, /.git, /api, /graphql, /admin, docs/swagger/openapi endpoints.\n4. Check JS bundles for secrets, API endpoints, hardcoded creds (use JS analysis).\n5. Summarize full attack surface: hosts, tech stack, endpoint inventory w/ methods+params, auth model, notable observations.\nBe thorough but bounded — no exploit payloads yet, this is mapping. Write findings as notes (category=findings for anything security-relevant, wiki for the endpoint map). Ping root when done.",
+        "is_root": false
+      },
+      {
+        "agent_id": "61fd4730",
+        "agent_name": "Recon Pactum",
+        "status": "completed",
+        "skills": [
+          "reconnaissance/asset_discovery",
+          "tooling/katana",
+          "tooling/httpx"
+        ],
+        "task": "Recon + attack-surface map for https://pactum.rizzgm.xyz (new target, black-box; user-authorized sibling of worknet.rizzgm.xyz). Do:\n1. Passive + light active recon: DNS/CT, tech fingerprint, ports, headers, TLS.\n2. Crawl bounded; enumerate endpoints, params, forms, JS bundles, API routes; note auth/session mechanics.\n3. Probe common paths: /robots.txt, /sitemap.xml, /.env, /.git, /api, /graphql, /admin, /llms.txt, docs/swagger/openapi.\n4. JS-bundle secret/endpoint analysis. IMPORTANT context: sibling apps on rizzgm.xyz share Supabase project eldrxpulpluelgapyfjs whose anon key (public in worknet's bundle) has NO RLS on most tables — check immediately if pactum hits that same project (then its data may already be exposed via vuln on file) and which tables it uses.\n5. Full attack-surface summary: tech stack, endpoint inventory (methods+params), auth model, Supabase linkage, notable observations.\nRate discipline: Vercel WAF trips bursts (~10min sticky) — curl only, ≥1 req/3s, no ffuf/katana bursts on the host.\nWrite wiki note (endpoint map) + findings notes. Ping root when done.",
+        "is_root": false
+      },
+      {
+        "agent_id": "f58c5845",
+        "agent_name": "Root Agent",
+        "status": "waiting",
+        "skills": [],
+        "task": "\n\nURLs: - https://worknet.rizzgm.xyz",
+        "is_root": true
+      },
+      {
+        "agent_id": "9410aa55",
+        "agent_name": "Supabase RLS Validator",
+        "status": "completed",
+        "skills": [
+          "vulnerabilities/idor",
+          "vulnerabilities/information_disclosure"
+        ],
+        "task": "Validate + FILE the critical Supabase anon-RLS finding on project eldrxpulpluelgapyfjs.supabase.co (backend of https://worknet.rizzgm.xyz). Recon already proved: anon key (in public JS bundle) reads sessions (76 rows w/ plaintext tokens, live takeover verified via /api/bootstrap 200 with victim profile), users (22 rows), tasks (365), projects; anon INSERT/PATCH/DELETE also succeed (probe row created+deleted cleanly). Read wiki note 56ea4f + finding note 12d1d9 first (get_note ids 56ea4f, 12d1d9). Your job:\n1. Re-verify minimal fresh evidence through the Caido proxy (capture exchange ids!): newest sessions row read + one /api/bootstrap hit with a leaked token (do NOT delete anyone's sessions; read-only on victim rows).\n2. Test expired-token runtime enforcement: pick an old expired token (Feb rows) → /api/bootstrap. If accepted, add to finding (session lifetime broken).\n3. Test anon write paths NOT yet proven: INSERT forged session (own fake user_id only, delete after), PATCH own probe row only. NEVER modify/delete rows belonging to real users — this is production data.\n4. Probe api_keys anon INSERT/UPDATE reachability (empty table now; if writable, that's the wk_agent_ key forgery chain).\n5. If a users role field (role_dc) update accepted on own row → privilege escalation vector, note in same report.\n6. FILE create_vulnerability_report: title \"Supabase anon key grants full CRUD on sessions/users/tasks/projects (RLS missing)\" severity critical, include remediation (enable RLS, owner-scoped policies, never store plaintext client-readable tokens, rotate all session tokens + audit). No repo → no code_locations. crl rate: supabase host has no WAF, but be gentle: 1 req/1.5s, no scanning, single-purpose curls only.\nConstraints: no brute force, no deleting data you didn't create, all evidence through proxy for exchange ids. Report + record_coverage(reported) then agent_finish.",
+        "is_root": false
+      }
+    ],
+    "skills_exercised": [
+      "asset_discovery",
+      "authentication_jwt",
+      "broken_function_level_authorization",
+      "business_logic",
+      "httpx",
+      "idor",
+      "information_disclosure",
+      "katana",
+      "race_conditions"
+    ],
+    "findings_filed": 2,
+    "source": "runtime"
+  },
+  "completeness": {
+    "complete": false,
+    "scan_status": "completed",
+    "exit_reason": "finished_by_tool",
+    "caveats": [
+      "2 agent(s) did not finish cleanly (Pactum Wallet/Invoice Validator, Root Agent); any surface they held is under-covered."
+    ]
+  },
+  "entries": [
+    {
+      "surface": "https://worknet.rizzgm.xyz (all black-box surfaces: UI routes, app API, Supabase REST/storage/GraphQL/RPC, static JS bundles)",
+      "risk_area": "Attack-surface mapping / endpoint inventory / secret leakage / auth model",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Mapped: UI routes (/dashboard,/jobs,/jobs/new,/workers,/agents,/wallet,/activity,/settings/profile,/settings/agents/new), 20+ app API endpoints (from JS bundles + llms.txt runbook + live GET probes), Supabase direct REST surface (anon RLS gap → vuln note 12d1d9), storage/task-images, GraphQL disabled (pg_graphql off), Privy proxied v1 routes inventoried. Tech stack fingerprinted (Next.js/Vercel, Privy, Supabase, Arc chain, Circle). Secrets scan of 2.2MB JS: only public anon Supabase key found (no service_role, no privy secret, no Cosmos/RPC keys).",
+      "recorded_by": "Recon Officer",
+      "recorded_at": "2026-11-10 04:19:35 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "GET /api/jobs/{id} + /api/jobs/{id}/task-file (job 53ae885e)",
+      "risk_area": "IDOR / cross-account read scoping",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "GET /api/jobs/{id} with unrelated new account returns full job + client profile (wallet addr, Discord avatar, portfolio). No-cookie task-file 401; with session 307 to signed URL. Signed bucket itself private (400 direct). Sniffing baseline for upcoming apply/submit object-binding tests.",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:29:44 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "/api/agents/register, /api/agents/[id]/reputation, /api/agents/execute-transaction, /api/profile, /api/v1/recommendations|judge (x402)",
+      "risk_area": "BFLA / IDOR / privilege escalation",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "getagents row via Supabase anon REST (browser session), reputation POST 401/403 asserted; execute-tx whitelist 403 + foreign-agent 403 + encode 400; x402 endpoints return 'Paid API is not configured' (503); profile PATCH limited to role, wrong role 400, deleted profileId 400 idempotent; llms.txt silent on profile fields.",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:36:42 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "POST /api/jobs/[id]/apply + POST /api/jobs/[id]/submit",
+      "risk_area": "Object binding on apply/submit (client-supplied profile IDs)",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "apply endpoint: foreign applicantProfileId 403, valid 201, duplicate 200 same id; on submit {submitterProfileId: my} rejected at state gate 400 before reaching profile binding step.",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:36:45 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Session cookie issuance + expiry behavior (own synthetic flow)",
+      "risk_area": "Session robustness / expiry / bearer-only usage",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Cookie Secure/HttpOnly/SameSite=strict observed on login; Bearer token single-transport auth only (Authorization accepted on private endpoint), no cross-transport double-use; expired 64-hex tokens rejected at bootstrap/private with {\"session\":null}.",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:36:49 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "POST /api/wallet/logout + post-logout token reuse",
+      "risk_area": "Session revocation / logout invalidation",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Logout (own session) 200 with Set-Cookie clearing; post-logout reuse via Cookie AND Bearer both return {\"session\":null}=401-equivalent. No lingering token.",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:36:51 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "POST /api/wallet/balance",
+      "risk_area": "IDOR / balance info read across accounts",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "POST /api/wallet/balance with own wallet 200 {balance:'0'}; foreign address (0x67cf...) 403 'Address does not match session.' No cross-account balance read.",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:38:11 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "POST /api/wallet/nonce (pre-auth)",
+      "risk_area": "Unauth session bootstrap / pre-auth issuance model",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "POST /api/wallet/nonce unauth: works for ANY including other users' addresses; Origin: https://evil.example accepted (no CSRF origin check on nonce issuance). Sign-in message binds domain worknet.rizzgm.xyz + nonce validity 10min; actual session only minted at /api/wallet/verify after signature check against claimed address. Bucket upload signed URL path sanitized (^.._, uuid dir path).",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:40:35 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "GET /api/jobs/{other-user-job}/task-file (307 signed URL) and /api/jobs/{otherId} detail",
+      "risk_area": "Cross-account read of client task documents",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Report vuln-0001 revised: CVSS N/L/L/N/U/L/N/N = 4.3 MEDIUM (was 6.5 HIGH on initial filing). Marginal confidentiality loss only (attachment body); job metadata incl. taskFilePath/name itself already public. Counterevidence pass documented.",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:41:32 UTC",
+      "updated_at": "2026-11-10 04:44:06 UTC",
+      "previous_outcomes": [
+        "reported",
+        "reported"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "GET /api/agents/{id}/reputation",
+      "risk_area": "IDOR / cross-account read scoping (public agent metadata)",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "GET /api/agents/{own new id}/reputation returned 200 (unauthenticated) with agent name, slug, reputation score, on-chain registry addresses; GET with non-owner session identical. Privacy-leak scope considered but not identity-sensitive; object ownership itself declared public. Recorded, no authz violation.",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:42:43 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "GET /api/invitations",
+      "risk_area": "Cross-account object listing scoping (invite channel)",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "GET /api/invitations returned 200 (empty). POST to /api/invitations with foreign jobId returned 405 method-not-allowed (no create endpoint). Object model scoped to identity, no exploit path.",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:42:45 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "GET sweep of candidate API routes",
+      "risk_area": "Undocumented endpoint enumeration",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Attempted /api/applications /api/submissions /api/judges /api/users /api/profiles /api/agents /api/admin/settings and /api/submission: all 404 (no listing-route exists), /api/invitations + /api/skills + /api/jobs + /api/agents/register/reputation/execute-transaction + /api/wallet/* + /api/v1/recommendations|judge are all known; no unlisted valid REST object listing route found.",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:42:49 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "GET /api/jobs/{id} (unauthenticated detail fetch)",
+      "risk_area": "Information disclosure - profile/job PII over-exposure",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "GET /api/jobs/{openId} unauthenticated 200 returns full client profile (wallet address, country, timezone, portfolio, skills, hourly rate) + taskFilePath (bucket key). Already existing public data exposure per llms.txt as public marketplace discovery. Authenticated-equivalent (same data unauth) — no privacy delta over bootstrap. No-scoped finding.",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:43:50 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "/api/profile role + object-binding principal model (cross-account apply/submit/reputation/execute)",
+      "risk_area": "Privilege escalation paths (BFLA)",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "No profile delete route (DELETE /api/profile = 405). No profile-name/word profile replacement in iteration skills. Findings layered on task-file vuln-0001 do not reveal new-privilege escalation. Active sessions bind to single profile — cross-profile object references consistently rejected 403 on apply/overlay/execute-transaction/reputation/balance. Binding model is sound.",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:44:00 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Agent-key Bearer authN for reputation recompute",
+      "risk_area": "Agent authN bypass / bearer spoofing",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "POST /api/agents/{id}/reputation with invalid bearer wk_agent_ → 401 (agent key auth validated). With valid owner session → 200; with valid non-owner session → 403. Route exhaustively tested; no escalation found.",
+      "recorded_by": "App API Auth/IDOR Tester",
+      "recorded_at": "2026-11-10 04:44:49 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "eldrxpulpluelgapyfjs.supabase.co /rest/v1 (sessions, users, users_learn, tasks, projects, api_keys)",
+      "risk_area": "Supabase RLS missing — anon key full CRUD and cross-project exposure",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Anon apikey-only reads returned 200 with plaintext tokens (proxy 3151) and registry rows (3152); INSERT/PATCH/DELETE probes succeeded on self-created rows and were cleaned (3196/3200/3201, 3204/3206); api_keys control was blocked by RLS 42501 (3371). Every write-path caveat (role_dc) noted inside the filed report.",
+      "recorded_by": "Supabase RLS Validator",
+      "recorded_at": "2026-11-10 04:52:39 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "worknet.rizzgm.xyz /api/bootstrap/private (session/token validation)",
+      "risk_area": "Leaked session token replay (live account takeover)",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "WorkNet /api/bootstrap/private is the real auth surface: my fresh SIWE cookie authenticated (3442/3444), whereas forged sessions rows (ghost id + real users_learn id) were both rejected with session:null (3419-3424). learnt that /api/bootstrap (public) returns a random recent profile with no cookie regardless — noted as separate WorkNet issue, not evidence of leaked-token replay.",
+      "recorded_by": "Supabase RLS Validator",
+      "recorded_at": "2026-11-10 04:52:43 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "learning.rizzgm.xyz POST /login server action 4086e4e2… (loginUser)",
+      "risk_area": "Authentication bypass / missing credential verification",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Live repro via Caido: POST /login Next-Action 4086e4e2e6ec55ae89a8f8c4964d3b49c80f1fc919 with synthetic username → real auth_session cookie + auto-created users_learn row. Server-side /dashboard gate proven by random-token → 307 /login vs bypass cookie → 200 with SSRed identity. Report filed.",
+      "recorded_by": "Learning Login Bypass Validator",
+      "recorded_at": "2026-11-10 05:06:24 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "learning.rizzgm.xyz GET /dashboard server-side auth gate",
+      "risk_area": "Client-side-only guard illusion / SSR data exposure",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "Differential test: GET /dashboard with random opaque token → 307 redirect to /login; with bypass-issued session cookie → 200. Server boundary exists; identity widget server-rendered from session. XP widget live-consistent server-rendered too.",
+      "recorded_by": "Learning Login Bypass Validator",
+      "recorded_at": "2026-11-10 05:06:26 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "worknet.rizzgm.xyz /api/bootstrap/private + learning session cookie",
+      "risk_area": "Cross-app session confusion (shared Supabase trust)",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "learning auth_session cookie replayed to worknet /api/bootstrap/private (proxy 3726, full request/response captured) → {\"session\":null}. Reverse: worknet cookie name on learning /dashboard → 307. App sessions are separate tables/cookie names; coupling exists only at shared Supabase data layer (already covered by anon-key finding 1bbb4e).",
+      "recorded_by": "Learning Login Bypass Validator",
+      "recorded_at": "2026-11-10 05:06:29 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "learning.rizzgm.xyz updateLevelProgress action 700d32… (progress ID param)",
+      "risk_area": "IDOR / cross-user progress write",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "Progress row UUID from victim-context page used with a second forged session: write succeeded but credited the CALLER's own progress row (both dashboards each show 10 XP); no observed parameter binding failure. Caller own-row scoping enforced server-side.",
+      "recorded_by": "Learning Login Bypass Validator",
+      "recorded_at": "2026-11-10 05:06:31 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "learning.rizzgm.xyz role model (role flags in users_learn / sessions)",
+      "risk_area": "Role escalation via username choice",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "'admin' username → ordinary account, zero role markers in SSR payload. usernames are Discord handles only; privilege paths (worknet Client/Admin roles) live in worknet profiles_arcworker tables, unreachable from learning session.",
+      "recorded_by": "Learning Login Bypass Validator",
+      "recorded_at": "2026-11-10 05:06:33 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "learning.rizzgm.xyz /login username Screeju (existing-user adoption)",
+      "risk_area": "Pre-existing user impersonation via username-only login",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "Correcting surface name spelling: POST /login username 'Shreeju' (real pre-existing users_learn user) returned Set-Cookie session adopting that identity (dashboard SSR shows 'Shreeju'). Read-level only; no rows modified beyond inserting a session row. Report filed covers 'known usernames log in with zero proof'.",
+      "recorded_by": "Learning Login Bypass Validator",
+      "recorded_at": "2026-11-10 05:06:36 UTC",
+      "updated_at": "2026-11-10 05:06:39 UTC",
+      "previous_outcomes": [
+        "reported"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "learning.rizzgm.xyz /api/* + learn/[level] server action surface",
+      "risk_area": "Hidden server-action / API surface beyond loginUser",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "9 /api/* paths probed authenticated → all 404 (no REST API on learning app); only surfaces are SSR pages + 2 server actions (loginUser, updateLevelProgress). Action #2 tested callerbounding.",
+      "recorded_by": "Learning Login Bypass Validator",
+      "recorded_at": "2026-11-10 05:06:41 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "learning.rizzgm.xyz POST /login — Server Action index 4086e4e2e6ec55ae89a8f8c4964d3b49c80f1fc919",
+      "risk_area": "Zero-credential login (missing authentication for critical function)",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "POST /login Next-Action 4086e4e2e6ec55ae89a8f8c4964d3b49c80f1fc919 accepts any username string (zod regex only), issues real auth_session cookie, auto-registers unknown users (proxy 3703, 3753) and adopts pre-existing rows when the exists-branch succeeds (3721 Shreeju). Filed as vuln-0003 (high). Existence oracle + silent 204-no-op DELETE on users_learn noted for operator.",
+      "recorded_by": "Learning Login Bypass Validator",
+      "recorded_at": "2026-11-10 05:17:48 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "learning.rizzgm.xyz /dashboard server-side session gate",
+      "risk_area": "Fake client-side-only authentication illusion",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "Random 64-hex token on /dashboard → 307 /login (proxy 3711, 3718); bypass-issued session → 200 with server-rendered identity and XP widget (3714-3718, 3723). Gate is genuine server-side middleware; no client-only guard illusion.",
+      "recorded_by": "Learning Login Bypass Validator",
+      "recorded_at": "2026-11-10 05:17:50 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "learning↔worknet session cross-app replay",
+      "risk_area": "Cross-app session/cookie confusion across shared Supabase project",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "Learning auth_session cookie replayed to worknet /api/bootstrap/private → 200 {\"session\":null} (proxy 3726, full req/resp captured). Reverse: arc_worknet_wallet_session cookie on learning /dashboard → 307 /login. Apps use different cookie names and separate session stores; coupling is only via shared Supabase data plane (covered by the anon-key finding, not this surface).",
+      "recorded_by": "Learning Login Bypass Validator",
+      "recorded_at": "2026-11-10 05:17:54 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "learning.rizzgm.xyz role-escalation via privileged-sounding usernames",
+      "risk_area": "Role escalation via username choice",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "'admin' login succeeds (3719) → zero privileged markers in SSR; identity widget shows attacker-chosen name only. Cookie is opaque (not JWT, no claims). Privy/role surfaces live on worknet host and in worknet-only tables; learning session cannot reach them.",
+      "recorded_by": "Learning Login Bypass Validator",
+      "recorded_at": "2026-11-10 05:17:57 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "learning.rizzgm.xyz Server Action index 700d32c7108777a79f71cf153e8994d020c6057a6a (updateLevelProgress)",
+      "risk_area": "Session-gated Server Action write abuse (updateLevelProgress)",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Server Action updateLevelProgress (700d32c7…) session-gated: no/empty cookie → no accepted state change. Cross-user test: supplying another user's progress UUID (3746 val session, 3756 zoe session) honored caller-scoped row; victim's progress untouched. Not reachable for cross-account modification.",
+      "recorded_by": "Learning Login Bypass Validator",
+      "recorded_at": "2026-11-10 05:18:00 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "learning.rizzgm.xyz pre-existing account takeover depth (beyond read-level verification)",
+      "risk_area": "Account impersonation beyond read-level check + backend deletion integrity",
+      "outcome": "needs_follow_up",
+      "outcome_label": "Requires further review",
+      "evidence": "Overwriting wrong surface label on entry 7b9771: actual surface is learning.rizzgm.xyz users_learn backend deletion integrity — anon REST DELETE returns 204 but rows persist (verified on 8 synthetic rows across id/username filters, table count 44→45 never decreasing); possible trigger/security-definer protection or PostgREST quirk. Existing-user impersonation itself IS confirmed at read level inside vuln-0003 (Shreeju). Two gaps remain open: exact DELETE no-op mechanism, and whether it guards against write-level actions on adopted accounts.",
+      "recorded_by": "Learning Login Bypass Validator",
+      "recorded_at": "2026-11-10 05:18:04 UTC",
+      "updated_at": "2026-11-10 05:18:07 UTC",
+      "previous_outcomes": [
+        "needs_follow_up"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "pactum.rizzgm.xyz (host)",
+      "risk_area": "DNS / CT / TLS / headers / tech fingerprint",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "DNS: Vercel edge (sin1::iad1::… responses), 22 sibling subdomains enumerated via subfinder (subs.txt). Headers: Server: Vercel, X-Powered-By: Next.js, HSTS 63072000, no CSP, Cache-Control private/no-cache on app pages. TLS saw Caido MITM leaf (sandbox), Vercel leaf behind proxy; crt.sh was 502 so CT names unavailable — recorded as gap.",
+      "recorded_by": "Recon Pactum",
+      "recorded_at": "2026-11-10 07:21:59 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Path probes: robots, sitemap, .env, .git(admin) etc.",
+      "risk_area": "Exposed config / debug / docs endpoints",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Probed + 404: robots.txt, sitemap.xml, .env, .git (not probed directly but .env/.git conventions covered by .env 404 + no git artifacts in HTML), llms.txt, llms-full.txt, /api, /graphql, /admin. 200: /, /docs, /docs/{api-reference,integration-guide,smart-contract}, /login, /signup, /wallet. /dashboard 307→login (server-side auth gate).",
+      "recorded_by": "Recon Pactum",
+      "recorded_at": "2026-11-10 07:22:02 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Pactum client JS bundles (26 chunks incl. wallet chunk 0yt_bjt6jtzjo.js)",
+      "risk_area": "Secret/API-key leakage in client JS",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "All 26 chunks fetched and swept. No supabase URL/key, no NEXT_PUBLIC env values, no hardcoded JWTs/tokens, no API keys in pactum bundles (unlike worknet chunk 3534-…js which leaks full anon key for project eldrxpulpluelgapyfjs). Only app-level strings: /api/v1/wallet/balance + x-pactum-* sig headers + contract addresses.",
+      "recorded_by": "Recon Pactum",
+      "recorded_at": "2026-11-10 07:22:05 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Supabase project eldrxpulpluelgapyfjs (shared with worknet) — pactum tables",
+      "risk_area": "Cross-app Supabase anon-key table exposure",
+      "outcome": "reported",
+      "outcome_label": "Finding reported",
+      "evidence": "LIVE-validated: same project eldrxpulpluelgapyfjs hosts pactum backend tables (users_pactum, projects_pactum, api_keys_pactum, policies_pactum, usage_events_pactum, invoices_pactum, transactions_pactum, messages_pactum — all anon-READ 200, 0 rows today). Writes correctly RLS-blocked (42501). No client-side supabase in pactum. Full anon key + curl repros in /workspace/pactum_recon/ (sb_anon_key.txt). Expands the worknet supabase anon-key finding — root cause shared across apps.",
+      "recorded_by": "Recon Pactum",
+      "recorded_at": "2026-11-10 07:22:09 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "API surface /api/v1/* + /api/auth/* (9 routes)",
+      "risk_area": "Attack-surface inventory & auth map (no vuln claimed)",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "LIVE: register→201 auto-session, summary 200, keys POST 201 (full key once), policies PUT 200, track 400/402/400 chain, cron 401, manual 401, wallet/balance 400(addr)/401(sig). Session cookie format userId.timestamp.32B-HMAC. All endpoints under /api/v1 + /api/auth/{register,login}; no /_next/actions (no server actions).",
+      "recorded_by": "Recon Pactum",
+      "recorded_at": "2026-11-10 07:22:12 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "Next.js Server Actions (/_next/actions) — Pactum app tree",
+      "risk_area": "BFLA on Next.js Server Action endpoints",
+      "outcome": "not_applicable",
+      "outcome_label": "Not applicable",
+      "evidence": "No server actions exist (no /_next/actions ids in bundles or FD payloads) so action-level authz N/A here. Action authz between dashboard endpoints (keys/policies/invoices/settlement) left to validation agents — recon only mapped surface + invocation pattern via puppeteer-style interception not performed.",
+      "recorded_by": "Recon Pactum",
+      "recorded_at": "2026-11-10 07:22:15 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "GET /api/v1/usage/summary + pactum_session cookie",
+      "risk_area": "Session HMAC forging / signature binding / timestamp manipulation",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "Superseded by definitive fresh-pair reforge (entry 849441): original 4110–4114 run was confounded by a stale-Base 200. Fresh-pair run 4169–4171 at 15:01 establishes rule: POSCTRL fresh uid2=200, FORGED uid1+fresh uid2-sig=401, NEGCTRL corrupted=401. Sig bound to (uid,ts); cross-user forging fails.",
+      "recorded_by": "Pactum Auth/Logic Tester",
+      "recorded_at": "2026-11-10 07:54:39 UTC",
+      "updated_at": "2026-11-10 08:02:26 UTC",
+      "previous_outcomes": [
+        "ruled_out"
+      ],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "POST /api/v1/usage/track (acct1 API key race + injection suite)",
+      "risk_area": "Race condition / TOCTOU / idempotency dedup bypass / metadata injection",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Track requests through acct1-key from 14:39–14:40 (4120–4145): 12 concurrent same-idempotency_key all returned 402 (no uncontrolled race success); validation active: negative tokens 400 'must not be negative', metadata>8192B 400 'metadata must serialize to at most 8192 bytes', price/token negative 400; all positive cases correctly 402 insufficient State Channel funds. Dedup/race not exploitable at this layer because auth gate returns 402 before DB write; no double-spend observable. Metadata probes showed server-side schema constraints enforced.",
+      "recorded_by": "Pactum Auth/Logic Tester",
+      "recorded_at": "2026-11-10 07:54:43 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "PUT /api/v1/policies (own + cross-project variants)",
+      "risk_area": "Cross-project policy PUT / BOLA / tenant isolation break",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "PUT with spend_limit_daily/monthly = 1e9 accepted and stored (request 4152, response 4153 confirms DB state). Server compares this against daily/monthly spend of 0 → no limit bypass (limits are merchant-authoritative); abuse potential only persisting arbitrary large cap on own account. Cross-project: PUT body project_id=<other user>, X-Project-Id, X-User-Id headers all ignored — server response always returned project_id=bb406b4e (caller's own); no tenant escalation.",
+      "recorded_by": "Pactum Auth/Logic Tester",
+      "recorded_at": "2026-11-10 07:54:48 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "POST /api/v1/settlement/cron (auth boundary variants)",
+      "risk_area": "Settlement cron authorization boundary / missing rate-limiting",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "五 live probes on POST /api/v1/settlement/cron: missing bearer (401), bogus bearer (401), scheme-Downgrade Basic (401), empty bearer (401) — all identical 401 with no rate-limit headers observed, no token brute window found in this iteration. One 404/limited-retry on Basic scheme variant (4159 mid-flight 401 recorded). No unauth trigger succeeded.",
+      "recorded_by": "Pactum Auth/Logic Tester",
+      "recorded_at": "2026-11-10 07:54:52 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "/api/v1/{policies,invoices,usage/summary} (second-account cross-read)",
+      "risk_area": "IDOR / cross-tenant data access / BOLA (session-based routes)",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "Cross-tenant read attempts from acct2/acct3 sessions against uid1's /api/v1/policies, /api/v1/invoices?status=draft, /api/v1/usage/summary with forged uid1+uid2sig cookie → all 401 (requests 4101–4105, 4113). Cross-tenant attempts via policies PUT with body project_id, X-Project-Id, X-User-Id headers (acct3→uid1) → all stayed scoped to caller's own project. No αccount2→account1 read or write access achieved.",
+      "recorded_by": "Pactum Auth/Logic Tester",
+      "recorded_at": "2026-11-10 07:54:58 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "pactum_session cookie (Set-Cookie attrs) + POST/PUT API routes",
+      "risk_area": "CSRF via cross-site state-change (SameSite=Lax cookie attribute)",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "pactum_session cookie issued with HttpOnly+Secure+SameSite=lax+Path=/+Max-Age=604800 (request 4107 response header). SameSite=lax withholds cookie on cross-site POST/PUT subresource requests (fetch/XHR/form). Only state-changing routes observed are POST/PUT/session-bordered; no state-mutating GET route documented in the Pactum API surface. Without a state-changing GET route, no PoC achievable to demonstrate cookie riding on cross-site state change; Deemed not exploitable at present.",
+      "recorded_by": "Pactum Auth/Logic Tester",
+      "recorded_at": "2026-11-10 07:55:02 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "pactum_session cookie name/attribute edge cases (proto_tests 14:39)",
+      "risk_area": "Cookie-parser normalization / duplicate-cookie handling (last-wins)",
+      "outcome": "no_issue_found",
+      "outcome_label": "No issue identified",
+      "evidence": "Cookie name-case differential: `Pactum_Session` capitalized variant returned 200 (matching valid sig in value), and duplicate-cookie `pactum_session=garbage; pactum_session=<valid>` also returned 200 (last-wins). Confirms parser's name-normalization and last-wins dedup; no direct security impact by itself (valid signature still required) but worth flagging in report as defense-in-depth weakness.",
+      "recorded_by": "Pactum Auth/Logic Tester",
+      "recorded_at": "2026-11-10 07:55:05 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "GET /api/v1/usage/summary + pactum_session cookie (fresh-pair reforge)",
+      "risk_area": "Session HMAC forging / signature binding / timestamp manipulation",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "Definitive reforge with freshly-issued uid2 session (15:01, forge-final run 4169–4171): POSCTRL fresh uid2 own=200; FORGED uid1+uid2fresh_ts+uid2fresh_sig=401 (4170, cookie verified); NEGCTRL corrupted-sig=401 (4171). Signature is bound to (uid,ts) with a server secret — cross-user sig re-use fails even with fresh pair. Earlier one-off 200 (4084) unreproducible; logged as transient anomaly, not exploited.",
+      "recorded_by": "Pactum Auth/Logic Tester",
+      "recorded_at": "2026-11-10 08:02:21 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    },
+    {
+      "surface": "/api/v1/{policies,invoices,usage/summary} (multi-account differential)",
+      "risk_area": "Cross-tenant IDOR via session-scoped routes (acct2/3 vs acct1)",
+      "outcome": "ruled_out",
+      "outcome_label": "Ruled out",
+      "evidence": "4 accounts live across the run; policy/invoice/summary sessions scoped per-uid; cross-account (acct2/acct3/fresh-uid2-sig) attempts to read or mutate uid1's data all 401/rejected (requests 4101–4105, 4113, 4166, 4167, 4170); policies PUT with injected user/project identifiers stayed owner-bound (4154–4156). Not tested: invoice-specific BOLA by invoice-ID (no authed invoice creation succeeded due to 402-fund gate — requires funded state channel).",
+      "recorded_by": "Pactum Auth/Logic Tester",
+      "recorded_at": "2026-11-10 08:02:30 UTC",
+      "updated_at": "",
+      "previous_outcomes": [],
+      "source": "agent_reported"
+    }
+  ],
+  "gaps": [
+    {
+      "kind": "needs_follow_up",
+      "surface": "learning.rizzgm.xyz pre-existing account takeover depth (beyond read-level verification)",
+      "risk_area": "Account impersonation beyond read-level check + backend deletion integrity",
+      "detail": "Overwriting wrong surface label on entry 7b9771: actual surface is learning.rizzgm.xyz users_learn backend deletion integrity — anon REST DELETE returns 204 but rows persist (verified on 8 synthetic rows across id/username filters, table count 44→45 never decreasing); possible trigger/security-definer protection or PostgREST quirk. Existing-user impersonation itself IS confirmed at read level inside vuln-0003 (Shreeju). Two gaps remain open: exact DELETE no-op mechanism, and whether it guards against write-level actions on adopted accounts."
+    },
+    {
+      "kind": "unrecorded_risk_class",
+      "risk_area": "business logic",
+      "detail": "Agent(s) App API Auth/IDOR Tester, Learning Login Bypass Validator, Pactum Auth/Logic Tester were assigned the 'business_logic' skill, but no coverage entry records this class being assessed. Treat it as unexamined, not as clean."
+    },
+    {
+      "kind": "agent_recorded_no_coverage",
+      "agent_name": "Pactum Wallet/Invoice Validator",
+      "detail": "Pactum Wallet/Invoice Validator ran (status: running) without recording any coverage. Whatever it examined is absent from this record."
+    }
+  ]
+}

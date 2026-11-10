@@ -1,0 +1,3 @@
+id,title,severity,timestamp,file
+vuln-0002,Supabase anon key grants full CRUD on sessions/users/tasks/projects + cross-project data exposure (RLS missing),CRITICAL,2026-11-10 04:52:12 UTC,vulnerabilities/vuln-0002.md
+vuln-0001,IDOR: Cross-account read of client task documents via /api/jobs/{id}/task-file,MEDIUM,2026-11-10 04:43:15 UTC,vulnerabilities/vuln-0001.md

