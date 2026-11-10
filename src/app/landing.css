@@ -924,3 +924,179 @@
   .landing-cta-row .button { width: 100%; justify-content: center; }
   .landing-hero-title { font-size: 34px; }
 }
+
+/* ── CTA offer lines (ask → offer) ── */
+.landing-cta-offer {
+  margin: 14px 0 0;
+  color: #8a928a;
+  font-size: 13px;
+  max-width: 46ch;
+}
+
+.landing-final-offer {
+  margin: 0 auto 28px;
+  color: #bec6bf;
+  font-size: 16px;
+  line-height: 1.65;
+  max-width: 56ch;
+}
+
+.landing-why-intro {
+  margin: 20px auto 0;
+  color: #bec6bf;
+  font-size: 16px;
+  line-height: 1.65;
+  max-width: 62ch;
+}
+
+/* ── Escrow money-flow demo ── */
+.escrow-demo {
+  width: 100%;
+  max-width: 340px;
+  padding: 24px;
+  border: 1px solid rgba(0,209,112,0.16);
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(0,209,112,0.07), transparent 60%),
+    rgba(255,255,255,0.02);
+}
+
+.escrow-demo-actors {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 8px;
+  align-items: end;
+  text-align: center;
+}
+
+.escrow-demo-actor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.escrow-demo-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  color: #bec6bf;
+}
+
+.escrow-demo-agent {
+  border-color: rgba(0,209,112,0.3);
+  color: #00d170;
+  background: rgba(0,209,112,0.07);
+}
+
+.escrow-demo-vault .escrow-demo-avatar {
+  width: 46px;
+  height: 46px;
+  border-color: rgba(0,209,112,0.45);
+  color: #00d170;
+  background: rgba(0,209,112,0.1);
+  animation: escrow-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes escrow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,209,112,0.18); }
+  50% { box-shadow: 0 0 0 9px rgba(0,209,112,0); }
+}
+
+.escrow-demo-caption {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a8b0aa;
+}
+
+.escrow-demo-vault .escrow-demo-caption { color: #00d170; }
+
+.escrow-demo-amount {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #eaf0ea;
+}
+
+.escrow-demo-status {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #00d170;
+}
+
+.escrow-demo-track {
+  position: relative;
+  height: 44px;
+  margin: 18px 0 4px;
+}
+
+/* Money in: client -> escrow */
+.escrow-demo-flow-a,
+.escrow-demo-flow-b {
+  position: absolute;
+  top: 50%;
+  height: 1.5px;
+  background: linear-gradient(90deg, rgba(0,209,112,0.05), rgba(0,209,112,0.55));
+}
+
+.escrow-demo-flow-a {
+  left: 12%;
+  width: 30%;
+  animation: escrow-float-a 2.8s linear infinite;
+}
+
+/* Money out: escrow -> worker */
+.escrow-demo-flow-b {
+  left: 58%;
+  width: 30%;
+  background: linear-gradient(90deg, rgba(0,209,112,0.55), rgba(0,209,112,0.05));
+  animation: escrow-float-b 2.8s linear infinite reverse;
+}
+
+@keyframes escrow-float-a {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes escrow-float-b {
+  from { clip-path: inset(0 0 0 100%); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+/* Diamond lock marker on the vault column */
+.escrow-demo-lock {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: #00d170;
+  box-shadow: 0 0 12px rgba(0,209,112,0.6);
+}
+
+.escrow-demo-note {
+  margin: 14px 0 0;
+  color: #8a928a;
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .escrow-demo-vault .escrow-demo-avatar,
+  .escrow-demo-flow-a,
+  .escrow-demo-flow-b { animation: none; }
+  .escrow-demo-flow-a, .escrow-demo-flow-b { clip-path: none; }
+}
+
+@media (max-width: 1200px) and (min-width: 901px) {
+  .escrow-demo { max-width: 290px; padding: 18px; }
+}

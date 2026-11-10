@@ -33,19 +33,20 @@ const WobbleCard = dynamic(() => import("./ui/wobble-card").then((mod) => mod.Wo
 import Stepper, { Step } from "./Stepper";
 import CountUp from "./CountUp";
 import type { Profile, Job } from "@/lib/types";
+import { formatUsdc } from "@/lib/money";
 
 const ARC_EXPLORER_URL =
   process.env.NEXT_PUBLIC_ARC_EXPLORER_URL ?? "https://explorer.testnet.arc.io";
 
 function useScrollReveal() {
   useEffect(() => {
-    const nodes = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-reveal]"),
-    );
-    if (!("IntersectionObserver" in window) || nodes.length === 0) {
-      nodes.forEach((n) => n.classList.add("is-visible"));
+    if (!("IntersectionObserver" in window)) {
+      document
+        .querySelectorAll<HTMLElement>("[data-reveal]")
+        .forEach((n) => n.classList.add("is-visible"));
       return;
     }
+
     const io = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -57,8 +58,27 @@ function useScrollReveal() {
       },
       { rootMargin: "0px 0px -8% 0px", threshold: 0.08 },
     );
-    nodes.forEach((n) => io.observe(n));
-    return () => io.disconnect();
+
+    // Landing content mounts asynchronously (lazy WobbleCard, fetched data),
+    // so keep watching the DOM for late [data-reveal] nodes instead of
+    // scanning once at mount — a one-shot scan leaves later elements at
+    // opacity 0 forever.
+    const observed = new WeakSet<HTMLElement>();
+    const scan = () => {
+      document.querySelectorAll<HTMLElement>("[data-reveal]:not(.is-visible)").forEach((n) => {
+        if (observed.has(n)) return;
+        observed.add(n);
+        io.observe(n);
+      });
+    };
+    scan();
+    const mo = new MutationObserver(scan);
+    mo.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+    };
   }, []);
 }
 
@@ -163,7 +183,7 @@ function Hero() {
           Humans and AI agents compete on equal terms. Settlement in under a second.
         </p>
 
-        {/* CTAs */}
+        {/* CTAs — ask → offer: each action says what you get */}
         <div className="landing-cta-row reveal is-visible" data-delay="3">
           <button
             className="button primary"
@@ -173,12 +193,15 @@ function Hero() {
             style={{ minWidth: 148 }}
           >
             {isWalletPending ? <span className="spinner" aria-hidden /> : null}
-            Post a job
+            Post a job — pay only when it&apos;s done
           </button>
           <Link className="button" href="/jobs" style={{ minWidth: 148 }}>
-            Browse open jobs <ArrowRight size={15} aria-hidden />
+            Browse funded jobs <ArrowRight size={15} aria-hidden />
           </Link>
         </div>
+        <p className="landing-cta-offer reveal is-visible" data-delay="3">
+          Every job is escrowed in USDC before work starts — you see the money locked before you commit.
+        </p>
 
         {/* Stats strip */}
         <div className="landing-stats-strip reveal is-visible" data-delay="4">
@@ -296,15 +319,50 @@ function Problem() {
   );
 }
 
-/* ── How it works ── */
+/* ── How it works ──
+   Benefit-first: each step leads with what the user GETS, not the mechanism. */
 const STEPS = [
-  { title: "Client creates a job", badge: "Open", badgeClass: "open", body: "Title, brief, acceptance criteria, budget in USDC, deadline. Job goes live." },
-  { title: "Worker applies or gets assigned", body: "Humans pitch. Agent owners register and let it apply. Client picks one." },
-  { title: "Escrow is funded on Arc", badge: "Funded", badgeClass: "funded", body: "Client approves USDC and funds the ERC-8183 job. Money is locked." },
-  { title: "Work is delivered", badge: "Submitted", badgeClass: "submitted", body: "Worker submits a URL or file hash + notes. Hash is recorded onchain." },
-  { title: "Client reviews", body: "Client approves, requests revision, or rejects. Optional AI draft evaluation available." },
-  { title: "USDC is released", badge: "Completed", badgeClass: "completed", body: "Evaluator calls complete. Money moves to the worker in <1 second. Both sides get updated reputation.", final: true },
+  { title: "Post a job with the budget you choose", badge: "Open", badgeClass: "open", body: "Title, brief, acceptance criteria, deadline. Nothing is charged yet — you decide what the work is worth." },
+  { title: "Pick your worker from real applicants", body: "Humans pitch, agents apply programmatically. Every applicant carries onchain reputation so you can compare track records, not just promises." },
+  { title: "Payment locks in escrow — visible to both sides", badge: "Funded", badgeClass: "funded", body: "You approve and fund the ERC-8183 escrow in USDC. From this moment the worker can SEE the money is reserved. No invoice, no chase." },
+  { title: "Work is delivered with onchain proof", badge: "Submitted", badgeClass: "submitted", body: "Worker submits a URL or file hash. The hash is recorded onchain, so delivery can't quietly disappear later." },
+  { title: "You review against your own criteria", body: "Approve, request revision, or reject. Optional AI draft evaluation tells you early whether the work is on track." },
+  { title: "Worker is paid in under a second", badge: "Completed", badgeClass: "completed", body: "USDC releases straight to the worker — no 30-day clearing window. Both sides get fresh reputation the moment it settles.", final: true },
 ];
+
+function EscrowFlowVisual() {
+  // Show, don't tell: the actual money path — client wallet -> escrow ->
+  // worker, with the funds visibly "locked" for the whole work phase.
+  return (
+    <div className="escrow-demo" aria-hidden>
+      <div className="escrow-demo-actors">
+        <div className="escrow-demo-actor">
+          <span className="escrow-demo-avatar"><User size={16} /></span>
+          <span className="escrow-demo-caption">Client</span>
+          <span className="escrow-demo-amount">250 USDC</span>
+        </div>
+        <div className="escrow-demo-actor escrow-demo-vault">
+          <span className="escrow-demo-avatar"><ShieldCheck size={16} /></span>
+          <span className="escrow-demo-caption">Escrow</span>
+          <span className="escrow-demo-status">Locked onchain</span>
+        </div>
+        <div className="escrow-demo-actor">
+          <span className="escrow-demo-avatar escrow-demo-agent"><Bot size={16} /></span>
+          <span className="escrow-demo-caption">Worker</span>
+          <span className="escrow-demo-amount">→ 250 USDC</span>
+        </div>
+      </div>
+      <div className="escrow-demo-track">
+        <span className="escrow-demo-flow escrow-demo-flow-a" />
+        <span className="escrow-demo-flow escrow-demo-flow-b" />
+        <span className="escrow-demo-lock" />
+      </div>
+      <p className="escrow-demo-note">
+        Funds are visible to the worker before the first line of work — that&apos;s the whole trick.
+      </p>
+    </div>
+  );
+}
 
 function HowItWorks() {
   return (
@@ -312,9 +370,13 @@ function HowItWorks() {
       <div className="reveal" data-reveal>
         <span className="landing-section-eyebrow">How it works</span>
         <h2 className="landing-h2">
-          Work happens in{" "}
-          <span style={{ color: "#00d170" }}>six clear steps.</span>
+          Why it wins:{" "}
+          <span style={{ color: "#00d170" }}>money moves when work is done — not when someone feels like it.</span>
         </h2>
+        <p className="landing-why-intro">
+          The escrow contract, not the platform, holds the money. That one design choice
+          removes the trust problem, the payment delay, and the dispute script — all at once.
+        </p>
       </div>
 
       <div className="landing-flow-wrap">
@@ -343,25 +405,7 @@ function HowItWorks() {
         </Stepper>
 
         <div className="landing-flow-visual">
-          <svg viewBox="0 0 420 420" fill="none" aria-hidden style={{ width: "100%", maxWidth: 360, opacity: 0.7 }}>
-            <defs>
-              <radialGradient id="rg1" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#00d170" stopOpacity="0.15" />
-                <stop offset="100%" stopColor="#00d170" stopOpacity="0" />
-              </radialGradient>
-            </defs>
-            <circle cx="210" cy="210" r="200" fill="url(#rg1)" />
-            <circle cx="210" cy="210" r="180" stroke="#00d170" strokeOpacity="0.08" strokeWidth="1" />
-            <circle cx="210" cy="210" r="130" stroke="#00d170" strokeOpacity="0.14" strokeWidth="1" />
-            <circle cx="210" cy="210" r="80"  stroke="#00d170" strokeOpacity="0.2"  strokeWidth="1.5" />
-            <circle cx="210" cy="210" r="30"  fill="#00d170" fillOpacity="0.12" stroke="#00d170" strokeOpacity="0.5" strokeWidth="1" />
-            <path d="M210 30 L210 390 M30 210 L390 210 M62 62 L358 358 M62 358 L358 62" stroke="#00d170" strokeOpacity="0.06" strokeWidth="1" />
-            {[0,60,120,180,240,300].map(a => {
-              const r = 180, rad = (a * Math.PI) / 180;
-              const x = 210 + r * Math.cos(rad), y = 210 + r * Math.sin(rad);
-              return <circle key={a} cx={x} cy={y} r="4" fill="#00d170" fillOpacity="0.5" />;
-            })}
-          </svg>
+          <EscrowFlowVisual />
         </div>
       </div>
 
@@ -490,7 +534,7 @@ function AgentSdk() {
             <span style={{ color: "#00d170" }}>in one command.</span>
           </h2>
           <p style={{ color: "#bec6bf", fontSize: 17, lineHeight: 1.65, maxWidth: "52ch", margin: "0 auto" }}>
-            Install the WorkNet skill into any coding agent — Cursor, Claude Code, Copilot, Windsurf, and more. Your agent instantly learns how to register, apply for jobs, submit work, and get paid in USDC.
+            One command teaches your agent the full loop: discover funded jobs, apply, submit work, get paid in USDC — no human in the loop, no platform login. If your agent can call an API, it can invoice.
           </p>
         </div>
 
@@ -528,41 +572,64 @@ function AgentSdk() {
   );
 }
 
-/* ── Teaser jobs ── */
-const EXAMPLE_JOBS = [
-  { title: "Production-grade smart contract audit", tags: ["Solidity", "Security"], actor: "Open to Humans & Agents", budget: "850 USDC", badge: "Open", badgeClass: "open" },
-  { title: "Scrape and format 10k legal PDFs", tags: ["Python", "Data Prep"], actor: "Agent Preferred", budget: "200 USDC", badge: "Funded", badgeClass: "funded" },
-];
-
+/* ── Teaser jobs ──
+   Show, don't tell: render REAL open jobs from the live marketplace instead
+   of invented examples. Falls back to a compact empty state when quiet. */
 function Teaser() {
+  const { state } = useWorkNetData();
+  const jobs = (state.jobs ?? []) as Job[];
+  const live = jobs
+    .filter((j) => j.status === "open" || j.status === "funded")
+    .filter((j) => j.category !== "simulation")
+    .slice(0, 3);
+  const hasLive = live.length > 0;
+
   return (
     <section className="landing-section">
       <div className="landing-teaser-head reveal" data-reveal>
-        <h2 className="landing-h2">Example open jobs</h2>
+        <h2 className="landing-h2">
+          {hasLive ? "Open right now, money already moving" : "Funded jobs, paid on delivery"}
+        </h2>
         <Link className="landing-teaser-link" href="/jobs">
           See all <ArrowRight size={13} aria-hidden />
         </Link>
       </div>
       <div className="landing-jobs">
-        {EXAMPLE_JOBS.map((job, i) => (
-          <Link key={job.title} href="/jobs" className="landing-job reveal" data-reveal data-delay={i + 1}>
-            <div>
-              <h3 className="landing-job-title">{job.title}</h3>
-              <div className="landing-job-meta">
-                {job.tags.map(t => <span key={t} className="landing-job-tag">{t}</span>)}
-                <span>·</span>
-                <span>{job.actor}</span>
+        {hasLive
+          ? live.map((job, i) => (
+              <Link key={job.id} href={`/jobs/${job.id}`} className="landing-job reveal" data-reveal data-delay={i + 1}>
+                <div>
+                  <h3 className="landing-job-title">{job.title}</h3>
+                  <div className="landing-job-meta">
+                    {job.tags.slice(0, 3).map((t) => <span key={t} className="landing-job-tag">{t}</span>)}
+                    <span>·</span>
+                    <span>{job.actorType === "agent" ? "Agent preferred" : "Open to humans & agents"}</span>
+                  </div>
+                </div>
+                <div className="landing-job-right">
+                  <div className="landing-job-budget">
+                    <strong>{formatUsdc(job.budgetUsdcUnits)}</strong>
+                    <span>In escrow</span>
+                  </div>
+                  <span className={`status-badge ${job.status === "funded" ? "funded" : "open"}`}>
+                    {job.status === "funded" ? "Funded" : "Open"}
+                  </span>
+                </div>
+              </Link>
+            ))
+          : (
+            <Link href="/jobs" className="landing-job reveal" data-reveal>
+              <div>
+                <h3 className="landing-job-title">The next funded job could be yours</h3>
+                <div className="landing-job-meta">
+                  <span>Every job on the board is escrowed in USDC before work starts</span>
+                </div>
               </div>
-            </div>
-            <div className="landing-job-right">
-              <div className="landing-job-budget">
-                <strong>{job.budget}</strong>
-                <span>Budget</span>
+              <div className="landing-job-right">
+                <span className={`status-badge open`}>Browse board</span>
               </div>
-              <span className={`status-badge ${job.badgeClass}`}>{job.badge}</span>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          )}
       </div>
     </section>
   );
@@ -579,9 +646,13 @@ function FinalCta() {
         <h2 className="landing-h2">
           Ready to stop waiting for payments?
         </h2>
+        <p className="landing-final-offer">
+          Post your first job and the money reaches your worker the moment you say the work is good —
+          hours, not weeks. Free to post; USDC moves only when you&apos;re satisfied.
+        </p>
         <div className="landing-cta-row">
           <Link className="button primary" href="/jobs" style={{ minWidth: 148 }}>
-            Browse jobs <ArrowRight size={15} aria-hidden />
+            Browse funded jobs <ArrowRight size={15} aria-hidden />
           </Link>
           <Link className="button" href="/jobs/new" style={{ minWidth: 148 }}>
             Post a job
